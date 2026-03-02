@@ -59,7 +59,7 @@
     "react-error-boundary": "^6.1.1",
     "@shikijs/langs": "^4.0.1",
     "@shikijs/themes": "^3.23.0",
-    "shiki": "^3.23.0",
+    "shiki": "^4.0.1",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.1",
     "tailwindcss": "^4.0.6",
