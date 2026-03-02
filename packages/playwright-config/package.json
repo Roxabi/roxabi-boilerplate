@@ -13,7 +13,7 @@
   "devDependencies": {
     "@playwright/test": "^1.58.2",
     "@repo/config": "workspace:*",
-    "@types/node": "^22",
+    "@types/node": "^24",
     "typescript": "^5.9.3"
   }
 }
