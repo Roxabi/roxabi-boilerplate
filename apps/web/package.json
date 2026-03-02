@@ -57,7 +57,7 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-error-boundary": "^6.1.1",
-    "@shikijs/langs": "^3.23.0",
+    "@shikijs/langs": "^4.0.1",
     "@shikijs/themes": "^3.23.0",
     "shiki": "^3.23.0",
     "sonner": "^2.0.7",
