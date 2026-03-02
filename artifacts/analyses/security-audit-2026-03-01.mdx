@@ -1,0 +1,390 @@
+---
+title: "Comprehensive Security Audit"
+description: Full security audit of the roxabi_boilerplate repository covering secrets, authentication, authorization, input validation, infrastructure, dependencies, and deployment.
+---
+
+## Context
+
+Independent security audit of the [roxabi_boilerplate](https://github.com/MickaelV0/roxabi_boilerplate) repository performed on 2026-03-01. Five parallel audit streams were executed:
+
+1. **Codebase structure & tech stack exploration**
+2. **Secrets & credentials scanning** (code + git history)
+3. **Authentication, authorization & input validation**
+4. **Docker, deployment & infrastructure**
+5. **Dependency vulnerability analysis**
+
+**Overall Assessment: STRONG** — Production-ready SaaS boilerplate with defense-in-depth architecture. No leaked secrets, no critical application-level vulnerabilities. Main issues are in infrastructure configuration (Docker/Nginx).
+
+---
+
+## Findings Summary
+
+| Severity | Count | Breakdown |
+|----------|-------|-----------|
+| **Critical** | 1 | Docker containers run as root |
+| **High** | 3 | Dev DB exposed, no TLS in nginx, no nginx security headers |
+| **Medium** | 10 | Password policy, account enumeration, TOCTOU, Docker hardening, DB SSL, CSP, nginx rate limit, PAT scope, DB URL in CLI, CDN dependency |
+| **Low** | 10 | No MFA, no HIBP check, consent cookie, image digests, default creds, server_tokens, HSTS preload, CORS warning, PII in logs, devtools in prod deps |
+| **Info** | 2 | API key auth not yet implemented, locale accepts arbitrary strings on signup |
+
+---
+
+## Critical Findings
+
+### C1: Containers Run as Root
+
+**Files:** `apps/api/Dockerfile` (lines 57-76), `apps/web/Dockerfile` (lines 47-63)
+
+Neither Dockerfile creates a non-root user or sets a `USER` directive. The final `runtime` stage (`node:24-slim`) runs the application process as `root`. If the container is compromised, the attacker has full root privileges.
+
+**Recommendation:**
+```dockerfile
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 --ingroup nodejs appuser
+USER appuser
+```
+
+---
+
+## High Findings
+
+### H1: Development Database Exposed on All Interfaces
+
+**File:** `docker-compose.yml:7`
+
+```yaml
+ports:
+  - "5432:5432"  # Accessible from any network interface
+```
+
+PostgreSQL is bound to `0.0.0.0:5432`, making it reachable from any machine on the network with default credentials `roxabi/roxabi`.
+
+**Recommendation:** Change to `"127.0.0.1:5432:5432"`.
+
+### H2: No TLS Configuration in Nginx
+
+**Files:** `deploy/nginx/api.conf:8`, `deploy/nginx/app.conf:8`
+
+Both configs only listen on port 80 (HTTP). No HTTPS, no TLS protocol restrictions, no cipher suite configuration, no HTTP-to-HTTPS redirect.
+
+**Recommendation:** Ship a template with `listen 443 ssl`, placeholder cert paths, and an explicit HTTP-to-HTTPS redirect block. Add comments referencing `certbot --nginx`.
+
+### H3: No Security Headers at Nginx Level
+
+**Files:** `deploy/nginx/api.conf`, `deploy/nginx/app.conf`
+
+Zero security headers at the reverse proxy level. While Helmet covers the API app, nginx should enforce headers as defense-in-depth (especially for the web app which Helmet does not cover).
+
+**Recommendation:**
+```nginx
+add_header X-Frame-Options "DENY" always;
+add_header X-Content-Type-Options "nosniff" always;
+add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+add_header Referrer-Policy "no-referrer" always;
+add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+```
+
+---
+
+## Medium Findings
+
+### M1: No Server-Side Password Complexity Enforcement
+
+**File:** `apps/api/src/auth/auth.instance.ts`
+
+Client-side password rules (8+ chars, uppercase, number, symbol) exist in `packages/ui/src/components/PasswordInput.tsx:67-72` but can be bypassed. A `security.passwordMinLength` system setting exists in the database (migration `0015_seed_system_settings.sql`) but no code reads or enforces it during password creation/change.
+
+**Recommendation:** Add a Better Auth `password` plugin or custom validation hook that reads and enforces the `security.passwordMinLength` system setting plus complexity rules.
+
+### M2: Account Enumeration via Magic Link
+
+**File:** `apps/api/src/auth/auth.instance.ts:155-162`
+
+```typescript
+if (!userData) {
+  throw new APIError('BAD_REQUEST', { message: 'USER_NOT_FOUND' })
+}
+```
+
+Explicitly returns `USER_NOT_FOUND` for non-existent emails, enabling email enumeration.
+
+**Recommendation:** Return a generic success message regardless of whether the email exists. Log the failed lookup server-side.
+
+### M3: TOCTOU in Admin User Update
+
+**File:** `apps/api/src/admin/adminUsers.service.ts:334-337`
+
+The non-self update path calls `findUserSnapshotOrThrow` then `executeUserUpdate` without wrapping in a transaction. A race condition exists between the snapshot check and the update.
+
+**Recommendation:** Wrap in a serializable transaction (like the self-role-change path at line 355 already does).
+
+### M4: No Docker Security Hardening in Production
+
+**File:** `docker-compose.prod.yml`
+
+No custom Docker network, no `security_opt: ["no-new-privileges:true"]`, no `cap_drop: [ALL]`, no `read_only: true`, no `tmpfs` for temporary directories.
+
+**Recommendation:** Add explicit network isolation and container hardening options:
+```yaml
+security_opt:
+  - no-new-privileges:true
+cap_drop:
+  - ALL
+```
+
+### M5: No SSL Enforcement for Database Connections
+
+**File:** `apps/api/src/database/drizzle.provider.ts:40-44`
+
+```typescript
+return postgres(connectionString, {
+  max: 10,
+  idle_timeout: 20,
+  connect_timeout: 10,
+})
+```
+
+No explicit `ssl: { rejectUnauthorized: true }`. Neon enforces SSL at the connection string level, but a non-Neon deployment could transmit credentials in plaintext.
+
+**Recommendation:** Either enforce SSL in connection options or validate that the connection string includes `sslmode=require`.
+
+### M6: CSP Allows `unsafe-inline`
+
+**File:** `apps/api/src/index.ts:20-21`
+
+```typescript
+scriptSrc: ["'self'", "'unsafe-inline'", 'https://unpkg.com'],
+styleSrc: ["'self'", "'unsafe-inline'", 'https://unpkg.com'],
+```
+
+`'unsafe-inline'` significantly weakens CSP protection against XSS. Present for Swagger UI compatibility.
+
+**Recommendation:** Conditionally tighten CSP when Swagger is disabled (production default). Use nonces or hashes for Swagger when enabled.
+
+### M7: No Rate Limiting at Nginx Level
+
+**Files:** `deploy/nginx/api.conf`, `deploy/nginx/app.conf`
+
+No `limit_req_zone` or `limit_conn_zone` directives. Application-level throttler is the only defense.
+
+**Recommendation:** Add nginx-level rate limiting as a first line of defense:
+```nginx
+limit_req_zone $binary_remote_addr zone=api:10m rate=30r/s;
+limit_req zone=api burst=50 nodelay;
+```
+
+### M8: PAT Used for Auto-Merge
+
+**File:** `.github/workflows/auto-merge.yml:37`
+
+Uses `secrets.PAT` instead of `GITHUB_TOKEN` because the latter cannot trigger merge queues. A PAT typically has broader permissions.
+
+**Recommendation:** Verify PAT scope is minimal (only `repo` for merge queue triggering). Document the rationale and scope.
+
+### M9: DATABASE_URL Passed as CLI Arguments
+
+**File:** `.github/workflows/deploy-preview.yml:156-161`
+
+```bash
+vercel deploy --token "$VERCEL_TOKEN" \
+  --build-env "DATABASE_URL=$DATABASE_URL" \
+  --env "DATABASE_URL=$DATABASE_URL"
+```
+
+CLI arguments may appear in process listings (`ps aux`) and shell history.
+
+**Recommendation:** Use Vercel project environment variables or `vercel env` commands instead of `--env`/`--build-env` flags.
+
+### M10: Swagger UI Loaded from External CDN
+
+**File:** `apps/api/src/index.ts:86-89`
+
+Swagger JS/CSS loaded from `unpkg.com` without Subresource Integrity (SRI) hashes. Supply chain risk if the CDN is compromised.
+
+**Recommendation:** Self-host Swagger UI assets or add SRI hashes to CSP. Since Swagger is dev-only by default, the risk is limited but should still be addressed.
+
+---
+
+## Low Findings
+
+### L1: No MFA Support
+
+Better Auth supports TOTP/2FA plugins, but none are enabled. For a SaaS boilerplate handling org-level data, MFA should be available at minimum for admin/owner roles.
+
+### L2: No Password Breach Checking
+
+No integration with Have I Been Pwned or similar breach databases during password creation/change.
+
+### L3: Consent Cookie Not httpOnly
+
+**File:** `consent.controller.ts:69` — Intentional and documented (frontend reads it client-side). Contains only consent preferences, no auth data. Consider signing the cookie payload to prevent tampering.
+
+### L4: Docker Image Tags Not Pinned to SHA Digests
+
+**Files:** Both Dockerfiles use `oven/bun:1.3` and `node:24-slim` without SHA256 digest pinning. Dependabot for Docker is configured (good), but digest pinning adds defense-in-depth.
+
+### L5: Default Database Credentials in Dev Compose
+
+**File:** `docker-compose.yml:9-11` — Defaults to `roxabi/roxabi`. Combined with H1 (all-interface binding), this creates a reachable database with known credentials in dev.
+
+### L6: Nginx Server Version Disclosed
+
+Neither nginx config includes `server_tokens off`. Leaks nginx version in response headers.
+
+### L7: HSTS Missing Preload Directive
+
+**File:** `apps/api/src/index.ts:27` — HSTS has `includeSubDomains` but not `preload`. Submit to the HSTS preload list after adding the directive.
+
+### L8: CORS Wildcard Produces Warning, Not Error
+
+**File:** `apps/api/src/cors.ts:14-16` — When the only configured origin is `*` in production, a warning is logged and CORS is disabled (safe fallback). But the app still starts. Consider throwing to prevent startup with broken CORS.
+
+### L9: Email Addresses (PII) in Log Messages
+
+**File:** `apps/api/src/auth/auth.instance.ts:94,139,182` — User emails logged when email sending fails. Consider logging user ID instead for GDPR compliance.
+
+### L10: Devtools in Production Dependencies
+
+**File:** `apps/web/package.json` — `@tanstack/react-devtools`, `@tanstack/react-query-devtools`, `@tanstack/react-router-devtools` listed under `dependencies` instead of `devDependencies`. TanStack devtools auto-disable in prod builds, but increases bundle size and attack surface.
+
+---
+
+## Informational Findings
+
+### I1: API Key Authentication Not Yet Implemented
+
+**File:** `docs/guides/security.mdx:302` — API keys can be created, stored (HMAC-SHA256 hashed), and revoked, but incoming request authentication via `sk_live_*` is not yet wired up.
+
+### I2: Locale Accepts Arbitrary Strings on Signup
+
+**File:** `apps/api/src/auth/auth.instance.ts:247` — Sanitized server-side after creation to allowed list `['en', 'fr']`, so no actual risk.
+
+---
+
+## Secrets & Credentials Audit: CLEAN
+
+| Category | Status | Notes |
+|----------|--------|-------|
+| Hardcoded secrets | Clean | Dev-only defaults with runtime guards |
+| `.env` files | Clean | Only `.env.example` tracked; `.env` gitignored |
+| Private keys / certs | Clean | None found; `*.pem` gitignored |
+| DB connection strings | Safe | Local-dev only (`localhost`), CI ephemeral |
+| JWT / signing keys | Clean | Placeholder values with prod validation |
+| OAuth secrets | Clean | Read from env, never hardcoded |
+| Webhook secrets | Clean | GitHub Secrets properly used |
+| Gitignored files committed | Clean | None found |
+| AWS/GCP/Azure creds | Clean | None found |
+| Payment keys | Clean | `sk_live_` is project's own API key prefix |
+| Git history | Clean | No secrets ever committed or deleted |
+
+**Key protections:**
+- Gitleaks scanning in CI with `.gitleaks.toml` allowlist
+- `env.validation.ts` rejects insecure defaults in non-dev environments (including Vercel preview)
+- API keys hashed with HMAC-SHA256 + per-key 16-byte salt
+- Cron secret validated with `timingSafeEqual()`
+- All CI/CD secrets referenced via `${{ secrets.* }}`
+
+---
+
+## Dependency Audit: HEALTHY
+
+| Finding | Severity | Production Impact |
+|---------|----------|-------------------|
+| `@esbuild-kit/*` deprecated (via drizzle-kit) | Medium | None (dev tool) |
+| `onnxruntime-web` dev prerelease (via huggingface) | Medium | None (dev dep) |
+| Devtools in production deps (`apps/web`) | Medium | Potential bundle bloat |
+| `postcss@8.4.31` old (via react-email/next) | Low | None (dev dep) |
+| `sqlite-vec` alpha, `rolldown` RC | Low | None (dev deps) |
+| Unbounded `>=` overrides | Low | Mitigated by lockfile |
+
+**Positive practices:**
+- Lockfile present with SHA-512 integrity hashes
+- Security overrides for `minimatch`, `lodash`, `rollup`, `ajv`
+- Bun blocks lifecycle scripts by default
+- No `moment.js`, no `express`, no packages with well-known historical CVEs
+- All workspaces are `private: true` (prevents accidental publishing)
+- `dompurify@^3.3.1` present and current
+
+---
+
+## Architecture & Security Strengths
+
+### Authentication & Sessions
+- **Better Auth 1.4.18** with cookie-based sessions (not JWTs)
+- 7-day session lifetime, 1-day refresh, 5-min cookie cache
+- Session tokens are cryptographically random UUIDs stored in DB
+- IP address and user agent tracked per session
+- Email verification required for email/password signups
+- Sessions forcefully cleared on account deletion
+
+### Authorization (Default-Deny)
+- Global `AuthGuard` registered as `APP_GUARD` — every route requires auth unless explicitly opted out
+- Layered checks: `@AllowAnonymous()` → session → `@OptionalAuth()` → role → org → permissions
+- Superadmin bypass with safeguards (cannot remove last superadmin, cannot ban self)
+- Per-organization RBAC with 4 default roles (Owner, Admin, Member, Viewer)
+- Permissions resolved as `resource:action` strings
+
+### Multi-Tenancy
+- PostgreSQL Row-Level Security via `SET LOCAL app.tenant_id`
+- Two-tier DB users: `roxabi` (migrations only) + `roxabi_app` (runtime, `NOBYPASSRLS`)
+- Application-level `TenantService.queryAs()` wraps all tenant-scoped queries
+- Admin queries use raw connection with explicit `organizationId` WHERE clauses
+
+### Rate Limiting
+- Dual-tier: 60/min global, 5/min auth-sensitive with 5-min block
+- Upstash Redis for distributed state (serverless)
+- Auth tier **fails closed** if Redis is unavailable; global tier fails open
+- Rate limit headers suppressed on auth-sensitive paths (prevents state leakage)
+- Startup validation: refuses to start in production without Redis credentials
+
+### Input Validation
+- Global `ValidationPipe` with `whitelist: true`, `forbidNonWhitelisted: true`
+- Zod schemas on all DTOs
+- UUID validation on all path parameters (`ParseUUIDPipe v4`)
+- ILIKE pattern escaping for search inputs
+- 1 MiB body size limit on Fastify
+- Open-redirect prevention via `safeRedirect()` in frontend
+
+### Security Headers (Helmet)
+- CSP with `defaultSrc: ["'none'"]`
+- HSTS 1-year with `includeSubDomains`
+- `X-Frame-Options: DENY`
+- `Referrer-Policy: no-referrer`
+- `Permissions-Policy` for camera, microphone, geolocation
+- `X-Powered-By` header removed
+
+### GDPR Compliance
+- Data export endpoint (`GET /api/gdpr/export`)
+- Soft-delete with 30-day grace period
+- Hard purge with anonymization (GDPR right to be forgotten)
+- Daily purge cron job at 2 AM UTC
+- Consent tracking with cookie + DB records
+
+### Audit & Observability
+- Comprehensive audit logs with before/after JSON snapshots
+- Sensitive field redaction on audit responses
+- Correlation IDs via `nestjs-cls` on every request
+- Structured error responses without stack traces
+
+---
+
+## Top 5 Recommended Actions (Priority Order)
+
+| # | Action | Severity | Effort |
+|---|--------|----------|--------|
+| 1 | **Add non-root user to Dockerfiles** | Critical | Low (< 1 hour) |
+| 2 | **Harden nginx configs** — TLS, security headers, rate limiting, `server_tokens off` | High | Medium (2-4 hours) |
+| 3 | **Bind dev DB to localhost** — `127.0.0.1:5432:5432` | High | Trivial (5 min) |
+| 4 | **Add server-side password validation** — enforce `security.passwordMinLength` + complexity | Medium | Low (1-2 hours) |
+| 5 | **Fix account enumeration** — generic response on magic link for unknown emails | Medium | Trivial (15 min) |
+
+---
+
+## Scope for Future Audits
+
+- **Penetration testing** — Focus on RBAC bypass, API key misuse, RLS boundary crossing
+- **Load testing** — Verify rate limiting behavior under scale
+- **MFA implementation** — Enable Better Auth TOTP plugin for admin/owner roles
+- **HIBP integration** — Check passwords against breach databases
+- **Incident response runbooks** — Key compromise, session hijacking, data breach procedures
+- **Secret rotation procedures** — Document rotation for `BETTER_AUTH_SECRET`, OAuth secrets, `CRON_SECRET`

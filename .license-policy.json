@@ -19,6 +19,8 @@
   "overrides": {
     "khroma@2.1.0": "MIT",
     "@dicebear/bottts@9.3.1": "MIT",
-    "@dicebear/avataaars@9.3.1": "MIT"
+    "@dicebear/bottts@9.3.2": "MIT",
+    "@dicebear/avataaars@9.3.1": "MIT",
+    "@dicebear/avataaars@9.3.2": "MIT"
   }
 }

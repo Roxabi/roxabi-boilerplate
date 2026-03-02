@@ -1,3 +1,4 @@
+import { readdirSync } from 'node:fs'
 import { fileURLToPath, URL } from 'node:url'
 import { paraglideVitePlugin } from '@inlang/paraglide-js'
 import tailwindcss from '@tailwindcss/vite'
@@ -11,6 +12,28 @@ import viteTsConfigPaths from 'vite-tsconfig-paths'
 import { z } from 'zod'
 
 const apiTarget = process.env.API_URL || `http://localhost:${process.env.API_PORT || 4000}`
+
+// Enumerate all /docs/** prerender routes directly from the MDX source files.
+// TanStack Start renders client-side, so Nitro's link crawler finds nothing —
+// we must provide the list explicitly. The docs/ symlink (→ ../../docs) is the
+// same directory fumadocs-mdx reads, so this list is always in sync.
+const docsDir = fileURLToPath(new URL('./docs', import.meta.url))
+function getDocRoutes(): string[] {
+  try {
+    return (readdirSync(docsDir, { recursive: true }) as string[])
+      .filter((f) => f.endsWith('.mdx'))
+      .map((f) => {
+        const slug = f
+          .replace(/\.mdx$/, '')
+          .replace(/[/\\]index$/, '') // foo/index → foo
+          .replace(/^index$/, '') // root index → '' → /docs
+          .replace(/\\/g, '/') // normalise Windows separators
+        return `/docs${slug ? `/${slug}` : ''}`
+      })
+  } catch {
+    return ['/docs']
+  }
+}
 
 const config = defineConfig(async () => ({
   envDir: '../..',
@@ -59,8 +82,15 @@ const config = defineConfig(async () => ({
         devProxy: {
           '/api/**': { target: apiTarget, changeOrigin: true },
         },
+        // Prerender all /docs/** pages at build time.
+        // Doc content is static — no need for runtime SSR per request.
+        // Routes are enumerated explicitly (crawler can't follow React-rendered links).
+        prerender: {
+          routes: getDocRoutes(),
+        },
         routeRules: {
           '/api/**': { proxy: `${apiTarget}/api/**` },
+          '/docs/**': { prerender: true },
         },
       },
     }),

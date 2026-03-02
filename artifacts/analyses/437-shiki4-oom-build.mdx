@@ -1,0 +1,123 @@
+---
+title: "PR #437 — Shiki 4.0 OOM Build Failure Root Cause"
+date: "2026-03-02"
+issue: 437
+status: investigated
+---
+
+# PR #437 — Shiki 4.0 OOM Build Failure
+
+## Context
+
+PR #437 batches 6 Dependabot updates including `shiki` / `@shikijs/langs` / `@shikijs/themes`
+3.23.0 → 4.0.0. CI Build step fails with:
+
+```
+FATAL ERROR: Ineffective mark-compacts near heap limit
+Allocation failed - JavaScript heap out of memory
+```
+
+Heap reached ~3.7 GB during the Nitro SSR Vite `transforming...` phase.
+Previous OOM fix (`5bccc98` / `4d63044`) is **still intact** — this is a different, marginal failure.
+
+---
+
+## Is the `shiki.ts` fix broken?
+
+**No.** `apps/web/src/lib/shiki.ts` uses `createBundledHighlighter` from `shiki/core` with
+selective per-language dynamic imports to avoid bundling all 200+ grammars.
+
+Verified in shiki 4.0.1:
+- `createBundledHighlighter` API is **identical** to 3.23.0 (same signature, same logic)
+- `@shikijs/langs/<name>` subpath exports still exist and are self-contained (no cross-imports)
+- `shiki/core` and `shiki/engine/javascript` subpaths still work
+- `fumadocs-core/highlight/config` → `defineShikiConfig` API **unchanged** in 16.6.8
+- `fumadocs-core/mdx-plugins/rehype-code.core` → `createRehypeCode` API **unchanged** in 16.6.8
+- `fumadocs-core` dist files have identical content hashes between 16.6.6 and 16.6.8
+
+The selective-lang fix is not regressed. Full shiki bundle is NOT being pulled into the SSR bundle.
+
+---
+
+## What actually changed
+
+### fumadocs-core 16.6.6 → 16.6.8
+
+`fumadocs-core 16.6.8` changelog: **"use Shiki.js v4"** (commit `5453502`).
+The dep range in `apps/web/package.json` is `"fumadocs-core": "^16.6.6"`, which bun now
+resolves to `16.6.8` because the Dependabot PR also bumps `@shikijs/*` to 4.0.
+
+| Version   | `@shikijs/rehype` dep | `shiki` dep |
+|-----------|----------------------|-------------|
+| 16.6.6    | `^3.22.0`            | `^3.22.0`   |
+| 16.6.8    | `^4.0.0`             | `^4.0.0`    |
+
+Both the app-level shiki packages AND fumadocs-core's transitive deps moved to 4.0 together.
+
+### New transitive dependency: `@shikijs/primitive`
+
+shiki 4.0 split some internals from `@shikijs/core` into a new `@shikijs/primitive` package:
+
+```
+@shikijs/core 3.23.0  →  79 KB (imports: @shikijs/types, @shikijs/vscode-textmate)
+@shikijs/core 4.0.1   →  49 KB + @shikijs/primitive 4.0.1 (28 KB) = 77 KB total
+```
+
+Net size is essentially the same. Grammar files (`@shikijs/langs/*`) are byte-for-byte identical.
+
+---
+
+## Root cause
+
+The OOM is **marginal** — not unbounded like the original issue.
+
+The Nitro SSR Vite build processes large compiled-MDX files (e.g. `testing.mdx` → 486 KB,
+`frontend-patterns.mdx` → 527 KB) through Rolldown's transform pipeline. This was already
+consuming ~3.5–3.7 GB of V8 heap. The combination of:
+
+1. `@shikijs/primitive` (new 28 KB module entering the module graph)
+2. Slightly different Rolldown module resolution patterns with 4.0's wider dep tree
+3. Both `fumadocs-core` and `@shikijs/*` bumping simultaneously
+
+…pushed the transform phase past Node.js's **default ~4 GB V8 heap ceiling**.
+
+The GitHub `ubuntu-latest` runner has **7 GB RAM** but Node.js 24's default
+`--max-old-space-size` is capped at ~4 GB. There is headroom; the JVM just doesn't know it.
+
+### What is NOT the cause
+
+- The selective-lang `shiki.ts` approach is not broken
+- The full `shiki` bundle (200+ grammars) is not being re-included
+- There is no new code correctness issue
+
+---
+
+## Comparison with original OOM (issue #234)
+
+| | Original (#234) | Current (#437) |
+|---|---|---|
+| Cause | Full `shiki` import → all 200+ grammars bundled into SSR | Marginal heap overflow from new transitive dep + fumadocs bump |
+| Failure mode | Immediate / catastrophic | Marginal — build ran 1m45s before OOM |
+| Fix required | Restrict langs (structural) | Raise heap ceiling in CI (environmental) |
+| `shiki.ts` fix | Introduced as the fix | Still intact, not the cause |
+
+---
+
+## Fix
+
+Add `NODE_OPTIONS: --max-old-space-size=6144` to the CI `build` job step.
+
+Runner has 7 GB RAM; allocating 6 GB to Node leaves 1 GB for the OS and other processes.
+This is the standard approach for marginal OOM on memory-constrained CI runners.
+
+```yaml
+# .github/workflows/ci.yml  — Build step
+      - name: Build
+        run: bun run build
+        env:
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+          NODE_OPTIONS: --max-old-space-size=6144
+```
+
+No changes to `shiki.ts`, `source.config.ts`, or `apps/web/package.json` are required.

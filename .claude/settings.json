@@ -18,13 +18,15 @@
       "source": {
         "source": "github",
         "repo": "anthropics/claude-plugins-official"
-      }
+      },
+      "autoUpdate": true
     },
     "roxabi-marketplace": {
       "source": {
         "source": "github",
         "repo": "Roxabi/roxabi-plugins"
-      }
+      },
+      "autoUpdate": true
     }
   }
 }

@@ -307,6 +307,26 @@ jobs:
         env:
           TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
           TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+          # Raise Node heap to 6 GB on the 7 GB ubuntu-latest runner.
+          # Default V8 ceiling (~4 GB) is marginal given Nitro's SSR bundle size.
+          # See artifacts/analyses/437-shiki4-oom-build.mdx for root cause.
+          NODE_OPTIONS: --max-old-space-size=6144
+
+      - name: Check SSR chunk sizes
+        # Fail if any single SSR chunk exceeds 2 MB.
+        # If the router chunk regresses (e.g. a .lazy.tsx is removed), CI fails
+        # with a clear message instead of an OOM crash.
+        run: |
+          LIMIT_KB=2000
+          failed=0
+          while IFS= read -r -d '' f; do
+            size=$(du -k "$f" | cut -f1)
+            if [ "$size" -gt "$LIMIT_KB" ]; then
+              echo "::error file=$f::SSR chunk too large: ${size} KB (limit ${LIMIT_KB} KB). Split with a .lazy.tsx file."
+              failed=1
+            fi
+          done < <(find apps/web/.output/server -name "*.mjs" -print0)
+          [ "$failed" -eq 0 ] || exit 1
 
   e2e:
     name: E2E Tests
@@ -393,7 +413,7 @@ jobs:
         run: bun test:e2e --project=chromium --reporter=list --reporter=html
 
       - name: Upload Playwright report
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-report
@@ -503,7 +523,7 @@ jobs:
         run: bun test:e2e --shard=${{ matrix.shard }}
 
       - name: Upload blob report
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: blob-report-${{ strategy.job-index }}
@@ -535,7 +555,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Download blob reports
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           pattern: blob-report-*
           merge-multiple: true
@@ -545,7 +565,7 @@ jobs:
         run: bunx playwright merge-reports --reporter html all-blob-reports
 
       - name: Upload merged report
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report-merged
           path: playwright-report/

@@ -45,12 +45,13 @@ vi.stubGlobal('cancelAnimationFrame', vi.fn())
 // Mock TanStack Router hooks used by the page component
 vi.mock('@tanstack/react-router', () => ({
   createFileRoute: () => () => ({}),
+  createLazyFileRoute: () => () => ({}),
   useNavigate: () => vi.fn(),
   Link: ({ children }: React.PropsWithChildren) => children,
 }))
 
 // Import the page component
-import { ClaudeCodePresentation } from './claude-code'
+import { ClaudeCodePresentation } from './claude-code.lazy'
 
 describe('ClaudeCodePresentation page', () => {
   it('should render all sections with correct ids when page loads', () => {
