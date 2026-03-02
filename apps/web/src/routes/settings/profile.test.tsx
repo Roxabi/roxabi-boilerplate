@@ -7,7 +7,11 @@ const captured = vi.hoisted(() => ({
 }))
 
 vi.mock('@tanstack/react-router', () => ({
-  createFileRoute: () => (config: { component: React.ComponentType }) => {
+  createFileRoute: () => (config: { component?: React.ComponentType }) => {
+    if (config.component) captured.Component = config.component
+    return { component: config.component }
+  },
+  createLazyFileRoute: () => (config: { component: React.ComponentType }) => {
     captured.Component = config.component
     return { component: config.component }
   },
@@ -84,9 +88,9 @@ mockParaglideMessages()
 const mockFetch = vi.fn()
 globalThis.fetch = mockFetch
 
-// Import after mocks to trigger createFileRoute and capture the component
+// Import after mocks to trigger createLazyFileRoute and capture the component
 import { toast } from 'sonner'
-import './profile'
+import './profile.lazy'
 
 function setupFetchProfile(data: Record<string, unknown> = {}) {
   mockFetch.mockResolvedValueOnce({
