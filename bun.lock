@@ -249,7 +249,6 @@
     },
   },
   "overrides": {
-    "@types/node": "^24",
     "ajv": ">=6.14.0",
     "lodash": ">=4.17.23",
     "minimatch": ">=10.2.3",
