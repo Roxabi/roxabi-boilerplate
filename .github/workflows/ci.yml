@@ -294,15 +294,11 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Cache Turbo
-        uses: actions/cache@v5
-        with:
-          path: .turbo
-          key: turbo-build-${{ runner.os }}-${{ github.sha }}
-          restore-keys: |
-            turbo-build-${{ runner.os }}-
-
       - name: Build
+        # No local turbo cache here — using Vercel remote cache only (TURBO_TOKEN).
+        # A stale GHA-restored .turbo/ causes turbo to clean output dirs on a "hit"
+        # but fail to restore tarballs (not saved locally on remote hits), leaving
+        # .output/ empty. Remote-only avoids the false-hit / clean-without-restore bug.
         run: bun run build
         env:
           TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
