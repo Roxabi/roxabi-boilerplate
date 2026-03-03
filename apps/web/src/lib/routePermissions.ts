@@ -162,6 +162,8 @@ export async function enforceRoutePermission(ctx: any): Promise<void> {
 // useEnrichedSession — cached enriched session via React Query
 // ---------------------------------------------------------------------------
 
+export const enrichedSessionKeys = { all: ['enriched-session'] as const }
+
 /**
  * Fetch and cache the enriched session (with RBAC permissions).
  *
@@ -172,7 +174,7 @@ export async function enforceRoutePermission(ctx: any): Promise<void> {
  */
 export function useEnrichedSession() {
   return useQuery({
-    queryKey: ['enriched-session'],
+    queryKey: enrichedSessionKeys.all,
     queryFn: fetchEnrichedSession,
     staleTime: 30_000,
     retry: false,

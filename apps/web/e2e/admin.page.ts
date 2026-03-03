@@ -1,5 +1,7 @@
 import type { Locator, Page } from '@playwright/test'
 
+const ORG_SWITCHER_EXCLUDE = /menu|theme|locale|github|sign in|sign up|open|close/i
+
 /**
  * Page Object Model for Admin flows (org admin and system admin navigation).
  *
@@ -107,10 +109,10 @@ export class AdminPage {
   }
 
   /**
-   * The members card header — the "Active Members" text shown above the members table.
+   * The members heading — the "Active Members" text shown above the members table.
    * Renders as a generic div (not a heading), so use text-based matching.
    */
-  get membersCard(): Locator {
+  get membersHeading(): Locator {
     return this.page
       .locator('main')
       .getByText(/active members/i)
@@ -213,7 +215,7 @@ export class AdminPage {
       .locator('header')
       .getByRole('button')
       .filter({ hasText: /\S/ })
-      .filter({ hasNotText: /menu|theme|locale|github|sign in|sign up|open|close/i })
+      .filter({ hasNotText: ORG_SWITCHER_EXCLUDE })
       .first()
       .waitFor({ state: 'visible', timeout })
   }
@@ -226,9 +228,7 @@ export class AdminPage {
     const header = this.page.locator('header')
     const buttons = header.getByRole('button')
     const texts = await buttons.allTextContents()
-    const idx = texts.findIndex(
-      (t) => t.trim().length > 0 && !/menu|theme|locale|github|sign in|sign up|open|close/i.test(t)
-    )
+    const idx = texts.findIndex((t) => t.trim().length > 0 && !ORG_SWITCHER_EXCLUDE.test(t))
     return idx === -1 ? null : buttons.nth(idx)
   }
 }

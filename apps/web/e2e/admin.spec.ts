@@ -32,7 +32,7 @@ test.describe('Org Admin', () => {
 
     // Assert — at least the members section heading is visible
     // (the card renders even when data is loading or populated)
-    await expect(admin.membersCard).toBeVisible({ timeout: 15_000 })
+    await expect(admin.membersHeading).toBeVisible({ timeout: 15_000 })
   })
 
   test('should search members', async ({ page }) => {
@@ -42,7 +42,7 @@ test.describe('Org Admin', () => {
     await page.waitForURL(/\/admin\/members/, { timeout: NAVIGATION_TIMEOUT })
 
     // Act — wait for member rows to be present before searching
-    await expect(admin.membersCard).toBeVisible({ timeout: 15_000 })
+    await expect(admin.membersHeading).toBeVisible({ timeout: 15_000 })
     await expect(admin.memberSearch).toBeVisible()
     await admin.memberSearch.fill('dev')
 

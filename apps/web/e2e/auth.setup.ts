@@ -34,7 +34,7 @@ setup('authenticate', async ({ page }) => {
         headers: {
           'Content-Type': 'application/json',
           // Required by better-auth's CSRF origin check (trustedOrigins = [APP_URL])
-          Origin: 'http://localhost:3000',
+          Origin: process.env.BASE_URL ?? 'http://localhost:3000',
         },
       }
     )

@@ -1,7 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { authClient } from '@/lib/authClient'
 import { hasPermission } from '@/lib/permissions'
-import { enforceRoutePermission, useEnrichedSession } from '@/lib/routePermissions'
+import {
+  enforceRoutePermission,
+  enrichedSessionKeys,
+  useEnrichedSession,
+} from '@/lib/routePermissions'
 import { ApiKeyListContent } from './-components/api-key-list-content'
 import { CreateKeyDialog } from './-components/create-key-dialog'
 import { ErrorState } from './-components/error-state'
@@ -17,8 +21,13 @@ export const Route = createFileRoute('/settings/api-keys/')({
   beforeLoad: async (ctx) => {
     await enforceRoutePermission(ctx)
     // Prime the React Query cache with the session already fetched by the root beforeLoad.
-    // This prevents useEnrichedSession() from making an extra network request on mount.
-    ctx.context.queryClient.setQueryData(['enriched-session'], ctx.context.session)
+    // Uses ensureQueryData (not setQueryData) so the value is included in the SSR dehydration
+    // snapshot and hydrated on the client without an extra /api/session network request.
+    await ctx.context.queryClient.ensureQueryData({
+      queryKey: enrichedSessionKeys.all,
+      queryFn: () => Promise.resolve(ctx.context.session ?? null),
+      staleTime: 30_000,
+    })
   },
   component: ApiKeysSettingsPage,
   head: () => ({
@@ -37,9 +46,9 @@ function ApiKeysSettingsPage() {
   const { keys, loading, error, updateKeyLocally, addKeyLocally } = useApiKeys(activeOrg?.id)
   const dialogs = useApiKeyDialogs(addKeyLocally, updateKeyLocally)
 
-  if (!activeOrg) return <NoOrgMessage />
   // Show skeleton while enriched session is loading (permissions not yet available)
   if (!enrichedSession) return <LoadingSkeleton />
+  if (!activeOrg) return <NoOrgMessage />
   // enrichedSession is non-null from here — permissions is string[] (non-optional)
   const userPermissions = enrichedSession.permissions
   if (!canRead) return <NoPermissionMessage />

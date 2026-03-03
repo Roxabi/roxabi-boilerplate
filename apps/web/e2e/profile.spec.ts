@@ -58,10 +58,6 @@ test.describe('User Profile', () => {
     await page.reload()
     // Wait for the profile input to re-populate after reload
     await expect(profile.displayNameInput).toHaveValue(newName, { timeout: 15_000 })
-
-    // Assert — the new name is still shown after reload
-    const nameAfterReload = await profile.displayNameInput.inputValue()
-    expect(nameAfterReload).toBe(newName)
   })
 
   test.afterEach(async ({ page }) => {
