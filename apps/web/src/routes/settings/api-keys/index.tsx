@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { authClient, useSession } from '@/lib/authClient'
+import { authClient } from '@/lib/authClient'
 import { hasPermission } from '@/lib/permissions'
+import { useEnrichedSession } from '@/lib/routePermissions'
 import { ApiKeyListContent } from './-components/api-key-list-content'
 import { CreateKeyDialog } from './-components/create-key-dialog'
 import { ErrorState } from './-components/error-state'
@@ -19,18 +20,20 @@ export const Route = createFileRoute('/settings/api-keys/')({
 })
 
 function ApiKeysSettingsPage() {
-  const { data: session } = useSession()
+  // useEnrichedSession fetches from /api/session which includes the RBAC permissions array.
+  // The standard better-auth useSession() does not include permissions, so hasPermission()
+  // would always return false with that hook.
+  const { data: enrichedSession } = useEnrichedSession()
   const { data: activeOrg } = authClient.useActiveOrganization()
-  const canRead = hasPermission(session, 'api_keys:read' as never)
-  const canWrite = hasPermission(session, 'api_keys:write' as never)
+  const canRead = hasPermission(enrichedSession, 'api_keys:read' as never)
+  const canWrite = hasPermission(enrichedSession, 'api_keys:write' as never)
   const { keys, loading, error, updateKeyLocally, addKeyLocally } = useApiKeys(activeOrg?.id)
   const dialogs = useApiKeyDialogs(addKeyLocally, updateKeyLocally)
-  const userPermissions: string[] =
-    session && 'permissions' in session && Array.isArray(session.permissions)
-      ? session.permissions
-      : []
+  const userPermissions: string[] = enrichedSession?.permissions ?? []
 
   if (!activeOrg) return <NoOrgMessage />
+  // Show skeleton while enriched session is loading (permissions not yet available)
+  if (!enrichedSession) return <LoadingSkeleton />
   if (!canRead) return <NoPermissionMessage />
   if (loading) return <LoadingSkeleton />
   if (error) return <ErrorState error={error} />

@@ -37,7 +37,7 @@ test.describe('Dashboard Navigation', () => {
     await dashboard.goto()
 
     await page.reload()
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('load')
 
     expect(page.url()).not.toContain('/login')
   })
@@ -60,7 +60,7 @@ test.describe('Dashboard Navigation', () => {
 
     if (links && links.length > 0 && links[0]) {
       await links[0].click()
-      await page.waitForLoadState('networkidle')
+      await page.waitForLoadState('load')
     }
 
     const newPath = await dashboard.getCurrentPath()

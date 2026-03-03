@@ -68,7 +68,9 @@ test.describe('API Key Management', () => {
     // Act — revoke the key via the confirmation dialog
     await apiKeys.revokeKey(keyName)
 
-    // Assert — after revocation the key is removed from the active list
-    await expect(page.getByText(keyName)).toBeHidden({ timeout: 15_000 })
+    // Assert — after revocation the key row shows "Revoked" status.
+    // Keys are kept in the list (not removed); only the status badge changes.
+    const revokedRow = page.getByRole('row').filter({ hasText: keyName })
+    await expect(revokedRow.getByText(/revoked/i)).toBeVisible({ timeout: 15_000 })
   })
 })

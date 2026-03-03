@@ -56,7 +56,8 @@ test.describe('User Profile', () => {
     await profile.updateName(newName)
     await expect(profile.successFeedback).toBeVisible({ timeout: 15_000 })
     await page.reload()
-    await page.waitForLoadState('networkidle')
+    // Wait for the profile input to re-populate after reload
+    await expect(profile.displayNameInput).toHaveValue(newName, { timeout: 15_000 })
 
     // Assert — the new name is still shown after reload
     const nameAfterReload = await profile.displayNameInput.inputValue()

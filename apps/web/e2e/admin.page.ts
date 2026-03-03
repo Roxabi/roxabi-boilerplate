@@ -107,10 +107,11 @@ export class AdminPage {
   }
 
   /**
-   * The members table (Card containing the table/list of members).
+   * The members card header — the "Active Members" text shown above the members table.
+   * Renders as a generic div (not a heading), so use text-based matching.
    */
   get membersCard(): Locator {
-    return this.page.getByRole('heading', { name: /active members/i }).first()
+    return this.page.getByText(/active members/i).first()
   }
 
   /**
@@ -192,6 +193,26 @@ export class AdminPage {
 
     // Wait for the menu to close
     await this.orgDropdownMenu.waitFor({ state: 'hidden', timeout: 5_000 }).catch(() => {})
+  }
+
+  /**
+   * Wait for the org switcher button to appear in the header.
+   *
+   * The sidebar nav is SSR-rendered and appears immediately, but the header user menu
+   * (including the org switcher) is rendered client-side after useSession() loads.
+   * Call this before `getCurrentOrgName()` to avoid race conditions.
+   */
+  async waitForOrgSwitcher(timeout = 15_000): Promise<void> {
+    // Wait for a header button that has actual text content (not icon-only) and is not a known
+    // utility button. Icon buttons (Language, Toggle theme, GitHub) have empty textContent even
+    // though they have an accessible name — so we require at least one non-whitespace character.
+    await this.page
+      .locator('header')
+      .getByRole('button')
+      .filter({ hasText: /\S/ })
+      .filter({ hasNotText: /menu|theme|locale|github|sign in|sign up|open|close/i })
+      .first()
+      .waitFor({ state: 'visible', timeout })
   }
 
   /**

@@ -77,6 +77,9 @@ test.describe('Org Admin', () => {
     // Assert — the header contains a button that shows the current org name
     // (OrgSwitcher renders a ghost button with the active org name)
     await expect(admin.adminNav).toBeVisible({ timeout: 15_000 })
+    // The sidebar nav is SSR-rendered; the header org switcher is client-side.
+    // Wait for client-side hydration before reading the org name.
+    await admin.waitForOrgSwitcher()
     const orgName = await admin.getCurrentOrgName()
     expect(orgName).toBeTruthy()
   })

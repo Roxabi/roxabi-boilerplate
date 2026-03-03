@@ -80,7 +80,6 @@ test.describe('Authentication — logout', () => {
     await auth.gotoLogin()
     await auth.loginWithPassword(TEST_USER_2.email, TEST_USER_2.password)
     await page.waitForURL(/\/(dashboard|org)/, { timeout: NAVIGATION_TIMEOUT })
-    await page.waitForLoadState('networkidle')
 
     await expect(auth.userMenuTrigger).toBeVisible({ timeout: 15_000 })
 

@@ -15,8 +15,17 @@ export class ProfilePage {
 
   async goto() {
     await this.page.goto('/settings/profile')
-    // Wait for the form to be present (profile data loads after session is available)
-    await this.page.waitForSelector('form', { timeout: 15_000 })
+    // Wait for the name input to be visible.
+    await this.displayNameInput.waitFor({ state: 'visible', timeout: 15_000 })
+    // The profile form populates inputs asynchronously from /api/users/me.
+    // Wait until the display name has a non-empty value before returning.
+    await this.page.waitForFunction(
+      () => {
+        const el = document.getElementById('fullName') as HTMLInputElement | null
+        return !!el && el.value.length > 0
+      },
+      { timeout: 10_000 }
+    )
   }
 
   // ---------------------------------------------------------------------------
