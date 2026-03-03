@@ -107,12 +107,17 @@ function useProfileData(user: { id: string; name: string | null } | undefined): 
 
   useEffect(() => {
     if (!user) return
-    getProfile()
+    const controller = new AbortController()
+    getProfile(controller.signal)
       .then((data) => {
         const p = parseProfileResponse(data, user.name ?? '', user.id)
         set({ ...p, loaded: true })
       })
-      .catch(() => set({ fullName: user.name ?? '', avatarSeed: user.id, loaded: true }))
+      .catch((err: unknown) => {
+        if (err instanceof Error && err.name === 'AbortError') return
+        set({ fullName: user.name ?? '', avatarSeed: user.id, loaded: true })
+      })
+    return () => controller.abort()
   }, [user, set])
 
   useEffect(() => {

@@ -1,26 +1,16 @@
 import type { UpdateProfilePayload, UserProfile } from '@repo/types'
-import { isErrorWithMessage } from '@/lib/errorUtils'
+import { isApiError, isErrorWithMessage } from '@/lib/errorUtils'
+
+export { isApiError }
 
 /**
  * Fetch the current user's profile from the API.
  * Throws on network error or non-ok response.
  */
-export async function getProfile(): Promise<UserProfile> {
-  const res = await fetch('/api/users/me', { credentials: 'include' })
-  if (!res.ok) throw new Error('fetch failed')
+export async function getProfile(signal?: AbortSignal): Promise<UserProfile> {
+  const res = await fetch('/api/users/me', { credentials: 'include', signal })
+  if (!res.ok) throw new Error(`Failed to fetch profile: ${res.status}`)
   return res.json() as Promise<UserProfile>
-}
-
-/**
- * Type guard for API errors thrown by `updateProfile`.
- * Distinguishes intentional API errors (non-ok HTTP response) from network errors.
- */
-export function isApiError(err: unknown): err is Error & { isApiError: true } {
-  return (
-    err instanceof Error &&
-    'isApiError' in err &&
-    (err as { isApiError: unknown }).isApiError === true
-  )
 }
 
 /**

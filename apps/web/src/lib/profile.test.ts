@@ -39,13 +39,15 @@ const mockProfile: UserProfile = {
   role: 'member',
   createdAt: new Date('2026-01-01'),
   updatedAt: new Date('2026-01-01'),
+  deletedAt: null,
+  deleteScheduledFor: null,
 }
 
 // ---------------------------------------------------------------------------
 // Setup
 // ---------------------------------------------------------------------------
 
-let fetchSpy: ReturnType<typeof vi.spyOn>
+let fetchSpy: ReturnType<typeof vi.spyOn> | undefined
 
 afterEach(() => {
   fetchSpy?.mockRestore()
@@ -87,7 +89,29 @@ describe('getProfile', () => {
     fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(createErrorResponse(401))
 
     // Act & Assert
-    await expect(getProfile()).rejects.toThrow('fetch failed')
+    await expect(getProfile()).rejects.toThrow('Failed to fetch profile:')
+  })
+
+  it('should propagate network errors from fetch', async () => {
+    // Arrange
+    fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Network error'))
+
+    // Act & Assert
+    await expect(getProfile()).rejects.toThrow('Network error')
+  })
+
+  it('should pass the signal to fetch when provided', async () => {
+    // Arrange
+    fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(createMockResponse(mockProfile))
+    const controller = new AbortController()
+
+    // Act
+    await getProfile(controller.signal)
+
+    // Assert
+    expect(fetchSpy).toHaveBeenCalledOnce()
+    const [, options] = fetchSpy.mock.calls[0] as [string, RequestInit]
+    expect(options.signal).toBe(controller.signal)
   })
 })
 

@@ -1,4 +1,5 @@
 import type {
+  ApiKey,
   CreateApiKeyRequest,
   CreateApiKeyResponse,
   ListApiKeysResponse,
@@ -29,9 +30,7 @@ function createErrorResponse(status: number, body?: Record<string, unknown>): Re
   return new Response('Internal Server Error', { status })
 }
 
-function makeApiKey(
-  overrides: Partial<import('@repo/types').ApiKey> = {}
-): import('@repo/types').ApiKey {
+function makeApiKey(overrides: Partial<ApiKey> = {}): ApiKey {
   return {
     id: 'key-1',
     name: 'Test Key',
