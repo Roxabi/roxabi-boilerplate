@@ -6,11 +6,10 @@ test.describe('User Profile', () => {
   // Profile tests use the shared authenticated storageState from the setup project.
   // No test.use({ storageState }) override needed — the default applies.
   //
-  // mode: 'serial' stops subsequent tests when one fails. retries: 0 prevents
-  // Playwright from retrying failed tests out of sequence — a retry would re-run
-  // the failed test while later tests are in a skipped state, causing inconsistent
-  // DB state that makes the retry fail for a different reason than the original failure.
-  test.describe.configure({ mode: 'serial', retries: 0 })
+  // mode: 'serial' stops subsequent tests when one fails — prevents later tests
+  // from running in unknown DB state. Global CI retries (2) apply at the group level,
+  // restarting the whole block from the beginning after afterEach cleanup restores state.
+  test.describe.configure({ mode: 'serial' })
   test.skip(() => !hasApi, 'Skipped: no DATABASE_URL in CI')
 
   test('should display current profile', async ({ page }) => {
