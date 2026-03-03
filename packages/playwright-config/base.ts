@@ -27,7 +27,7 @@ export const basePlaywrightConfig: PlaywrightTestConfig = {
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: process.env.CI ? 2 : undefined,
   timeout: process.env.CI ? 60_000 : 30_000,
   reporter: process.env.CI ? [['blob'], ['list']] : 'html',
   use: {

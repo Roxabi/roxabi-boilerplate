@@ -19,11 +19,9 @@ export class ProfilePage {
     // On CI cold-start the first DB-backed API response can take 30–50s. 60s matches the
     // global CI test timeout and covers both webkit slowness and API warm-up time.
     await this.page.waitForSelector('form', { timeout: 60_000 })
-    // The consent banner briefly appears on first render (TanStack Start renders the
-    // shellComponent before the root loader resolves — so loaderData is undefined on
-    // the first render, causing initialConsent=null and showBanner=true). It disappears
-    // once client-side hydration reads the consent cookie. Wait for it to be gone before
-    // interacting, otherwise it intercepts clicks on elements near the bottom of the viewport.
+    // Safety guard: after ADR-004 (getServerConsent moved to beforeLoad), the consent
+    // banner should never appear for users with a valid consent cookie. This call is a
+    // fast no-op when the banner is hidden, so it has no meaningful cost.
     await this.waitForConsentBannerGone()
   }
 
@@ -73,15 +71,10 @@ export class ProfilePage {
   /**
    * Wait until the consent banner is no longer visible.
    *
-   * Root cause: TanStack Start renders shellComponent (which mounts ConsentProvider)
-   * before the root loader resolves. On first render loaderData is undefined, so
-   * initialConsent=null and the banner shows. Once the loader data arrives and
-   * React hydrates, the banner disappears. This takes ~100–500ms on production builds.
-   *
-   * The consent cookie IS correctly set in storageState via auth.setup.ts addCookies(),
-   * but this does not help because the race is in the render pipeline, not the cookie jar.
-   *
-   * This method is a fast no-op when the banner is already hidden.
+   * After ADR-004, getServerConsent() runs in beforeLoad (not loader), so the cookie
+   * is read before shellComponent renders — the banner is never shown on first SSR
+   * paint for users with a valid consent cookie. This method is always a fast no-op
+   * in that case, but is kept as a safety guard against regressions.
    */
   async waitForConsentBannerGone(timeout = 10_000): Promise<void> {
     const banner = this.page.locator('section[aria-label*="ookie" i]')
