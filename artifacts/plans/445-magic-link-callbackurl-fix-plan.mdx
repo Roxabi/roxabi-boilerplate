@@ -1,0 +1,414 @@
+---
+title: "Plan: fix(auth): magic link verification broken — callbackURL missing + Mailpit dev infra"
+issue: 445
+spec: artifacts/specs/445-magic-link-callbackurl-fix-spec.mdx
+complexity: 6/10
+tier: F-full
+generated: "2026-03-03T00:00:00Z"
+---
+
+## Summary
+
+Fix the missing `callbackURL` in both `signIn.magicLink` call sites so Better Auth embeds the
+correct redirect in the token at request time. Add Mailpit as the dev SMTP relay (via
+docker-compose) with a new `NodemailerEmailProvider`, replacing the silent console-log fallback.
+Cover the full magic link flow with E2E tests using Mailpit's REST API for token interception.
+
+## Reference Patterns
+
+- `apps/api/src/email/resend.provider.ts` — `EmailProvider` interface impl pattern (Injectable,
+  ConfigService injection, error redaction, EmailSendException throw)
+- `apps/api/src/email/email.provider.test.ts` — unit test pattern for email providers
+  (vi.mock, createMockConfig, describe/it structure)
+- `apps/web/e2e/auth.page.ts` — AuthPage POM pattern (Locator getters, async navigation methods)
+- `docker-compose.yml` — existing service definition format (image, ports, restart, healthcheck)
+
+## Agents
+
+| Agent | Tasks | Files |
+|-------|-------|-------|
+| devops | 3 | `docker-compose.yml`, `.env.example`, `apps/api/package.json` (bun add) |
+| backend-dev | 2 | `apps/api/src/email/nodemailer.provider.ts` (new), `apps/api/src/email/email.module.ts` |
+| frontend-dev | 3 | `apps/web/src/routes/-login-handlers.ts`, `apps/web/src/routes/magic-link-sent.tsx`, `apps/web/src/routes/magic-link/verify.tsx` |
+| tester | 5 | `apps/api/src/email/nodemailer.provider.test.ts` (new), `apps/web/src/routes/magic-link/verify.test.tsx`, `apps/web/e2e/auth.page.ts`, `apps/web/e2e/testHelpers.ts`, `apps/web/e2e/auth.spec.ts` |
+
+## Consistency Report
+
+- Criteria covered: 12/12
+- Uncovered criteria: none
+- Tasks without spec backing: none
+- Gold plating exemptions: 1 (SC-12 "existing tests remain green" is a quality gate — verified
+  implicitly by `bun run test` passing throughout; no dedicated task required)
+
+---
+
+## Micro-Tasks
+
+### Slice V0: Infra — Mailpit + NodemailerEmailProvider
+
+#### Task V0.1 [RED] → tester
+- **File:** `apps/api/src/email/nodemailer.provider.test.ts` (new)
+- **Description:** Create test file with describe/it stubs for NodemailerEmailProvider — tests
+  will fail until V0.5 implements the provider
+- **Snippet:**
+  ```ts
+  import { describe, expect, it, vi } from 'vitest'
+  // import { NodemailerEmailProvider } from './nodemailer.provider.js'
+  describe('NodemailerEmailProvider', () => {
+    describe('send()', () => {
+      it('should send email via nodemailer transporter')
+      it('should throw EmailSendException on transport error')
+    })
+  })
+  ```
+- **Verify:** `grep -q 'NodemailerEmailProvider' apps/api/src/email/nodemailer.provider.test.ts`
+- **Expected:** file exists with describe structure
+- **Time:** 5 min
+- **Difficulty:** 2
+- **Traces:** SC-2
+- **Phase:** RED
+
+#### Task V0.2 [GREEN] [P] → devops
+- **File:** `docker-compose.yml`
+- **Description:** Add Mailpit service alongside postgres — SMTP on 1025, web UI on 8025
+- **Snippet:**
+  ```yaml
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: roxabi-mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+  ```
+- **Verify:** `grep -q 'mailpit' docker-compose.yml`
+- **Expected:** mailpit service present
+- **Time:** 3 min
+- **Difficulty:** 1
+- **Traces:** SC-1
+- **Phase:** GREEN
+
+#### Task V0.3 [GREEN] [P] → devops
+- **File:** `.env.example`
+- **Description:** Document SMTP_HOST and SMTP_PORT after the Resend block, with Mailpit context
+- **Snippet:**
+  ```env
+  # ─── Email — Mailpit (dev SMTP relay) ────────────────────────
+  # Start with: bun run db:up (runs alongside Postgres in Docker)
+  # Web UI: http://localhost:8025
+  SMTP_HOST=localhost
+  SMTP_PORT=1025
+  ```
+- **Verify:** `grep -q 'SMTP_HOST' .env.example`
+- **Expected:** SMTP vars present with comment
+- **Time:** 2 min
+- **Difficulty:** 1
+- **Traces:** SC-4
+- **Phase:** GREEN
+
+#### Task V0.4 [GREEN] → devops
+- **File:** `apps/api/package.json`
+- **Description:** Install nodemailer runtime dep and @types/nodemailer dev dep in apps/api
+- **Snippet:** `cd apps/api && bun add nodemailer && bun add -D @types/nodemailer`
+- **Verify:** `grep -q '"nodemailer"' apps/api/package.json`
+- **Expected:** nodemailer in dependencies
+- **Time:** 3 min
+- **Difficulty:** 1
+- **Traces:** SC-2
+- **Phase:** GREEN
+
+#### Task V0.5 [GREEN] → backend-dev
+- **File:** `apps/api/src/email/nodemailer.provider.ts` (new)
+- **Description:** Create NodemailerEmailProvider implementing EmailProvider — reads SMTP_HOST
+  and SMTP_PORT from ConfigService, creates nodemailer transporter, sends email, throws
+  EmailSendException on failure (matching ResendEmailProvider error pattern)
+- **Snippet:**
+  ```ts
+  import { Injectable, Logger } from '@nestjs/common'
+  import { ConfigService } from '@nestjs/config'
+  import nodemailer from 'nodemailer'
+  import { toError } from '../common/utils/toError.js'
+  import type { EmailProvider } from './email.provider.js'
+  import { EmailSendException } from './emailSend.exception.js'
+
+  @Injectable()
+  export class NodemailerEmailProvider implements EmailProvider {
+    private readonly logger = new Logger(NodemailerEmailProvider.name)
+    private readonly transporter: nodemailer.Transporter
+
+    constructor(config: ConfigService) {
+      const host = config.get<string>('SMTP_HOST', 'localhost')
+      const port = config.get<number>('SMTP_PORT', 1025)
+      this.transporter = nodemailer.createTransport({ host, port, secure: false })
+    }
+
+    async send(params: { to: string; subject: string; html: string; text?: string }): Promise<void> {
+      try {
+        await this.transporter.sendMail({ from: 'dev@localhost', ...params })
+      } catch (error) {
+        const cause = toError(error)
+        this.logger.error(`Failed to send email to ${params.to}: ${cause.message}`, cause.stack)
+        throw new EmailSendException(params.to, cause)
+      }
+    }
+  }
+  ```
+- **Verify:** `bun run typecheck --filter=@repo/api`
+- **Expected:** no type errors
+- **Time:** 8 min
+- **Difficulty:** 3
+- **Traces:** SC-2
+- **Phase:** GREEN
+
+#### Task V0.6 [GREEN] → backend-dev
+- **File:** `apps/api/src/email/email.module.ts`
+- **Description:** Replace `useClass: ResendEmailProvider` with a `useFactory` that selects
+  provider based on env: RESEND_API_KEY → Resend, SMTP_HOST → Nodemailer, else → Resend
+  (console-log fallback path)
+- **Snippet:**
+  ```ts
+  import { Module } from '@nestjs/common'
+  import { ConfigService } from '@nestjs/config'
+  import { EMAIL_PROVIDER } from './email.provider.js'
+  import { NodemailerEmailProvider } from './nodemailer.provider.js'
+  import { ResendEmailProvider } from './resend.provider.js'
+
+  @Module({
+    providers: [
+      {
+        provide: EMAIL_PROVIDER,
+        inject: [ConfigService],
+        useFactory: (config: ConfigService) => {
+          if (config.get('RESEND_API_KEY')) return new ResendEmailProvider(config)
+          if (config.get('SMTP_HOST')) return new NodemailerEmailProvider(config)
+          return new ResendEmailProvider(config) // console-log fallback
+        },
+      },
+    ],
+    exports: [EMAIL_PROVIDER],
+  })
+  export class EmailModule {}
+  ```
+- **Verify:** `bun run typecheck --filter=@repo/api`
+- **Expected:** no type errors
+- **Time:** 5 min
+- **Difficulty:** 2
+- **Traces:** SC-3
+- **Phase:** GREEN
+
+#### Task V0.7 [GREEN] → tester
+- **File:** `apps/api/src/email/nodemailer.provider.test.ts`
+- **Description:** Implement full unit tests for NodemailerEmailProvider — mock nodemailer
+  transporter, assert sendMail called with correct params, assert EmailSendException thrown on
+  transport error (follow resend.provider.test.ts pattern)
+- **Snippet:**
+  ```ts
+  import { Logger } from '@nestjs/common'
+  import { beforeEach, describe, expect, it, vi } from 'vitest'
+  import { EmailSendException } from './emailSend.exception.js'
+  import { NodemailerEmailProvider } from './nodemailer.provider.js'
+
+  const mockSendMail = vi.fn()
+  vi.mock('nodemailer', () => ({
+    default: { createTransport: () => ({ sendMail: mockSendMail }) },
+  }))
+  ```
+- **Verify:** `bun run test --filter=@repo/api`
+- **Expected:** all tests pass
+- **Time:** 10 min
+- **Difficulty:** 3
+- **Traces:** SC-2
+- **Phase:** GREEN
+
+#### RED-GATE V0 → tester
+- **Verify:** V0.7 complete and passing; `bun run typecheck --filter=@repo/api` exits 0
+- **Phase:** RED-GATE
+
+---
+
+### Slice V1: Fix callbackURL in signIn.magicLink
+
+#### Task V1.1 [GREEN] [P] → frontend-dev
+- **File:** `apps/web/src/routes/-login-handlers.ts`
+- **Description:** Add `callbackURL: \`${window.location.origin}/dashboard\`` to
+  `authClient.signIn.magicLink` call in `handleMagicLink` (line 83)
+- **Snippet:**
+  ```ts
+  const { error: mlError } = await authClient.signIn.magicLink({
+    email: form.magicLinkEmail,
+    callbackURL: `${window.location.origin}/dashboard`,
+  })
+  ```
+- **Verify:** `grep -q 'callbackURL' apps/web/src/routes/-login-handlers.ts`
+- **Expected:** callbackURL present in magicLink call
+- **Time:** 2 min
+- **Difficulty:** 1
+- **Traces:** SC-5
+- **Phase:** GREEN
+
+#### Task V1.2 [GREEN] [P] → frontend-dev
+- **File:** `apps/web/src/routes/magic-link-sent.tsx`
+- **Description:** Add `callbackURL: \`${window.location.origin}/dashboard\`` to
+  `authClient.signIn.magicLink` call in `handleResend` (line 66)
+- **Snippet:**
+  ```ts
+  const { error } = await authClient.signIn.magicLink({
+    email,
+    callbackURL: `${window.location.origin}/dashboard`,
+  })
+  ```
+- **Verify:** `grep -q 'callbackURL' apps/web/src/routes/magic-link-sent.tsx`
+- **Expected:** callbackURL present in resend magicLink call
+- **Time:** 2 min
+- **Difficulty:** 1
+- **Traces:** SC-6
+- **Phase:** GREEN
+
+#### RED-GATE V1 → frontend-dev
+- **Verify:** `bun run typecheck --filter=@repo/web` exits 0
+- **Phase:** RED-GATE
+
+---
+
+### Slice V2: Cleanup — remove dead callbackURL from verify flow
+
+#### Task V2.1 [GREEN] [P] → frontend-dev
+- **File:** `apps/web/src/routes/magic-link/verify.tsx`
+- **Description:** Remove `callbackURL` from `URLSearchParams` in `GuestVerifyFlow` (lines
+  154–158) — keep only `token` and `errorCallbackURL`
+- **Snippet:**
+  ```ts
+  const params = new URLSearchParams({
+    token,
+    errorCallbackURL: `${window.location.origin}/magic-link/verify`,
+  })
+  ```
+- **Verify:** `grep -qv 'callbackURL.*dashboard' apps/web/src/routes/magic-link/verify.tsx`
+- **Expected:** `callbackURL` query param no longer set in verify URL
+- **Time:** 2 min
+- **Difficulty:** 1
+- **Traces:** SC-7
+- **Phase:** REFACTOR
+
+#### Task V2.2 [GREEN] [P] → tester
+- **File:** `apps/web/src/routes/magic-link/verify.test.tsx`
+- **Description:** Remove the assertion for `callbackURL=http%3A%2F%2Flocalhost%2Fdashboard`
+  (line 180) — the `errorCallbackURL` assertion remains
+- **Verify:** `bun run test --filter=@repo/web`
+- **Expected:** all verify.test.tsx tests pass
+- **Time:** 3 min
+- **Difficulty:** 1
+- **Traces:** SC-8
+- **Phase:** REFACTOR
+
+#### RED-GATE V2 → tester
+- **Verify:** `bun run test --filter=@repo/web` exits 0
+- **Phase:** RED-GATE
+
+---
+
+### Slice V3: E2E — magic link flow
+
+#### Task V3.1 [RED] [P] → tester
+- **File:** `apps/web/e2e/auth.page.ts`
+- **Description:** Add magic link locators and `requestMagicLink(email)` method to AuthPage.
+  Tab trigger uses `getByRole('tab', { name: /magic.link/i })`. Input in active tab content.
+- **Snippet:**
+  ```ts
+  get loginMagicLinkTab(): Locator {
+    return this.page.getByRole('tab', { name: /magic.link/i })
+  }
+
+  get loginMagicLinkEmailInput(): Locator {
+    return this.page.locator('[data-state="active"] input[type="email"]')
+  }
+
+  get loginMagicLinkSubmitButton(): Locator {
+    return this.page.getByRole('button', { name: /send.magic.link/i })
+  }
+
+  async requestMagicLink(email: string): Promise<void> {
+    await this.loginMagicLinkTab.click()
+    await this.loginMagicLinkEmailInput.fill(email)
+    await this.loginMagicLinkSubmitButton.click()
+  }
+  ```
+- **Verify:** `grep -q 'requestMagicLink' apps/web/e2e/auth.page.ts`
+- **Expected:** method present
+- **Time:** 5 min
+- **Difficulty:** 2
+- **Traces:** SC-9
+- **Phase:** RED
+
+#### Task V3.2 [RED] [P] → tester
+- **File:** `apps/web/e2e/testHelpers.ts`
+- **Description:** Add `getMagicLinkToken(request)` helper — GETs Mailpit REST API at
+  `http://localhost:8025/api/v1/messages?limit=1`, parses HTML body to extract the
+  `/magic-link/verify?token=` href, returns the path
+- **Snippet:**
+  ```ts
+  export async function getMagicLinkToken(request: import('@playwright/test').APIRequestContext): Promise<string> {
+    const res = await request.get('http://localhost:8025/api/v1/messages?limit=1')
+    const { messages } = await res.json() as { messages: Array<{ HTML: string }> }
+    const html = messages[0]?.HTML ?? ''
+    const match = html.match(/href="[^"]*\/magic-link\/verify\?token=([^"&]+)/)
+    if (!match) throw new Error('Magic link token not found in Mailpit')
+    return `/magic-link/verify?token=${match[1]}`
+  }
+  ```
+- **Verify:** `grep -q 'getMagicLinkToken' apps/web/e2e/testHelpers.ts`
+- **Expected:** helper present
+- **Time:** 8 min
+- **Difficulty:** 3
+- **Traces:** SC-10
+- **Phase:** RED
+
+#### Task V3.3 [GREEN] → tester
+- **File:** `apps/web/e2e/auth.spec.ts`
+- **Description:** Add magic link happy path E2E test — request link for TEST_USER, poll Mailpit,
+  navigate to verify URL, assert URL is /dashboard and session cookie is set. Uses
+  unauthenticated context + `test.skip(() => !hasApi)` guard.
+- **Snippet:**
+  ```ts
+  test.describe('Authentication — magic link', () => {
+    test.use({ storageState: { cookies: [], origins: [] } })
+    test.skip(() => !hasApi, 'Skipped: no DATABASE_URL / Mailpit in CI')
+
+    test('should authenticate via magic link and redirect to dashboard', async ({ page, request }) => {
+      const auth = new AuthPage(page)
+      await auth.gotoLogin()
+      await auth.requestMagicLink(TEST_USER.email)
+      const verifyPath = await getMagicLinkToken(request)
+      await page.goto(verifyPath)
+      await page.waitForURL(/\/dashboard/, { timeout: NAVIGATION_TIMEOUT })
+    })
+  })
+  ```
+- **Verify:** `grep -q 'magic link' apps/web/e2e/auth.spec.ts`
+- **Expected:** test present; passes locally with Mailpit running
+- **Time:** 10 min
+- **Difficulty:** 4
+- **Traces:** SC-10
+- **Phase:** GREEN
+
+#### Task V3.4 [GREEN] → tester
+- **File:** `apps/web/e2e/auth.spec.ts`
+- **Description:** Add magic link error path E2E test — navigate to
+  `/magic-link/verify?token=invalid`, assert `role="alert"` error message is visible
+- **Snippet:**
+  ```ts
+  test('should show error for invalid magic link token', async ({ page }) => {
+    await page.goto('/magic-link/verify?token=invalid-token-xyz')
+    await expect(page.getByRole('alert')).toBeVisible({ timeout: 10_000 })
+  })
+  ```
+- **Verify:** `grep -q 'invalid magic link' apps/web/e2e/auth.spec.ts`
+- **Expected:** test present
+- **Time:** 3 min
+- **Difficulty:** 2
+- **Traces:** SC-11
+- **Phase:** GREEN
+
+#### RED-GATE V3 → tester
+- **Verify:** E2E tests pass locally (`bun run test:e2e --grep "magic link"`)
+- **Phase:** RED-GATE
