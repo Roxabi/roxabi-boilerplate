@@ -295,11 +295,11 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Build
-        # No local turbo cache here — using Vercel remote cache only (TURBO_TOKEN).
-        # A stale GHA-restored .turbo/ causes turbo to clean output dirs on a "hit"
-        # but fail to restore tarballs (not saved locally on remote hits), leaving
-        # .output/ empty. Remote-only avoids the false-hit / clean-without-restore bug.
-        run: bun run build
+        # --force bypasses turbo cache reads. Turbo's remote cache hit replays logs
+        # and cleans output dirs but silently fails to restore files, leaving
+        # apps/web/.output/ empty. --force guarantees a real build every time.
+        # Outputs are still written to remote cache after the build.
+        run: bunx turbo build --force
         env:
           TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
           TURBO_TEAM: ${{ vars.TURBO_TEAM }}
