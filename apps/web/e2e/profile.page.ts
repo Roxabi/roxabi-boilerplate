@@ -34,9 +34,10 @@ export class ProfilePage {
 
   /**
    * The DiceBear avatar preview image rendered inside AvatarCustomizationSection.
+   * Uses the specific alt text ("Avatar preview") to avoid matching the hidden nav avatar.
    */
   get avatarImage(): Locator {
-    return this.page.locator('img[alt]').first()
+    return this.page.getByAltText(/avatar preview/i)
   }
 
   /**

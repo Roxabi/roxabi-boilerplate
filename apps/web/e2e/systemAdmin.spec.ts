@@ -63,7 +63,7 @@ test.describe('System Admin', () => {
       const admin = new AdminPage(page)
       await p.goto(admin)
       await page.waitForURL(p.url, { timeout: NAVIGATION_TIMEOUT })
-      await page.waitForLoadState('networkidle')
+      await page.waitForLoadState('domcontentloaded')
       await expect(page.getByRole('heading', { name: p.heading })).toBeVisible({ timeout: 15_000 })
     })
   }
@@ -73,7 +73,11 @@ test.describe('System Admin', () => {
     const admin = new AdminPage(page)
     await admin.gotoUsers()
     await page.waitForURL(/\/admin\/users/, { timeout: NAVIGATION_TIMEOUT })
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
+
+    // Wait for at least one data row (beyond the header) so counts are meaningful.
+    // Seeded data always includes at least the dev + superadmin users.
+    await page.getByRole('row').nth(1).waitFor({ state: 'visible', timeout: 15_000 })
 
     // Capture the initial row count before filtering
     const rowsBefore = await page.getByRole('row').count()

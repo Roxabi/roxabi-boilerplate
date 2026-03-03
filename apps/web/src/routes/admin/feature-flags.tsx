@@ -23,10 +23,7 @@ function FeatureFlagsErrorBoundary({ error }: { error: Error }) {
 
 export const Route = createFileRoute('/admin/feature-flags')({
   staticData: { permission: 'role:superadmin' },
-  beforeLoad: async (ctx) => {
-    await enforceRoutePermission(ctx)
-    await ctx.context.queryClient.ensureQueryData(featureFlagQueries.list())
-  },
+  beforeLoad: enforceRoutePermission,
   component: FeatureFlagsPage,
   errorComponent: FeatureFlagsErrorBoundary,
   head: () => ({ meta: [{ title: 'Feature Flags | Admin | Roxabi' }] }),

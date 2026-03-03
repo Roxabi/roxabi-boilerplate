@@ -40,6 +40,21 @@ setup('authenticate', async ({ page }) => {
     )
   expect(setActiveResponse.ok()).toBe(true)
 
+  // Set the consent cookie programmatically so the banner is suppressed in all subsequent
+  // test pages. Clicking the UI button during hydration is unreliable (DOM node detaches).
+  // storageState() captures cookies set via document.cookie, so the banner stays dismissed.
+  // Keep policyVersion in sync with legalConfig.consentPolicyVersion in legal.config.ts.
+  await page.evaluate(() => {
+    const payload = {
+      categories: { necessary: true, analytics: false, marketing: false },
+      consentedAt: new Date().toISOString(),
+      policyVersion: '2026-02-v1',
+      action: 'rejected',
+    }
+    // biome-ignore lint/suspicious/noDocumentCookie: test setup — sets consent cookie for storageState persistence
+    document.cookie = `consent=${encodeURIComponent(JSON.stringify(payload))}; Path=/; SameSite=Lax`
+  })
+
   // Save signed-in state for reuse by other projects
   await page.context().storageState({ path: AUTH_FILE })
 })
