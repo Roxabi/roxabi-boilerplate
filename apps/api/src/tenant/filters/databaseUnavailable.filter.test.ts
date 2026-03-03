@@ -59,7 +59,7 @@ describe('DatabaseUnavailableFilter', () => {
     expect(body.timestamp).toBeDefined()
     expect(body.path).toBe('/api/tenants/query')
     expect(body.correlationId).toBe('test-correlation-id')
-    expect(body.message).toBe('Database not available')
+    expect(body.message).toBe('An internal error occurred')
     expect(body.errorCode).toBe('DATABASE_UNAVAILABLE')
   })
 

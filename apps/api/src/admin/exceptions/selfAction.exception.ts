@@ -7,5 +7,6 @@ export class SelfActionException extends Error {
   constructor() {
     super('Cannot perform this action on your own account')
     this.name = 'SelfActionException'
+    Object.setPrototypeOf(this, new.target.prototype)
   }
 }

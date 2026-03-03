@@ -16,6 +16,7 @@ import { AllExceptionsFilter } from './common/filters/allExceptions.filter.js'
 import { validate } from './config/env.validation.js'
 import { ConsentModule } from './consent/consent.module.js'
 import { DatabaseModule } from './database/database.module.js'
+import { EmailModule } from './email/email.module.js'
 import { FeatureFlagsModule } from './feature-flags/featureFlags.module.js'
 import { GdprModule } from './gdpr/gdpr.module.js'
 import { OrganizationModule } from './organization/organization.module.js'
@@ -49,6 +50,7 @@ import { UserModule } from './user/user.module.js'
     }),
     EventEmitterModule.forRoot(),
     DatabaseModule,
+    EmailModule,
     AuditModule,
     AuthModule,
     TenantModule,

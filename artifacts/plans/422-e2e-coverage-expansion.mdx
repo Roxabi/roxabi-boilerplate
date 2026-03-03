@@ -1,0 +1,160 @@
+---
+title: "Plan: Expand Playwright e2e coverage for missing flows"
+issue: 422
+spec: artifacts/specs/422-e2e-coverage-expansion.mdx
+complexity: 4/10
+tier: F-lite
+generated: "2026-02-28T12:00:00Z"
+---
+
+## Summary
+
+Add 5 Playwright e2e spec files with corresponding Page Object Models covering registration, user profile, API keys, org admin + switching, and system admin flows. Requires a new superadmin auth setup project and minor Playwright config changes.
+
+## Reference Patterns
+
+- **POM convention:** `apps/web/e2e/auth.page.ts` — class with `constructor(private page: Page)`, getter-based `Locator` properties, async helper methods, no assertions
+- **Spec convention:** `apps/web/e2e/auth.spec.ts` — `test.describe()` groups, `test.use({ storageState })` for clean contexts, `test.skip(() => !hasApi)` for CI, generous timeouts
+- **Test helpers:** `apps/web/e2e/testHelpers.ts` — exported user credential objects + utility functions
+- **Playwright config:** `packages/playwright-config/base.ts` — setup projects + browser projects with dependencies + testIgnore
+
+## Agents
+
+| Agent | Task count | Files |
+|-------|-----------|-------|
+| tester | 12 | `apps/web/e2e/registration.page.ts`, `registration.spec.ts`, `profile.page.ts`, `profile.spec.ts`, `api-keys.page.ts`, `api-keys.spec.ts`, `admin.page.ts`, `admin.spec.ts`, `system-admin.setup.ts`, `system-admin.spec.ts`, `testHelpers.ts`, `packages/playwright-config/base.ts` |
+
+## Consistency Report
+
+- Criteria covered: 15/15
+- Uncovered criteria: none
+- Tasks without spec backing: none
+- Gold plating exemptions applied: 1 (Playwright config update — infra)
+
+## Micro-Tasks
+
+### Slice V1: Registration
+
+#### Task 1: Create registration POM [P] → tester
+- **File:** `apps/web/e2e/registration.page.ts`
+- **Snippet:** `export class RegistrationPage { constructor(private page: Page) {} async goto() { await this.page.goto('/register'); await this.waitForHydration() } get nameInput(): Locator { ... } get emailInput(): Locator { ... } get passwordInput(): Locator { ... } get submitButton(): Locator { ... } get successCard(): Locator { ... } get errorAlert(): Locator { ... } get backToLoginLink(): Locator { ... } async register(name, email, password) { ... } }`
+- **Verify:** `test -f apps/web/e2e/registration.page.ts && grep -q 'class RegistrationPage' apps/web/e2e/registration.page.ts` (ready)
+- **Expected:** File exists with class definition
+- **Time:** 5 min | **Difficulty:** 2
+- **Traces:** SC-2, U1→U7 | **Phase:** GREEN
+
+#### Task 2: Create registration spec → tester
+- **File:** `apps/web/e2e/registration.spec.ts`
+- **Snippet:** `test.describe('Registration', () => { test.use({ storageState: { cookies: [], origins: [] } }); test.skip(() => !hasApi, '...'); test('form display', ...); test('successful signup with timestamp email → success card', ...); test('validation errors', ...); test('duplicate email error', ...); test('back to sign in link', ...) })`
+- **Verify:** `test -f apps/web/e2e/registration.spec.ts && grep -q "test.describe('Registration'" apps/web/e2e/registration.spec.ts` (ready)
+- **Expected:** File exists with 5 test cases
+- **Time:** 8 min | **Difficulty:** 3
+- **Traces:** SC-1, U1→U7 | **Phase:** GREEN
+
+#### RED-GATE: V1 complete → tester
+- **Verify:** `bun run test:e2e -- --grep Registration --project chromium` (deferred)
+- **Phase:** RED-GATE
+
+### Slice V2: User Profile + Settings
+
+#### Task 3: Create profile POM [P] → tester
+- **File:** `apps/web/e2e/profile.page.ts`
+- **Snippet:** `export class ProfilePage { constructor(private page: Page) {} async goto() { await this.page.goto('/settings/profile') } get displayNameInput(): Locator { ... } get avatarImage(): Locator { ... } get saveButton(): Locator { ... } get successFeedback(): Locator { ... } async updateName(name) { ... } }`
+- **Verify:** `test -f apps/web/e2e/profile.page.ts && grep -q 'class ProfilePage' apps/web/e2e/profile.page.ts` (ready)
+- **Expected:** File exists with class definition
+- **Time:** 4 min | **Difficulty:** 2
+- **Traces:** SC-4, P1→P3 | **Phase:** GREEN
+
+#### Task 4: Create profile spec → tester
+- **File:** `apps/web/e2e/profile.spec.ts`
+- **Snippet:** `test.describe('User Profile', () => { test.skip(() => !hasApi, '...'); let originalName: string; test.afterEach(async ({ page }) => { /* restore originalName */ }); test('display current profile', ...); test('update display name', ...); test('avatar visible and non-broken', ...); test('changes persist after reload', ...) })`
+- **Verify:** `test -f apps/web/e2e/profile.spec.ts && grep -q 'afterEach' apps/web/e2e/profile.spec.ts` (ready)
+- **Expected:** File exists with 4 test cases + teardown
+- **Time:** 8 min | **Difficulty:** 3
+- **Traces:** SC-3, P1→P3 | **Phase:** GREEN
+
+#### RED-GATE: V2 complete → tester
+- **Verify:** `bun run test:e2e -- --grep "User Profile" --project chromium` (deferred)
+- **Phase:** RED-GATE
+
+### Slice V3: API Key Management
+
+#### Task 5: Create API keys POM [P] → tester
+- **File:** `apps/web/e2e/api-keys.page.ts`
+- **Snippet:** `export class ApiKeysPage { constructor(private page: Page) {} async goto() { await this.page.goto('/settings/api-keys') } get keysList(): Locator { ... } get emptyState(): Locator { ... } get createButton(): Locator { ... } get keyNameInput(): Locator { ... } get createConfirmButton(): Locator { ... } get keyValueDisplay(): Locator { ... } revokeButton(keyName): Locator { ... } async createKey(name) { ... } async revokeKey(name) { ... } }`
+- **Verify:** `test -f apps/web/e2e/api-keys.page.ts && grep -q 'class ApiKeysPage' apps/web/e2e/api-keys.page.ts` (ready)
+- **Expected:** File exists with class definition
+- **Time:** 5 min | **Difficulty:** 2
+- **Traces:** SC-6, K1→K6 | **Phase:** GREEN
+
+#### Task 6: Create API keys spec → tester
+- **File:** `apps/web/e2e/api-keys.spec.ts`
+- **Snippet:** `test.describe('API Key Management', () => { test.skip(() => !hasApi, '...'); test('empty state display', ...); test('create new key and capture value', ...); test('one-time key value is non-empty', ...); test('revoke key removes from list', ...) })`
+- **Verify:** `test -f apps/web/e2e/api-keys.spec.ts && grep -q "test.describe('API Key Management'" apps/web/e2e/api-keys.spec.ts` (ready)
+- **Expected:** File exists with 4 test cases
+- **Time:** 8 min | **Difficulty:** 3
+- **Traces:** SC-5, K1→K6 | **Phase:** GREEN
+
+#### RED-GATE: V3 complete → tester
+- **Verify:** `bun run test:e2e -- --grep "API Key" --project chromium` (deferred)
+- **Phase:** RED-GATE
+
+### Slice V4: Org Admin + Switching
+
+#### Task 7: Create admin POM [P] → tester
+- **File:** `apps/web/e2e/admin.page.ts`
+- **Snippet:** `export class AdminPage { constructor(private page: Page) {} async goto(path = '/admin/members') { ... } get orgSidebarLinks(): Locator { ... } get systemSidebarLinks(): Locator { ... } get membersList(): Locator { ... } get memberSearch(): Locator { ... } get orgSettingsName(): Locator { ... } get orgSettingsSlug(): Locator { ... } get currentOrgDisplay(): Locator { ... } get orgSwitcher(): Locator { ... } async switchOrg(orgName) { ... } }`
+- **Verify:** `test -f apps/web/e2e/admin.page.ts && grep -q 'class AdminPage' apps/web/e2e/admin.page.ts` (ready)
+- **Expected:** File exists with class definition covering org + system locators
+- **Time:** 6 min | **Difficulty:** 3
+- **Traces:** SC-11, N1→N4, O0→O3, S1 | **Phase:** GREEN
+
+#### Task 8: Create admin spec → tester
+- **File:** `apps/web/e2e/admin.spec.ts`
+- **Snippet:** `test.describe('Org Admin', () => { test.skip(() => !hasApi, '...'); test('sidebar org links visible', ...); test('member list display', ...); test('member search filters', ...); test('org settings display name and slug', ...); test('current org display visible', ...); test('org switcher switches active org', ...) })`
+- **Verify:** `test -f apps/web/e2e/admin.spec.ts && grep -q "org switcher" apps/web/e2e/admin.spec.ts` (ready)
+- **Expected:** File exists with 6 test cases including org switching
+- **Time:** 10 min | **Difficulty:** 4
+- **Traces:** SC-7, N1→N4, O0→O3 | **Phase:** GREEN
+
+#### RED-GATE: V4 complete → tester
+- **Verify:** `bun run test:e2e -- --grep "Org Admin" --project chromium` (deferred)
+- **Phase:** RED-GATE
+
+### Slice V5: System Admin
+
+#### Task 9: Add SUPERADMIN_USER to testHelpers [P] → tester
+- **File:** `apps/web/e2e/testHelpers.ts`
+- **Snippet:** `export const SUPERADMIN_USER = { email: 'superadmin@roxabi.local', password: 'password123', name: 'Super Admin' }`
+- **Verify:** `grep -q 'SUPERADMIN_USER' apps/web/e2e/testHelpers.ts` (ready)
+- **Expected:** Export exists
+- **Time:** 2 min | **Difficulty:** 1
+- **Traces:** SC-10 | **Phase:** GREEN
+
+#### Task 10: Create system-admin auth setup → tester
+- **File:** `apps/web/e2e/system-admin.setup.ts`
+- **Snippet:** `import { test as setup } from '@playwright/test'; import { SUPERADMIN_USER } from './testHelpers'; import { AuthPage } from './auth.page'; const superadminAuthFile = './apps/web/e2e/.auth/superadmin.json'; setup('authenticate as superadmin', async ({ page }) => { const auth = new AuthPage(page); await auth.gotoLogin(); await auth.loginWithPassword(SUPERADMIN_USER.email, SUPERADMIN_USER.password); await page.waitForURL(...); await page.context().storageState({ path: superadminAuthFile }) })`
+- **Verify:** `test -f apps/web/e2e/system-admin.setup.ts && grep -q 'superadmin' apps/web/e2e/system-admin.setup.ts` (ready)
+- **Expected:** Setup file authenticates as superadmin and saves state
+- **Time:** 5 min | **Difficulty:** 2
+- **Traces:** SC-9 | **Phase:** GREEN
+
+#### Task 11: Update Playwright config for superadmin setup → tester
+- **File:** `packages/playwright-config/base.ts`
+- **Snippet:** Add `system-admin-setup` project (testMatch: `/system-admin\.setup\.ts/`), update browser projects' `testIgnore` to also exclude `system-admin.setup.ts`, add `superadminAuthFile` const
+- **Verify:** `grep -q 'system-admin-setup' packages/playwright-config/base.ts` (ready)
+- **Expected:** New setup project registered, browser projects ignore it
+- **Time:** 5 min | **Difficulty:** 3
+- **Traces:** SC-9 (infra) | **Phase:** GREEN
+
+#### Task 12: Create system-admin spec → tester
+- **File:** `apps/web/e2e/system-admin.spec.ts`
+- **Snippet:** `test.describe('System Admin', () => { test.use({ storageState: superadminAuthFile }); test.skip(() => !hasApi, '...'); test('system sidebar links visible for superadmin', ...); test('users list with filters', ...); test('organizations list', ...); test('feature flags page', ...); test('audit logs page', ...); test('system settings page', ...) })`
+- **Verify:** `test -f apps/web/e2e/system-admin.spec.ts && grep -q "test.describe('System Admin'" apps/web/e2e/system-admin.spec.ts` (ready)
+- **Expected:** File exists with 6 test cases using superadmin session
+- **Time:** 10 min | **Difficulty:** 4
+- **Traces:** SC-8, S1→S7 | **Phase:** GREEN
+
+#### RED-GATE: V5 complete → tester
+- **Verify:** `bun run test:e2e -- --grep "System Admin" --project chromium` (deferred)
+- **Phase:** RED-GATE

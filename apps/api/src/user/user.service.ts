@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common'
 import { EventEmitter2 } from '@nestjs/event-emitter'
 import type { OrgOwnershipResolution } from '@repo/types'
 import { and, eq, isNotNull } from 'drizzle-orm'
+import { DELETION_GRACE_PERIOD_MS } from '../common/constants.js'
 import { USER_SOFT_DELETED, UserSoftDeletedEvent } from '../common/events/userSoftDeleted.event.js'
 import { DRIZZLE, type DrizzleDB, type DrizzleTx } from '../database/drizzle.provider.js'
 import { whereActive } from '../database/helpers/whereActive.js'
@@ -43,14 +44,14 @@ const profileColumns = {
 
 /** Simple in-memory TTL cache for soft-delete status lookups */
 const SOFT_DELETE_CACHE_TTL_MS = 60_000
-const softDeleteCache = new Map<
-  string,
-  { value: { deletedAt: Date | null; deleteScheduledFor: Date | null } | null; expiresAt: number }
->()
 
 @Injectable()
 export class UserService {
   private readonly logger = new Logger(UserService.name)
+  private readonly softDeleteCache = new Map<
+    string,
+    { value: { deletedAt: Date | null; deleteScheduledFor: Date | null } | null; expiresAt: number }
+  >()
 
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleDB,
@@ -58,7 +59,7 @@ export class UserService {
   ) {}
 
   async getSoftDeleteStatus(userId: string) {
-    const cached = softDeleteCache.get(userId)
+    const cached = this.softDeleteCache.get(userId)
     if (cached && cached.expiresAt > Date.now()) {
       return cached.value
     }
@@ -70,13 +71,16 @@ export class UserService {
       .limit(1)
 
     const result = user ?? null
-    softDeleteCache.set(userId, { value: result, expiresAt: Date.now() + SOFT_DELETE_CACHE_TTL_MS })
+    this.softDeleteCache.set(userId, {
+      value: result,
+      expiresAt: Date.now() + SOFT_DELETE_CACHE_TTL_MS,
+    })
     return result
   }
 
   /** Invalidate the soft-delete status cache for a user */
   private invalidateSoftDeleteCache(userId: string) {
-    softDeleteCache.delete(userId)
+    this.softDeleteCache.delete(userId)
   }
 
   async getProfile(userId: string) {
@@ -266,7 +270,7 @@ export class UserService {
     await this.validateSoftDeleteRequest(userId, confirmEmail)
 
     const now = new Date()
-    const deleteScheduledFor = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+    const deleteScheduledFor = new Date(now.getTime() + DELETION_GRACE_PERIOD_MS)
 
     const updated = await this.db.transaction(async (tx) => {
       for (const resolution of orgResolutions) {
@@ -345,12 +349,8 @@ export class UserService {
     return user
   }
 
-  private async anonymizeUserRecords(
-    tx: DrizzleTx,
-    userId: string,
-    originalEmail: string,
-    now: Date
-  ) {
+  /** @internal Used by PurgeService for cron-based anonymization delegation. */
+  async anonymizeUserRecords(tx: DrizzleTx, userId: string, originalEmail: string, now: Date) {
     const anonymizedEmail = `deleted-${crypto.randomUUID()}@anonymized.local`
 
     // Anonymize user record

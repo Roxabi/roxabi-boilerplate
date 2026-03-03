@@ -7,5 +7,6 @@ export class SelfRemovalException extends Error {
   constructor() {
     super('Cannot remove yourself from the organization')
     this.name = 'SelfRemovalException'
+    Object.setPrototypeOf(this, new.target.prototype)
   }
 }

@@ -1,7 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { DashboardPage } from './dashboard.page'
-
-const hasApi = Boolean(process.env.DATABASE_URL) || !process.env.CI
+import { hasApi } from './testHelpers'
 
 test.describe('Dashboard Navigation', () => {
   // Dashboard tests require the API server (needs DATABASE_URL).
@@ -38,7 +37,7 @@ test.describe('Dashboard Navigation', () => {
     await dashboard.goto()
 
     await page.reload()
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('load')
 
     expect(page.url()).not.toContain('/login')
   })
@@ -61,7 +60,7 @@ test.describe('Dashboard Navigation', () => {
 
     if (links && links.length > 0 && links[0]) {
       await links[0].click()
-      await page.waitForLoadState('networkidle')
+      await page.waitForLoadState('load')
     }
 
     const newPath = await dashboard.getCurrentPath()

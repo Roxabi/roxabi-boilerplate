@@ -10,6 +10,7 @@ import { AdminMemberNotFoundException } from './exceptions/memberNotFound.except
 import { AdminRoleNotFoundException } from './exceptions/roleNotFound.exception.js'
 import { SelfRemovalException } from './exceptions/selfRemoval.exception.js'
 import { SelfRoleChangeException } from './exceptions/selfRoleChange.exception.js'
+import { escapeIlikePattern } from './utils/escapeIlikePattern.js'
 
 /**
  * AdminMembersService intentionally uses the raw DRIZZLE connection (not TenantService)
@@ -64,7 +65,7 @@ export class AdminMembersService {
   private buildMemberSearchClause(orgId: string, search?: string) {
     const conditions = [eq(members.organizationId, orgId)]
     if (search) {
-      const pattern = `%${search}%`
+      const pattern = `%${escapeIlikePattern(search)}%`
       const searchCondition = or(ilike(users.name, pattern), ilike(users.email, pattern))
       if (searchCondition) conditions.push(searchCondition)
     }

@@ -13,9 +13,10 @@ import { magicLink } from 'better-auth/plugins/magic-link'
 import { organization } from 'better-auth/plugins/organization'
 import { eq } from 'drizzle-orm'
 import { buildFrontendUrl } from '../common/url.util.js'
+import { toError } from '../common/utils/toError.js'
 import type { DrizzleDB } from '../database/drizzle.provider.js'
 import { users } from '../database/schema/auth.schema.js'
-import type { EmailProvider } from './email/email.provider.js'
+import type { EmailProvider } from '../email/email.provider.js'
 
 const logger = new Logger('AuthInstance')
 
@@ -71,18 +72,27 @@ function buildEmailAndPasswordConfig(emailProvider: EmailProvider, config: AuthI
       url: string
     }) {
       const emailUrl = buildFrontendUrl(url, config.appURL, '/reset-password/confirm')
+
+      let emailContent: { html: string; text?: string; subject: string }
       try {
         const locale = (user as UserWithLocale).locale ?? 'en'
         const { html, text, subject } = await renderResetEmail(emailUrl, locale, config.appURL)
-        await emailProvider.send({ to: user.email, subject, html, text })
-      } catch (error) {
-        logger.error('Failed to render reset password email, using fallback', error)
-        await emailProvider.send({
-          to: user.email,
+        emailContent = { html, text, subject }
+      } catch {
+        logger.warn('Failed to render reset password email template, using plain fallback')
+        emailContent = {
           subject: 'Reset your password',
           html: `<p>Click <a href="${escapeHtml(emailUrl)}">here</a> to reset your password.</p>`,
           text: `Reset your password: ${emailUrl}`,
-        })
+        }
+      }
+
+      try {
+        await emailProvider.send({ to: user.email, ...emailContent })
+      } catch (error) {
+        const cause = toError(error)
+        logger.error(`Failed to send reset password email to ${user.email}`, cause.stack)
+        throw new APIError('INTERNAL_SERVER_ERROR', { message: 'EMAIL_SEND_FAILED' })
       }
     },
   }
@@ -103,6 +113,8 @@ function buildEmailVerificationConfig(emailProvider: EmailProvider, config: Auth
       url: string
     }) {
       const emailUrl = buildFrontendUrl(url, config.appURL, '/verify-email')
+
+      let emailContent: { html: string; text?: string; subject: string }
       try {
         const locale = (user as UserWithLocale).locale ?? 'en'
         const { html, text, subject } = await renderVerificationEmail(
@@ -110,15 +122,22 @@ function buildEmailVerificationConfig(emailProvider: EmailProvider, config: Auth
           locale,
           config.appURL
         )
-        await emailProvider.send({ to: user.email, subject, html, text })
-      } catch (error) {
-        logger.error('Failed to render verification email, using fallback', error)
-        await emailProvider.send({
-          to: user.email,
+        emailContent = { html, text, subject }
+      } catch {
+        logger.warn('Failed to render verification email template, using plain fallback')
+        emailContent = {
           subject: 'Verify your email',
           html: `<p>Click <a href="${escapeHtml(emailUrl)}">here</a> to verify your email.</p>`,
           text: `Verify your email: ${emailUrl}`,
-        })
+        }
+      }
+
+      try {
+        await emailProvider.send({ to: user.email, ...emailContent })
+      } catch (error) {
+        const cause = toError(error)
+        logger.error(`Failed to send verification email to ${user.email}`, cause.stack)
+        throw new APIError('INTERNAL_SERVER_ERROR', { message: 'EMAIL_SEND_FAILED' })
       }
     },
   }
@@ -142,18 +161,26 @@ function buildMagicLinkPlugin(
         throw new APIError('BAD_REQUEST', { message: 'USER_NOT_FOUND' })
       }
 
+      let emailContent: { html: string; text?: string; subject: string }
       try {
         const locale = userData.locale ?? 'en'
         const { html, text, subject } = await renderMagicLinkEmail(emailUrl, locale, config.appURL)
-        await emailProvider.send({ to: email, subject, html, text })
-      } catch (error) {
-        logger.error('Failed to render magic link email, using fallback', error)
-        await emailProvider.send({
-          to: email,
+        emailContent = { html, text, subject }
+      } catch {
+        logger.warn('Failed to render magic link email template, using plain fallback')
+        emailContent = {
           subject: 'Sign in to Roxabi',
           html: `<p>Click <a href="${escapeHtml(emailUrl)}">here</a> to sign in.</p>`,
           text: `Sign in to Roxabi: ${emailUrl}`,
-        })
+        }
+      }
+
+      try {
+        await emailProvider.send({ to: email, ...emailContent })
+      } catch (error) {
+        const cause = toError(error)
+        logger.error(`Failed to send magic link email to ${email}`, cause.stack)
+        throw new APIError('INTERNAL_SERVER_ERROR', { message: 'EMAIL_SEND_FAILED' })
       }
     },
   })

@@ -7,5 +7,6 @@ export class OrgDepthExceededException extends Error {
   constructor() {
     super('Maximum organization depth of 3 levels exceeded')
     this.name = 'OrgDepthExceededException'
+    Object.setPrototypeOf(this, new.target.prototype)
   }
 }

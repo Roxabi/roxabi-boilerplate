@@ -7,5 +7,6 @@ export class NotDeletedException extends Error {
   constructor(resource: string, id: string) {
     super(`${resource} ${id} is not deleted`)
     this.name = 'NotDeletedException'
+    Object.setPrototypeOf(this, new.target.prototype)
   }
 }

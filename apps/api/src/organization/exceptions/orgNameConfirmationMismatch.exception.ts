@@ -8,5 +8,6 @@ export class OrgNameConfirmationMismatchException extends Error {
   constructor() {
     super('Organization name confirmation does not match')
     this.name = 'OrgNameConfirmationMismatchException'
+    Object.setPrototypeOf(this, new.target.prototype)
   }
 }

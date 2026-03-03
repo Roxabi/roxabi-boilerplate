@@ -23,7 +23,10 @@ import { SkipOrg } from '../common/decorators/skipOrg.decorator.js'
 import { ZodValidationPipe } from '../common/pipes/zodValidation.pipe.js'
 import { AdminUsersLifecycleService } from './adminUsers.lifecycle.js'
 import { AdminUsersService } from './adminUsers.service.js'
-import { AdminExceptionFilter } from './filters/adminException.filter.js'
+import { AdminBadRequestFilter } from './filters/adminBadRequest.filter.js'
+import { AdminConflictFilter } from './filters/adminConflict.filter.js'
+import { AdminInternalErrorFilter } from './filters/adminInternalError.filter.js'
+import { AdminNotFoundFilter } from './filters/adminNotFound.filter.js'
 
 export const updateUserSchema = z.object({
   name: z.string().min(1).max(255).optional(),
@@ -54,7 +57,12 @@ type BanUserDto = z.infer<typeof banUserSchema>
 
 @ApiTags('Admin Users')
 @ApiBearerAuth()
-@UseFilters(AdminExceptionFilter)
+@UseFilters(
+  AdminNotFoundFilter,
+  AdminConflictFilter,
+  AdminBadRequestFilter,
+  AdminInternalErrorFilter
+)
 @Throttle({ global: { ttl: 60_000, limit: 30 } })
 @Roles('superadmin')
 @SkipOrg()

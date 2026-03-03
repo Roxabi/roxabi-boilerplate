@@ -8,5 +8,6 @@ export class OrgNotDeletedException extends Error {
   constructor(public readonly orgId: string) {
     super(`Organization ${orgId} is not scheduled for deletion`)
     this.name = 'OrgNotDeletedException'
+    Object.setPrototypeOf(this, new.target.prototype)
   }
 }

@@ -1,14 +1,16 @@
 import type { Page } from '@playwright/test'
-import { AuthPage } from './auth.page'
 
 /**
  * Shared test utilities for E2E tests.
  * Provides helper functions for common test operations.
  */
 
-/**
- * Test user credentials for E2E tests
- */
+/** Whether the API is available (DATABASE_URL set, or not in CI). */
+export const hasApi = Boolean(process.env.DATABASE_URL) || !process.env.CI
+
+/** Generous timeout for navigations in CI (covers cold-start API responses). */
+export const NAVIGATION_TIMEOUT = 45_000
+
 /** Credentials matching apps/api/scripts/fixtures/auth.fixture.ts */
 export const TEST_USER = {
   email: 'dev@roxabi.local',
@@ -22,73 +24,34 @@ export const TEST_USER_2 = {
   name: 'Admin User',
 }
 
-/**
- * Login a user in E2E tests
- * @param page - Playwright page object
- * @param email - User email
- * @param password - User password
- */
-export async function loginUser(
-  page: Page,
-  email: string = TEST_USER.email,
-  password: string = TEST_USER.password
-) {
-  const auth = new AuthPage(page)
-  await auth.gotoLogin()
-  await auth.loginWithPassword(email, password)
-  await page.waitForURL(/\/(dashboard|org)/, { timeout: 30000 })
-  return auth
+export const SUPERADMIN_USER = {
+  email: 'superadmin@roxabi.local',
+  password: 'password123',
+  name: 'Super Admin',
 }
 
-/**
- * Logout a user in E2E tests
- * @param page - Playwright page object
- */
-export async function logoutUser(page: Page) {
-  const auth = new AuthPage(page)
-  await auth.logout()
-  await page.waitForURL(/\/(login|$)/, { timeout: 30000 })
-}
+/** Path to the regular-user auth storage state file (relative to repo root). */
+export const AUTH_FILE = './apps/web/e2e/.auth/user.json'
+
+/** Path to the superadmin auth storage state file (relative to repo root). */
+export const SUPERADMIN_AUTH_FILE = './apps/web/e2e/.auth/superadmin.json'
 
 /**
- * Check if user is authenticated (basic check)
- * @param page - Playwright page object
- * @returns true if user appears authenticated
- */
-export async function isAuthenticated(page: Page): Promise<boolean> {
-  const url = page.url()
-  // User is authenticated if NOT on login page
-  return !url.includes('/login')
-}
-
-/**
- * Clear session cookies
+ * Wait for React hydration to complete.
+ * TanStack Start SSR renders the HTML, but event handlers (e.g. e.preventDefault())
+ * are only attached after React hydrates. Interacting before hydration causes
+ * plain HTML form submits instead of JS-handled ones.
+ *
  * @param page - Playwright page object
  */
-export async function clearSession(page: Page) {
-  await page.context().clearCookies()
-  await page.goto('/')
-}
-
-/**
- * Wait for navigation to a specific path
- * @param page - Playwright page object
- * @param pathPattern - Path pattern to match (regex or string)
- */
-export async function waitForNavigation(page: Page, pathPattern: string | RegExp) {
-  await page.waitForURL(typeof pathPattern === 'string' ? new RegExp(pathPattern) : pathPattern)
-}
-
-/**
- * Get current user email from page (if displayed)
- * @param page - Playwright page object
- * @returns User email if visible, null otherwise
- */
-export async function getUserEmail(page: Page): Promise<string | null> {
-  try {
-    const emailElement = await page.getByText(/@/).first()
-    return (await emailElement.textContent()) || null
-  } catch {
-    return null
-  }
+export async function waitForReactHydration(page: Page): Promise<void> {
+  await page.waitForFunction(
+    () => {
+      const btn = document.querySelector('button[type="submit"]')
+      if (!btn) return false
+      // React attaches __reactFiber$ / __reactProps$ to DOM nodes during hydration
+      return Object.keys(btn).some((k) => k.startsWith('__react'))
+    },
+    { timeout: 15000 }
+  )
 }

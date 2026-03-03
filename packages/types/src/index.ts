@@ -1,6 +1,7 @@
 export * from './account'
 export * from './admin'
 export * from './api'
+export * from './apiKeys'
 export * from './audit'
 export * from './auth'
 export * from './avatar'

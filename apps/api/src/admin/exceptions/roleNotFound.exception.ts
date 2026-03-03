@@ -7,5 +7,6 @@ export class AdminRoleNotFoundException extends Error {
   constructor(roleId: string) {
     super(`Role "${roleId}" not found`)
     this.name = 'AdminRoleNotFoundException'
+    Object.setPrototypeOf(this, new.target.prototype)
   }
 }

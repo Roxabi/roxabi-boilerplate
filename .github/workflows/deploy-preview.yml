@@ -156,6 +156,7 @@ jobs:
             if URL=$(vercel deploy --token "$VERCEL_TOKEN" \
               --build-env "DATABASE_URL=$DATABASE_URL" \
               --env "DATABASE_URL=$DATABASE_URL" \
+              --env "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" \
               --env "SWAGGER_ENABLED=true" \
               --env "RATE_LIMIT_ENABLED=false"); then break; fi
             if [ "$attempt" -lt 3 ]; then

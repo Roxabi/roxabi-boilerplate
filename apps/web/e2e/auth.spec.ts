@@ -1,9 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { AuthPage } from './auth.page'
-import { TEST_USER_2 } from './testHelpers'
-
-const hasApi = Boolean(process.env.DATABASE_URL) || !process.env.CI
-const NAVIGATION_TIMEOUT = 45_000
+import { hasApi, NAVIGATION_TIMEOUT, TEST_USER_2 } from './testHelpers'
 
 // Tests that need a clean (unauthenticated) browser context.
 // Using test.use() avoids clearCookies() which could invalidate the
@@ -83,7 +80,6 @@ test.describe('Authentication — logout', () => {
     await auth.gotoLogin()
     await auth.loginWithPassword(TEST_USER_2.email, TEST_USER_2.password)
     await page.waitForURL(/\/(dashboard|org)/, { timeout: NAVIGATION_TIMEOUT })
-    await page.waitForLoadState('networkidle')
 
     await expect(auth.userMenuTrigger).toBeVisible({ timeout: 15_000 })
 

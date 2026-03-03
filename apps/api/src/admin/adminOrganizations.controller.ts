@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -23,7 +24,10 @@ import { ZodValidationPipe } from '../common/pipes/zodValidation.pipe.js'
 import { AdminMembersService } from './adminMembers.service.js'
 import { AdminOrganizationsDeletionService } from './adminOrganizations.deletion.js'
 import { AdminOrganizationsService } from './adminOrganizations.service.js'
-import { AdminExceptionFilter } from './filters/adminException.filter.js'
+import { AdminBadRequestFilter } from './filters/adminBadRequest.filter.js'
+import { AdminConflictFilter } from './filters/adminConflict.filter.js'
+import { AdminInternalErrorFilter } from './filters/adminInternalError.filter.js'
+import { AdminNotFoundFilter } from './filters/adminNotFound.filter.js'
 
 const changeMemberRoleSchema = z.object({
   roleId: z.string().uuid(),
@@ -55,9 +59,26 @@ const updateOrgSchema = z.object({
 type CreateOrgDto = z.infer<typeof createOrgSchema>
 type UpdateOrgDto = z.infer<typeof updateOrgSchema>
 
+const listOrgsQuerySchema = z.object({
+  cursor: z.string().min(1).optional(),
+  limit: z.preprocess((val) => {
+    if (val === undefined || val === null || val === '') return 20
+    const n = Number(val)
+    return Number.isNaN(n) ? 20 : Math.min(Math.max(Math.floor(n), 1), 100)
+  }, z.number().int()),
+  status: z.enum(['active', 'archived']).optional(),
+  search: z.string().max(200).optional(),
+  view: z.enum(['list', 'tree']).optional(),
+})
+
 @ApiTags('Admin Organizations')
 @ApiBearerAuth()
-@UseFilters(AdminExceptionFilter)
+@UseFilters(
+  AdminNotFoundFilter,
+  AdminConflictFilter,
+  AdminBadRequestFilter,
+  AdminInternalErrorFilter
+)
 @Throttle({ global: { ttl: 60_000, limit: 30 } })
 @Roles('superadmin')
 @SkipOrg()
@@ -79,16 +100,24 @@ export class AdminOrganizationsController {
     @Query('search') search?: string,
     @Query('view') view?: string
   ) {
-    if (view === 'tree') {
+    const parsed = listOrgsQuerySchema.safeParse({
+      cursor: cursor || undefined,
+      limit,
+      status: status || undefined,
+      search: search?.trim() || undefined,
+      view: view || undefined,
+    })
+
+    if (!parsed.success) {
+      throw new BadRequestException(parsed.error.flatten().fieldErrors)
+    }
+
+    if (parsed.data.view === 'tree') {
       return this.adminOrganizationsService.listOrganizationsForTree()
     }
 
-    const safeLimit = Math.min(Math.max(Number(limit) || 20, 1), 100)
-    const filters = {
-      status: status || undefined,
-      search: search?.trim() || undefined,
-    }
-    return this.adminOrganizationsService.listOrganizations(filters, cursor || undefined, safeLimit)
+    const { limit: safeLimit, cursor: safeCursor, view: _view, ...filters } = parsed.data
+    return this.adminOrganizationsService.listOrganizations(filters, safeCursor, safeLimit)
   }
 
   @Post()

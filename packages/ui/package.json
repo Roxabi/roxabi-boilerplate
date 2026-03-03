@@ -31,7 +31,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "culori": "^4.0.2",
-    "lucide-react": "^0.575.0",
+    "lucide-react": "^0.576.0",
     "radix-ui": "^1.4.3",
     "react-intersection-observer": "^10.0.2",
     "sonner": "^2.0.7",

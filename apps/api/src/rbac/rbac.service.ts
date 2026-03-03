@@ -8,6 +8,7 @@ import { TenantService } from '../tenant/tenant.service.js'
 import { DefaultRoleException } from './exceptions/defaultRole.exception.js'
 import { MemberNotFoundException } from './exceptions/memberNotFound.exception.js'
 import { OwnershipConstraintException } from './exceptions/ownershipConstraint.exception.js'
+import { RoleInsertFailedException } from './exceptions/roleInsertFailed.exception.js'
 import { RoleNotFoundException } from './exceptions/roleNotFound.exception.js'
 import { RoleSlugConflictException } from './exceptions/roleSlugConflict.exception.js'
 import { DEFAULT_ROLES } from './rbac.constants.js'
@@ -85,7 +86,7 @@ export class RbacService {
         })
         .returning()
 
-      if (!role) throw new Error('Failed to insert role')
+      if (!role) throw new RoleInsertFailedException()
 
       await this.syncPermissions(tx, role.id, data.permissions)
 

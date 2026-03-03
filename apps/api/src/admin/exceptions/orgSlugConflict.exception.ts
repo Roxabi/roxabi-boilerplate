@@ -7,5 +7,6 @@ export class OrgSlugConflictException extends Error {
   constructor() {
     super('An organization with this slug already exists')
     this.name = 'OrgSlugConflictException'
+    Object.setPrototypeOf(this, new.target.prototype)
   }
 }

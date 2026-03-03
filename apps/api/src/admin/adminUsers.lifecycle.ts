@@ -1,8 +1,8 @@
 import { Inject, Injectable, Logger } from '@nestjs/common'
-import type { AuditAction } from '@repo/types'
 import { eq } from 'drizzle-orm'
 import { ClsService } from 'nestjs-cls'
 import { AuditService } from '../audit/audit.service.js'
+import { DELETION_GRACE_PERIOD_MS } from '../common/constants.js'
 import { DRIZZLE, type DrizzleDB, type DrizzleTx } from '../database/drizzle.provider.js'
 import { users } from '../database/schema/auth.schema.js'
 import { findUserSnapshotOrThrow, isLastActiveSuperadmin } from './adminUsers.shared.js'
@@ -11,6 +11,7 @@ import { NotDeletedException } from './exceptions/notDeleted.exception.js'
 import { SelfActionException } from './exceptions/selfAction.exception.js'
 import { SuperadminProtectionException } from './exceptions/superadminProtection.exception.js'
 import { UserAlreadyBannedException } from './exceptions/userAlreadyBanned.exception.js'
+import { logUserAudit } from './utils/logAudit.js'
 
 /**
  * AdminUsersLifecycleService -- lifecycle state-transition operations for admin user management.
@@ -55,7 +56,16 @@ export class AdminUsersLifecycleService {
       { isolationLevel: 'serializable' }
     )
 
-    this.logUserAudit('user.banned', userId, actorId, user, updatedUser)
+    logUserAudit(
+      this.auditService,
+      this.logger,
+      this.cls,
+      'user.banned',
+      userId,
+      actorId,
+      user,
+      updatedUser
+    )
 
     return updatedUser
   }
@@ -89,7 +99,16 @@ export class AdminUsersLifecycleService {
       .where(eq(users.id, userId))
       .returning()
 
-    this.logUserAudit('user.unbanned', userId, actorId, user, updatedUser)
+    logUserAudit(
+      this.auditService,
+      this.logger,
+      this.cls,
+      'user.unbanned',
+      userId,
+      actorId,
+      user,
+      updatedUser
+    )
 
     return updatedUser
   }
@@ -106,7 +125,7 @@ export class AdminUsersLifecycleService {
     this.validateDeleteEligibility(user, userId)
 
     const now = new Date()
-    const scheduledFor = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+    const scheduledFor = new Date(now.getTime() + DELETION_GRACE_PERIOD_MS)
 
     const [updatedUser] = await this.db
       .update(users)
@@ -114,7 +133,16 @@ export class AdminUsersLifecycleService {
       .where(eq(users.id, userId))
       .returning()
 
-    this.logUserAudit('user.deleted', userId, actorId, user, updatedUser)
+    logUserAudit(
+      this.auditService,
+      this.logger,
+      this.cls,
+      'user.deleted',
+      userId,
+      actorId,
+      user,
+      updatedUser
+    )
 
     return updatedUser
   }
@@ -147,34 +175,17 @@ export class AdminUsersLifecycleService {
       .where(eq(users.id, userId))
       .returning()
 
-    this.logUserAudit('user.restored', userId, actorId, user, updatedUser)
+    logUserAudit(
+      this.auditService,
+      this.logger,
+      this.cls,
+      'user.restored',
+      userId,
+      actorId,
+      user,
+      updatedUser
+    )
 
     return updatedUser
-  }
-
-  private logUserAudit(
-    action: AuditAction,
-    userId: string,
-    actorId: string,
-    before: Record<string, unknown> | undefined,
-    after: Record<string, unknown> | undefined
-  ) {
-    this.auditService
-      .log({
-        actorId,
-        actorType: 'user',
-        action,
-        resource: 'user',
-        resourceId: userId,
-        before: before ? { ...before } : null,
-        after: after ? { ...after } : null,
-      })
-      .catch((err) => {
-        this.logger.error(
-          { correlationId: this.cls.getId(), action, error: err.message },
-          'Audit log write failed'
-        )
-        // TODO: Add metrics counter for audit failures (Phase 3)
-      })
   }
 }

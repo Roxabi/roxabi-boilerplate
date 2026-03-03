@@ -8,5 +8,6 @@ export class UserNotFoundException extends Error {
   constructor(public readonly userId: string) {
     super(`User ${userId} not found`)
     this.name = 'UserNotFoundException'
+    Object.setPrototypeOf(this, new.target.prototype)
   }
 }

@@ -6,5 +6,7 @@ export class DatabaseUnavailableException extends Error {
 
   constructor() {
     super('Database not available')
+    this.name = 'DatabaseUnavailableException'
+    Object.setPrototypeOf(this, new.target.prototype)
   }
 }

@@ -7,5 +7,6 @@ export class AdminMemberNotFoundException extends Error {
   constructor(memberId: string) {
     super(`Member "${memberId}" not found`)
     this.name = 'AdminMemberNotFoundException'
+    Object.setPrototypeOf(this, new.target.prototype)
   }
 }

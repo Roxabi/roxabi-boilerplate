@@ -1,22 +1,18 @@
 import { Inject, Injectable, Logger } from '@nestjs/common'
 import { and, eq, isNotNull, lt } from 'drizzle-orm'
 import { DRIZZLE, type DrizzleDB } from '../database/drizzle.provider.js'
-import {
-  accounts,
-  invitations,
-  members,
-  organizations,
-  sessions,
-  users,
-  verifications,
-} from '../database/schema/auth.schema.js'
+import { invitations, members, organizations, users } from '../database/schema/auth.schema.js'
 import { roles } from '../database/schema/rbac.schema.js'
+import { UserService } from '../user/user.service.js'
 
 @Injectable()
 export class PurgeService {
   private readonly logger = new Logger(PurgeService.name)
 
-  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDB) {}
+  constructor(
+    @Inject(DRIZZLE) private readonly db: DrizzleDB,
+    private readonly userService: UserService
+  ) {}
 
   async runPurge() {
     this.logger.log('Purge cron started')
@@ -45,38 +41,13 @@ export class PurgeService {
     for (const user of expiredUsers) {
       if (user.email.endsWith('@anonymized.local')) continue
 
-      await this.anonymizeUser(user, now)
+      await this.db.transaction(async (tx) => {
+        await this.userService.anonymizeUserRecords(tx, user.id, user.email, now)
+      })
       anonymized++
     }
 
     return anonymized
-  }
-
-  private async anonymizeUser(user: { id: string; email: string }, now: Date) {
-    await this.db.transaction(async (tx) => {
-      const anonymizedEmail = `deleted-${crypto.randomUUID()}@anonymized.local`
-
-      await tx
-        .update(users)
-        .set({
-          firstName: 'Deleted',
-          lastName: 'User',
-          name: 'Deleted User',
-          email: anonymizedEmail,
-          image: null,
-          emailVerified: false,
-          avatarSeed: null,
-          avatarStyle: null,
-          updatedAt: now,
-        })
-        .where(eq(users.id, user.id))
-
-      await tx.delete(sessions).where(eq(sessions.userId, user.id))
-      await tx.delete(accounts).where(eq(accounts.userId, user.id))
-      await tx.delete(verifications).where(eq(verifications.identifier, user.email))
-      await tx.delete(invitations).where(eq(invitations.inviterId, user.id))
-      await tx.delete(invitations).where(eq(invitations.email, user.email))
-    })
   }
 
   private async purgeOrganizations(): Promise<number> {

@@ -7,5 +7,6 @@ export class ApiKeyNotFoundException extends Error {
   constructor(keyId: string) {
     super(`API key "${keyId}" not found`)
     this.name = 'ApiKeyNotFoundException'
+    Object.setPrototypeOf(this, new.target.prototype)
   }
 }

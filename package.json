@@ -34,10 +34,11 @@
     "db:migrate": "bash scripts/db.sh migrate",
     "db:reset": "bash scripts/db.sh reset",
     "db:seed": "bash scripts/db.sh seed",
-    "dashboard": "bun .claude/skills/issues/dashboard.ts"
+    "dashboard": "bun ~/projects/roxabi-plugins/plugins/dev-core/skills/issues/dashboard.ts"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.4",
+    "@types/node": "^24.11.0",
+    "@biomejs/biome": "^2.4.5",
     "@commitlint/cli": "^20.4.2",
     "@commitlint/config-conventional": "^20.4.2",
     "@huggingface/transformers": "^3.8.1",
@@ -52,7 +53,7 @@
     "@vitejs/plugin-react": "^5.1.4",
     "@vitest/coverage-v8": "^4.0.18",
     "jsdom": "^28.1.0",
-    "lefthook": "^2.1.1",
+    "lefthook": "^2.1.2",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "sqlite-vec": "0.1.7-alpha.2",
@@ -68,13 +69,18 @@
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.2.8",
-    "fumadocs-mdx": "^14.2.8",
-    "shiki": "^3.23.0"
+    "fumadocs-mdx": "^14.2.9",
+    "lucide-react": "^0.576.0",
+    "shiki": "^4.0.1"
   },
   "overrides": {
+    "@types/node": "^24",
     "minimatch": ">=10.2.3",
     "lodash": ">=4.17.23",
     "rollup": ">=4.59.0",
     "ajv": ">=6.14.0"
+  },
+  "resolutions": {
+    "@types/node": "24.11.0"
   }
 }

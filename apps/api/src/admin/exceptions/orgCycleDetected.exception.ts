@@ -7,5 +7,6 @@ export class OrgCycleDetectedException extends Error {
   constructor() {
     super('Cannot set parent to a descendant organization')
     this.name = 'OrgCycleDetectedException'
+    Object.setPrototypeOf(this, new.target.prototype)
   }
 }

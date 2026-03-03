@@ -7,5 +7,6 @@ export class FlagNotFoundException extends Error {
   constructor(id: string) {
     super(`Feature flag "${id}" not found`)
     this.name = 'FlagNotFoundException'
+    Object.setPrototypeOf(this, new.target.prototype)
   }
 }

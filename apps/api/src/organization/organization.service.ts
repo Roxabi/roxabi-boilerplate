@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common'
 import { EventEmitter2 } from '@nestjs/event-emitter'
 import { and, count, eq } from 'drizzle-orm'
+import { DELETION_GRACE_PERIOD_MS } from '../common/constants.js'
 import {
   ORGANIZATION_SOFT_DELETED,
   OrganizationSoftDeletedEvent,
@@ -44,7 +45,7 @@ export class OrganizationService {
     await this.requireOwnership(orgId, userId)
 
     const now = new Date()
-    const deleteScheduledFor = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+    const deleteScheduledFor = new Date(now.getTime() + DELETION_GRACE_PERIOD_MS)
 
     const updated = await this.db.transaction(async (tx) => {
       const [result] = await tx

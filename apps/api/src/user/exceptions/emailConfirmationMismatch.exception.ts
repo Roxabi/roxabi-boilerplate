@@ -8,5 +8,6 @@ export class EmailConfirmationMismatchException extends Error {
   constructor() {
     super('Email confirmation does not match')
     this.name = 'EmailConfirmationMismatchException'
+    Object.setPrototypeOf(this, new.target.prototype)
   }
 }

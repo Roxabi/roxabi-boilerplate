@@ -7,5 +7,6 @@ export class InvitationNotFoundException extends Error {
   constructor(invitationId: string) {
     super(`Invitation "${invitationId}" not found`)
     this.name = 'InvitationNotFoundException'
+    Object.setPrototypeOf(this, new.target.prototype)
   }
 }

@@ -7,5 +7,6 @@ export class ApiKeyScopesExceededException extends Error {
   constructor() {
     super('Requested scopes exceed your current permissions')
     this.name = 'ApiKeyScopesExceededException'
+    Object.setPrototypeOf(this, new.target.prototype)
   }
 }

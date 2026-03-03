@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common'
+import { Inject, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common'
 import type { AuditAction } from '@repo/types'
 import {
   and,
@@ -17,6 +17,7 @@ import { ClsService } from 'nestjs-cls'
 import { AuditService } from '../audit/audit.service.js'
 import { buildCursorCondition, buildCursorResponse } from '../common/utils/cursorPagination.util.js'
 import { DRIZZLE, type DrizzleDB, type DrizzleTx } from '../database/drizzle.provider.js'
+import { PG_UNIQUE_VIOLATION } from '../database/pgErrorCodes.js'
 import { auditLogs } from '../database/schema/audit.schema.js'
 import { members, organizations, sessions, users } from '../database/schema/auth.schema.js'
 import { findUserSnapshotOrThrow, isLastActiveSuperadmin } from './adminUsers.shared.js'
@@ -24,6 +25,8 @@ import { EmailConflictException } from './exceptions/emailConflict.exception.js'
 import { LastSuperadminException } from './exceptions/lastSuperadmin.exception.js'
 import { SuperadminProtectionException } from './exceptions/superadminProtection.exception.js'
 import { AdminUserNotFoundException } from './exceptions/userNotFound.exception.js'
+import { escapeIlikePattern } from './utils/escapeIlikePattern.js'
+import { logUserAudit } from './utils/logAudit.js'
 import { redactSensitiveFields } from './utils/redactSensitiveFields.js'
 
 /**
@@ -129,11 +132,7 @@ export class AdminUsersService {
     }
 
     if (filters.search) {
-      const escaped = filters.search
-        .replace(/\\/g, '\\\\')
-        .replace(/%/g, '\\%')
-        .replace(/_/g, '\\_')
-      const pattern = `%${escaped}%`
+      const pattern = `%${escapeIlikePattern(filters.search)}%`
       const searchCondition = or(ilike(users.name, pattern), ilike(users.email, pattern))
       if (searchCondition) conditions.push(searchCondition)
     }
@@ -332,14 +331,27 @@ export class AdminUsersService {
       return this.executeSelfRoleChange(userId, data, actorId)
     }
 
-    const beforeUser = await findUserSnapshotOrThrow(this.db, userId)
-    this.validateUpdatePermissions(data, beforeUser.role ?? 'user')
-
-    const updatedUser = await this.executeUserUpdate(userId, data)
-    const auditAction =
-      data.role && data.role !== beforeUser.role ? 'user.role_changed' : 'user.updated'
-
-    this.logUserAudit(auditAction, userId, actorId, beforeUser, updatedUser)
+    const updatedUser = await this.db.transaction(
+      async (tx) => {
+        const beforeUser = await findUserSnapshotOrThrow(tx, userId)
+        this.validateUpdatePermissions(data, beforeUser.role ?? 'user')
+        const updated = await this.applyUserUpdate(tx, userId, data)
+        const auditAction =
+          data.role && data.role !== beforeUser.role ? 'user.role_changed' : 'user.updated'
+        logUserAudit(
+          this.auditService,
+          this.logger,
+          this.cls,
+          auditAction,
+          userId,
+          actorId,
+          beforeUser,
+          updated
+        )
+        return updated
+      },
+      { isolationLevel: 'serializable' }
+    )
 
     return updatedUser
   }
@@ -388,13 +400,6 @@ export class AdminUsersService {
     }
   }
 
-  private async executeUserUpdate(
-    userId: string,
-    data: { name?: string; email?: string; role?: string }
-  ) {
-    return this.applyUserUpdate(this.db, userId, data)
-  }
-
   private async applyUserUpdate(
     db: DrizzleDB | DrizzleTx,
     userId: string,
@@ -405,37 +410,15 @@ export class AdminUsersService {
       if (!result) throw new AdminUserNotFoundException(userId)
       return result
     } catch (err) {
+      if (err instanceof AdminUserNotFoundException) throw err
       const pgErr = err as { code?: string }
-      if (pgErr.code === '23505') {
+      if (pgErr.code === PG_UNIQUE_VIOLATION) {
         throw new EmailConflictException()
+      }
+      if (pgErr.code === '40001') {
+        throw new ServiceUnavailableException('Serialization conflict — please retry')
       }
       throw err
     }
-  }
-
-  private logUserAudit(
-    action: AuditAction,
-    userId: string,
-    actorId: string,
-    before: Record<string, unknown> | undefined,
-    after: Record<string, unknown> | undefined
-  ) {
-    this.auditService
-      .log({
-        actorId,
-        actorType: 'user',
-        action,
-        resource: 'user',
-        resourceId: userId,
-        before: before ? { ...before } : null,
-        after: after ? { ...after } : null,
-      })
-      .catch((err) => {
-        this.logger.error(
-          { correlationId: this.cls.getId(), action, error: err.message },
-          'Audit log write failed'
-        )
-        // TODO: Add metrics counter for audit failures (Phase 3)
-      })
   }
 }

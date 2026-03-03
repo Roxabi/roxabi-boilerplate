@@ -1,4 +1,5 @@
 import type { Locator, Page } from '@playwright/test'
+import { waitForReactHydration } from './testHelpers'
 
 /**
  * Page Object Model for Auth flows (login, signup, logout).
@@ -9,39 +10,17 @@ export class AuthPage {
   constructor(private page: Page) {}
 
   // ---------------------------------------------------------------------------
-  // Helpers
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Wait for React hydration to complete.
-   * TanStack Start SSR renders the HTML, but event handlers (e.g. e.preventDefault())
-   * are only attached after React hydrates. Interacting before hydration causes
-   * plain HTML form submits instead of JS-handled ones.
-   */
-  private async waitForHydration() {
-    await this.page.waitForFunction(
-      () => {
-        const btn = document.querySelector('button[type="submit"]')
-        if (!btn) return false
-        // React attaches __reactFiber$ / __reactProps$ to DOM nodes during hydration
-        return Object.keys(btn).some((k) => k.startsWith('__react'))
-      },
-      { timeout: 15000 }
-    )
-  }
-
-  // ---------------------------------------------------------------------------
   // Navigation
   // ---------------------------------------------------------------------------
 
   async gotoLogin() {
     await this.page.goto('/login')
-    await this.waitForHydration()
+    await waitForReactHydration(this.page)
   }
 
   async gotoSignup() {
     await this.page.goto('/signup')
-    await this.waitForHydration()
+    await waitForReactHydration(this.page)
   }
 
   // ---------------------------------------------------------------------------

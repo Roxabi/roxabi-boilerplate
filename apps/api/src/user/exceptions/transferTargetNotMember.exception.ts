@@ -11,5 +11,6 @@ export class TransferTargetNotMemberException extends Error {
   ) {
     super(`User ${targetUserId} is not a member of organization ${orgId}`)
     this.name = 'TransferTargetNotMemberException'
+    Object.setPrototypeOf(this, new.target.prototype)
   }
 }

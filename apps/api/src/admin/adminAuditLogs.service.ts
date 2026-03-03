@@ -4,6 +4,7 @@ import { buildCursorCondition, buildCursorResponse } from '../common/utils/curso
 import { DRIZZLE, type DrizzleDB } from '../database/drizzle.provider.js'
 import { auditLogs } from '../database/schema/audit.schema.js'
 import { users } from '../database/schema/auth.schema.js'
+import { escapeIlikePattern } from './utils/escapeIlikePattern.js'
 import { redactSensitiveFields } from './utils/redactSensitiveFields.js'
 
 /**
@@ -75,11 +76,7 @@ export class AdminAuditLogsService {
     }
 
     if (filters.search) {
-      const escaped = filters.search
-        .replace(/\\/g, '\\\\')
-        .replace(/%/g, '\\%')
-        .replace(/_/g, '\\_')
-      const pattern = `%${escaped}%`
+      const pattern = `%${escapeIlikePattern(filters.search)}%`
       const searchCondition = or(
         ilike(auditLogs.action, pattern),
         ilike(auditLogs.resource, pattern),

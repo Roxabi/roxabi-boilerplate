@@ -3,6 +3,7 @@
   "pages": [
     "001-release-please",
     "002-empty-state-monolithic-vs-compound",
-    "003-magic-link-error-handling"
+    "003-magic-link-error-handling",
+    "004-ssr-consent-and-data-fetching-patterns"
   ]
 }

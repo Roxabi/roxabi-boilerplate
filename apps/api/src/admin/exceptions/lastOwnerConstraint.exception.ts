@@ -7,5 +7,6 @@ export class LastOwnerConstraintException extends Error {
   constructor() {
     super('Cannot remove the last owner of the organization')
     this.name = 'LastOwnerConstraintException'
+    Object.setPrototypeOf(this, new.target.prototype)
   }
 }

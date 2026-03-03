@@ -492,7 +492,7 @@ describe('AdminUsersService', () => {
   // -----------------------------------------------------------------------
   describe('updateUser', () => {
     it('should update name, email, and role and return the updated user', async () => {
-      // Arrange — read before-state then perform update
+      // Arrange — non-self path now uses a serializable transaction (M3 fix)
       const beforeUser = { ...baseUser }
       const updatedUser = {
         ...baseUser,
@@ -501,8 +501,9 @@ describe('AdminUsersService', () => {
         role: 'superadmin',
       }
 
-      db.select.mockReturnValueOnce(createChainMock([beforeUser]))
-      db.update.mockReturnValueOnce(createChainMock([updatedUser]))
+      const tx = mockTransaction(db)
+      tx.select.mockReturnValueOnce(createChainMock([beforeUser]))
+      tx.update.mockReturnValueOnce(createChainMock([updatedUser]))
 
       // Act
       const result = await service.updateUser(
@@ -513,7 +514,7 @@ describe('AdminUsersService', () => {
 
       // Assert
       expect(result).toBeDefined()
-      expect(db.update).toHaveBeenCalled()
+      expect(tx.update).toHaveBeenCalled()
     })
 
     it('should record before and after snapshots in the audit log', async () => {
@@ -521,8 +522,9 @@ describe('AdminUsersService', () => {
       const beforeUser = { ...baseUser }
       const updatedUser = { ...baseUser, name: 'New Name' }
 
-      db.select.mockReturnValueOnce(createChainMock([beforeUser]))
-      db.update.mockReturnValueOnce(createChainMock([updatedUser]))
+      const tx = mockTransaction(db)
+      tx.select.mockReturnValueOnce(createChainMock([beforeUser]))
+      tx.update.mockReturnValueOnce(createChainMock([updatedUser]))
 
       // Act
       await service.updateUser('user-1', { name: 'New Name' }, 'actor-super')
@@ -542,7 +544,8 @@ describe('AdminUsersService', () => {
 
     it('should throw AdminUserNotFoundException when user does not exist', async () => {
       // Arrange
-      db.select.mockReturnValueOnce(createChainMock([]))
+      const tx = mockTransaction(db)
+      tx.select.mockReturnValueOnce(createChainMock([]))
 
       // Act & Assert
       await expect(
@@ -551,13 +554,14 @@ describe('AdminUsersService', () => {
     })
 
     it('should throw EmailConflictException on duplicate email (pg error 23505)', async () => {
-      // Arrange — user exists, but update throws a unique constraint violation
-      db.select.mockReturnValueOnce(createChainMock([baseUser]))
+      // Arrange — user exists, but update throws a unique constraint violation inside the tx
+      const tx = mockTransaction(db)
+      tx.select.mockReturnValueOnce(createChainMock([baseUser]))
       const pgError = { code: '23505', constraint_name: 'users_email_unique' }
       const updateChain = createChainMock([])
       // biome-ignore lint/suspicious/noThenProperty: intentional thenable mock to simulate pg rejection
       updateChain.then = (_resolve: unknown, reject: (e: unknown) => void) => reject(pgError)
-      db.update.mockReturnValueOnce(updateChain)
+      tx.update.mockReturnValueOnce(updateChain)
 
       // Act & Assert
       await expect(
@@ -567,12 +571,13 @@ describe('AdminUsersService', () => {
 
     it('should rethrow unknown errors that are not 23505', async () => {
       // Arrange
-      db.select.mockReturnValueOnce(createChainMock([baseUser]))
+      const tx = mockTransaction(db)
+      tx.select.mockReturnValueOnce(createChainMock([baseUser]))
       const unknownError = new Error('DB connection lost')
       const updateChain = createChainMock([])
       // biome-ignore lint/suspicious/noThenProperty: intentional thenable mock to simulate pg rejection
       updateChain.then = (_resolve: unknown, reject: (e: unknown) => void) => reject(unknownError)
-      db.update.mockReturnValueOnce(updateChain)
+      tx.update.mockReturnValueOnce(updateChain)
 
       // Act & Assert
       await expect(service.updateUser('user-1', { name: 'X' }, 'actor-super')).rejects.toThrow(
@@ -582,7 +587,8 @@ describe('AdminUsersService', () => {
 
     it('should not call auditService.log when user is not found', async () => {
       // Arrange
-      db.select.mockReturnValueOnce(createChainMock([]))
+      const tx = mockTransaction(db)
+      tx.select.mockReturnValueOnce(createChainMock([]))
 
       // Act
       await service.updateUser('user-missing', { name: 'X' }, 'actor-super').catch(() => {})
@@ -594,7 +600,8 @@ describe('AdminUsersService', () => {
     it('should throw SuperadminProtectionException when changing a superadmin role to non-superadmin', async () => {
       // Arrange
       const superadminUser = { ...baseUser, role: 'superadmin' }
-      db.select.mockReturnValueOnce(createChainMock([superadminUser]))
+      const tx = mockTransaction(db)
+      tx.select.mockReturnValueOnce(createChainMock([superadminUser]))
 
       // Act & Assert
       await expect(service.updateUser('user-1', { role: 'user' }, 'actor-super')).rejects.toThrow(
@@ -607,8 +614,9 @@ describe('AdminUsersService', () => {
       const beforeUser = { ...baseUser, role: 'user' }
       const updatedUser = { ...baseUser, role: 'superadmin' }
 
-      db.select.mockReturnValueOnce(createChainMock([beforeUser]))
-      db.update.mockReturnValueOnce(createChainMock([updatedUser]))
+      const tx = mockTransaction(db)
+      tx.select.mockReturnValueOnce(createChainMock([beforeUser]))
+      tx.update.mockReturnValueOnce(createChainMock([updatedUser]))
 
       // Act
       await service.updateUser('user-1', { role: 'superadmin' }, 'actor-super')
@@ -626,8 +634,9 @@ describe('AdminUsersService', () => {
       const beforeUser = { ...baseUser, role: 'user' }
       const updatedUser = { ...baseUser, name: 'New Name', role: 'user' }
 
-      db.select.mockReturnValueOnce(createChainMock([beforeUser]))
-      db.update.mockReturnValueOnce(createChainMock([updatedUser]))
+      const tx = mockTransaction(db)
+      tx.select.mockReturnValueOnce(createChainMock([beforeUser]))
+      tx.update.mockReturnValueOnce(createChainMock([updatedUser]))
 
       // Act
       await service.updateUser('user-1', { name: 'New Name' }, 'actor-super')
@@ -702,19 +711,41 @@ describe('AdminUsersService', () => {
     })
 
     it('should allow name/email self-update without confirmation for superadmin', async () => {
-      // Arrange — no role change, just name update on own account
+      // Arrange — no role change, just name update on own account.
+      // isSelfRoleChange=false (no data.role), so goes through the non-self
+      // path which uses a serializable transaction (M3 fix).
       const beforeUser = { ...baseUser, id: 'actor-super', role: 'superadmin' }
       const updatedUser = { ...beforeUser, name: 'New Name' }
 
-      db.select.mockReturnValueOnce(createChainMock([beforeUser]))
-      db.update.mockReturnValueOnce(createChainMock([updatedUser]))
+      const tx = mockTransaction(db)
+      tx.select.mockReturnValueOnce(createChainMock([beforeUser]))
+      tx.update.mockReturnValueOnce(createChainMock([updatedUser]))
 
       // Act
       const result = await service.updateUser('actor-super', { name: 'New Name' }, 'actor-super')
 
-      // Assert — no transaction needed, direct update
+      // Assert — non-self path uses transaction; self-role-change path not triggered (no role change)
       expect(result).toBeDefined()
-      expect(db.transaction).not.toHaveBeenCalled()
+      expect(db.transaction).toHaveBeenCalledOnce()
+    })
+
+    it('should use serializable transaction for non-self update (M3 TOCTOU fix)', async () => {
+      // Arrange
+      const beforeUser = { ...baseUser }
+      const updatedUser = { ...baseUser, name: 'New Name' }
+
+      const tx = mockTransaction(db)
+      tx.select.mockReturnValueOnce(createChainMock([beforeUser]))
+      tx.update.mockReturnValueOnce(createChainMock([updatedUser]))
+
+      // Act
+      await service.updateUser('user-1', { name: 'New Name' }, 'actor-super')
+
+      // Assert — non-self path uses serializable transaction
+      expect(db.transaction).toHaveBeenCalledWith(
+        expect.any(Function),
+        expect.objectContaining({ isolationLevel: 'serializable' })
+      )
     })
 
     it('should use serializable transaction for self-role-change', async () => {

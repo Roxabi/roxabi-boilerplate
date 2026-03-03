@@ -24,6 +24,8 @@ function RevokeKeyDialog({
       confirmText={keyToRevoke.name}
       confirmLabel={m.api_keys_revoke_confirm_label()}
       onConfirm={onConfirm}
+      actionLabel="Revoke"
+      loadingLabel="Revoking..."
     />
   )
 }

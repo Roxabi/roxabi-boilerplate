@@ -13,6 +13,12 @@ updates:
         update-types:
           - minor
           - patch
+    ignore:
+      # @types/node major versions track Node.js majors — only LTS (even) versions.
+      # Upgrade manually when targeting a new LTS (e.g. 22 → 24 in Oct 2026).
+      - dependency-name: "@types/node"
+        update-types:
+          - version-update:semver-major
     labels:
       - dependencies
 
@@ -32,6 +38,15 @@ updates:
     directory: /apps/api
     schedule:
       interval: monthly
+    ignore:
+      # Only upgrade to even (LTS) Node versions — odd releases are not LTS.
+      # Dependabot will still open PRs for even versions (24, 26, 28…).
+      - dependency-name: node
+        versions:
+          - ">= 23, < 24"
+          - ">= 25, < 26"
+          - ">= 27, < 28"
+          - ">= 29, < 30"
     labels:
       - dependencies
       - docker
@@ -41,6 +56,15 @@ updates:
     directory: /apps/web
     schedule:
       interval: monthly
+    ignore:
+      # Only upgrade to even (LTS) Node versions — odd releases are not LTS.
+      # Dependabot will still open PRs for even versions (24, 26, 28…).
+      - dependency-name: node
+        versions:
+          - ">= 23, < 24"
+          - ">= 25, < 26"
+          - ">= 27, < 28"
+          - ">= 29, < 30"
     labels:
       - dependencies
       - docker

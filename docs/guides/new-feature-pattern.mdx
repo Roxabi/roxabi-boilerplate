@@ -1,0 +1,602 @@
+---
+title: New Feature Pattern Guide
+description: End-to-end canonical pattern for building a new full-stack feature — auth decorators, packages, backend and frontend structure.
+---
+
+## Overview
+
+This guide is the single reference for building a new full-stack feature in Roxabi. It walks through every layer — from shared types to backend module to frontend route — and links to the detailed standards docs for each pattern.
+
+Use this guide when you are:
+
+- Adding a new domain feature (e.g., projects, billing, reports)
+- Extending an existing feature with new endpoints and UI
+- Onboarding and need to understand the canonical structure
+
+**Prerequisite reads:** [Authentication](./authentication), [RBAC](./rbac), [Multi-tenant](./multi-tenant).
+
+## 1. Feature Planning
+
+Before writing code, answer these questions:
+
+| Question | Determines |
+|----------|-----------|
+| What domain does this feature belong to? | Module name, file locations |
+| Is the data tenant-scoped? | Whether you need RLS + `TenantService` |
+| What permissions does it need? | New `resource:action` entries in `@repo/types` |
+| Who can access it? | Auth decorators on endpoints, route guards on pages |
+| Does it share types across FE and BE? | Whether to add types to `@repo/types` |
+
+## 2. Shared Types (`@repo/types`)
+
+### When to Use `@repo/types`
+
+| Scenario | Where to put types |
+|----------|--------------------|
+| Type shared between `apps/web` and `apps/api` | `packages/types/src/` |
+| Type used only in the backend | `apps/api/src/{feature}/dto/` or colocated |
+| Type used only in the frontend | `apps/web/src/lib/{feature}/types.ts` |
+| Permission strings for a new resource | `packages/types/src/rbac.ts` |
+
+### Adding a New Shared Type
+
+1. Create or extend a file in `packages/types/src/`:
+
+```ts
+// packages/types/src/project.ts
+export type Project = {
+  id: string
+  tenantId: string
+  name: string
+  description: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type CreateProjectInput = {
+  name: string
+  description?: string
+}
+```
+
+2. Export from the barrel file:
+
+```ts
+// packages/types/src/index.ts
+export type { Project, CreateProjectInput } from './project'
+```
+
+3. Consume in both apps:
+
+```ts
+import type { Project } from '@repo/types'
+```
+
+### When to Create a New Package
+
+Create a new package under `packages/` only when:
+
+- Multiple apps need shared **runtime code** (not just types)
+- The code has no dependency on any specific app's context
+- Examples: a validation library, a shared API client, a utility package
+
+For shared types alone, `@repo/types` is sufficient. Do not create a new package just for types.
+
+## 3. Backend — Module Structure
+
+Full standards: [Backend Patterns](../standards/backend-patterns).
+
+### 3.1 Scaffold the Module
+
+```
+apps/api/src/project/
+├── project.module.ts
+├── project.controller.ts
+├── project.service.ts
+├── dto/
+│   └── createProject.dto.ts
+├── exceptions/
+│   └── projectNotFound.exception.ts
+├── filters/
+│   └── projectNotFound.filter.ts
+└── project.service.test.ts
+```
+
+**File naming:** camelCase base + suffix. Multi-word names: `apiKeyRotation.service.ts`, not `api-key-rotation.service.ts`.
+
+### 3.2 Auth Decorators
+
+The `AuthGuard` is global — every endpoint requires authentication by default. Use decorators to modify behavior:
+
+| Decorator | Effect | Use when |
+|-----------|--------|----------|
+| *(none)* | Authenticated user required | Default for all endpoints |
+| `@AllowAnonymous()` | Skip all auth | Public endpoints (health, webhooks) |
+| `@OptionalAuth()` | Allow anonymous, attach session if present | Public pages with conditional UI |
+| `@Roles('superadmin')` | Require global platform role | Platform admin endpoints |
+| `@RequireOrg()` | Require active organization | Tenant-scoped endpoints without specific permissions |
+| `@Permissions('resource:action')` | Require tenant-scoped permission(s) | Most feature endpoints (implies `@RequireOrg()`) |
+
+**Evaluation order:** `@AllowAnonymous` > session check > `@OptionalAuth` > soft-delete check > `@Roles` > `@RequireOrg` / `@Permissions` > superadmin bypass > permission check.
+
+**Common patterns:**
+
+```ts
+// Tenant-scoped read endpoint — most common
+@Get()
+@Permissions('projects:read')
+async list() { ... }
+
+// Tenant-scoped write endpoint
+@Post()
+@Permissions('projects:write')
+async create(@Body(new ZodValidationPipe(createProjectSchema)) body: CreateProjectDto) { ... }
+
+// Platform admin only
+@Roles('superadmin')
+@Get('admin/stats')
+async getStats() { ... }
+
+// Public endpoint (no auth)
+@AllowAnonymous()
+@Get('health')
+healthCheck() { return { status: 'ok' } }
+```
+
+**Key rules:**
+
+- `@Permissions()` implies `@RequireOrg()` — no need to add both
+- All listed permissions use AND logic (all must be present)
+- `superadmin` users bypass all permission checks automatically
+- See [RBAC guide](./rbac) for adding new permission resources
+
+### 3.3 Controller
+
+Controllers handle HTTP only — parse requests, call services, format responses:
+
+```ts
+import { Controller, Get, Post, Param, Body, Delete } from '@nestjs/common'
+import { ParseUUIDPipe } from '@nestjs/common'
+import { Permissions } from '../auth/decorators/permissions.decorator'
+import { ZodValidationPipe } from '../common/pipes/zodValidation.pipe'
+import { ProjectService } from './project.service'
+import { createProjectSchema, type CreateProjectDto } from './dto/createProject.dto'
+
+@Controller('api/projects')
+export class ProjectController {
+  constructor(private readonly projectService: ProjectService) {}
+
+  @Get()
+  @Permissions('projects:read')
+  async list() {
+    return this.projectService.list()
+  }
+
+  @Get(':id')
+  @Permissions('projects:read')
+  async findOne(@Param('id', new ParseUUIDPipe({ version: '4' })) id: string) {
+    return this.projectService.findOne(id)
+  }
+
+  @Post()
+  @Permissions('projects:write')
+  async create(@Body(new ZodValidationPipe(createProjectSchema)) body: CreateProjectDto) {
+    return this.projectService.create(body)
+  }
+
+  @Delete(':id')
+  @Permissions('projects:delete')
+  async remove(@Param('id', new ParseUUIDPipe({ version: '4' })) id: string) {
+    return this.projectService.remove(id)
+  }
+}
+```
+
+### 3.4 Service with Tenant Scope
+
+For tenant-scoped data, inject `TenantService` and `ClsService`. All queries go through `TenantService.query()`:
+
+```ts
+import { Injectable } from '@nestjs/common'
+import { ClsService } from 'nestjs-cls'
+import { eq } from 'drizzle-orm'
+import { TenantService } from '../tenant/tenant.service'
+import { projects } from '../database/schema/project.schema'
+import type { CreateProjectDto } from './dto/createProject.dto'
+import { ProjectNotFoundException } from './exceptions/projectNotFound.exception'
+
+@Injectable()
+export class ProjectService {
+  constructor(
+    private readonly tenantService: TenantService,
+    private readonly cls: ClsService,
+  ) {}
+
+  async list() {
+    return this.tenantService.query((tx) =>
+      tx.select().from(projects)
+    )
+  }
+
+  async findOne(id: string) {
+    const [project] = await this.tenantService.query((tx) =>
+      tx.select().from(projects).where(eq(projects.id, id)).limit(1)
+    )
+    if (!project) throw new ProjectNotFoundException(id)
+    return project
+  }
+
+  async create(data: CreateProjectDto) {
+    const tenantId = this.cls.get('tenantId') as string
+
+    return this.tenantService.query(async (tx) => {
+      const [project] = await tx
+        .insert(projects)
+        .values({ tenantId, ...data })
+        .returning()
+      return project
+    })
+  }
+
+  async remove(id: string) {
+    return this.tenantService.query(async (tx) => {
+      const [deleted] = await tx
+        .delete(projects)
+        .where(eq(projects.id, id))
+        .returning()
+      if (!deleted) throw new ProjectNotFoundException(id)
+      return deleted
+    })
+  }
+}
+```
+
+**Key points:**
+
+- `SELECT` queries do not need `WHERE tenant_id = ...` — RLS handles filtering
+- `INSERT` must set `tenantId` — the `WITH CHECK` policy validates it matches the session
+- For non-tenant-scoped features (global/platform), inject `DRIZZLE` directly instead of `TenantService`
+
+### 3.5 DTOs with Zod
+
+All request validation uses Zod schemas applied via `ZodValidationPipe`:
+
+```ts
+// dto/createProject.dto.ts
+import { z } from 'zod'
+
+export const createProjectSchema = z.object({
+  name: z.string().min(1).max(100),
+  description: z.string().max(500).optional(),
+})
+
+export type CreateProjectDto = z.infer<typeof createProjectSchema>
+```
+
+### 3.6 Exception Handling
+
+Three layers: domain exception, domain-to-HTTP filter, global fallback.
+
+```ts
+// exceptions/projectNotFound.exception.ts — pure TS, no NestJS imports
+export class ProjectNotFoundException extends Error {
+  constructor(public readonly projectId: string) {
+    super(`Project ${projectId} not found`)
+  }
+}
+```
+
+```ts
+// filters/projectNotFound.filter.ts
+import { type ArgumentsHost, Catch, type ExceptionFilter, HttpStatus } from '@nestjs/common'
+import type { FastifyReply, FastifyRequest } from 'fastify'
+import { ClsService } from 'nestjs-cls'
+import { ProjectNotFoundException } from '../exceptions/projectNotFound.exception'
+
+@Catch(ProjectNotFoundException)
+export class ProjectNotFoundFilter implements ExceptionFilter {
+  constructor(private readonly cls: ClsService) {}
+
+  catch(exception: ProjectNotFoundException, host: ArgumentsHost) {
+    const ctx = host.switchToHttp()
+    const response = ctx.getResponse<FastifyReply>()
+    const request = ctx.getRequest<FastifyRequest>()
+    const correlationId = this.cls.getId()
+
+    response.header('x-correlation-id', correlationId)
+    response.status(HttpStatus.NOT_FOUND).send({
+      statusCode: HttpStatus.NOT_FOUND,
+      timestamp: new Date().toISOString(),
+      path: request.url,
+      correlationId,
+      message: exception.message,
+    })
+  }
+}
+```
+
+Register filters in your module:
+
+```ts
+@Module({
+  imports: [TenantModule],
+  controllers: [ProjectController],
+  providers: [
+    ProjectService,
+    { provide: APP_FILTER, useClass: ProjectNotFoundFilter },
+  ],
+})
+export class ProjectModule {}
+```
+
+### 3.7 Module Registration
+
+Register in `AppModule`:
+
+```ts
+// app.module.ts
+@Module({
+  imports: [
+    // ... existing modules
+    ProjectModule,
+  ],
+})
+export class AppModule {}
+```
+
+## 4. Frontend — Route and Components
+
+Full standards: [Frontend Patterns](../standards/frontend-patterns).
+
+### 4.1 Route File Structure
+
+TanStack Start uses file-based routing. Create route files under `apps/web/src/routes/`:
+
+```
+apps/web/src/routes/
+├── $locale/
+│   ├── projects/
+│   │   ├── index.tsx        # /projects — list page
+│   │   └── $projectId.tsx   # /projects/:projectId — detail page
+│   └── admin/
+│       └── projects.tsx     # /admin/projects — admin management page
+```
+
+**Conventions:** `$param` for dynamic segments, `_` prefix for pathless layouts, `__root.tsx` for root route.
+
+### 4.2 Route Protection
+
+Use `staticData.permission` + `enforceRoutePermission` in `beforeLoad`:
+
+```tsx
+import { createFileRoute } from '@tanstack/react-router'
+import { enforceRoutePermission } from '@/lib/routePermissions'
+
+export const Route = createFileRoute('/$locale/projects/')({
+  staticData: { permission: 'projects:read' },
+  beforeLoad: async (ctx) => {
+    // Auth guard first — abort before fetching if unauthorized
+    await enforceRoutePermission(ctx)
+
+    // Prefetch data — only reached if the guard passes
+    await ctx.context.queryClient.ensureQueryData(projectQueries.list())
+  },
+  component: ProjectsPage,
+})
+```
+
+**Ordering is mandatory:** auth guard first, data prefetch second.
+
+For role-based routes (e.g., superadmin-only):
+
+```tsx
+staticData: { permission: 'role:superadmin' },
+```
+
+### 4.3 TanStack Query Setup
+
+Create query factories in `apps/web/src/lib/{feature}/`:
+
+```
+apps/web/src/lib/projects/
+├── types.ts          # Local types (if not in @repo/types)
+├── queryKeys.ts      # Hierarchical key factory
+├── queries.ts        # queryOptions() factories
+├── hooks.ts          # Custom hooks (mutations, etc.)
+└── __tests__/        # Tests
+```
+
+**Query key factory:**
+
+```ts
+// lib/projects/queryKeys.ts
+export const projectKeys = {
+  all: ['projects'] as const,
+  list: () => [...projectKeys.all, 'list'] as const,
+  detail: (id: string) => [...projectKeys.all, 'detail', id] as const,
+} as const
+```
+
+**Query options factory:**
+
+```ts
+// lib/projects/queries.ts
+import { queryOptions } from '@tanstack/react-query'
+import type { Project } from '@repo/types'
+import { projectKeys } from './queryKeys'
+
+export const projectQueries = {
+  list: () =>
+    queryOptions({
+      queryKey: projectKeys.list(),
+      queryFn: async ({ signal }): Promise<Project[]> => {
+        const res = await fetch('/api/projects', {
+          credentials: 'include',
+          signal,
+        })
+        if (!res.ok) throw new Error('Failed to fetch projects')
+        return res.json()
+      },
+    }),
+
+  detail: (id: string) =>
+    queryOptions({
+      queryKey: projectKeys.detail(id),
+      queryFn: async ({ signal }): Promise<Project> => {
+        const res = await fetch(`/api/projects/${id}`, {
+          credentials: 'include',
+          signal,
+        })
+        if (!res.ok) throw new Error('Failed to fetch project')
+        return res.json()
+      },
+    }),
+}
+```
+
+**Mutation hook:**
+
+```ts
+// lib/projects/hooks.ts
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import type { CreateProjectInput } from '@repo/types'
+import { projectKeys } from './queryKeys'
+
+export function useCreateProject() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (data: CreateProjectInput) => {
+      const res = await fetch('/api/projects', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      if (!res.ok) throw new Error('Failed to create project')
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: projectKeys.list() })
+    },
+  })
+}
+```
+
+### 4.4 Page Component
+
+Route components orchestrate — they do not contain fetch logic or business conditionals:
+
+```tsx
+import { useQuery } from '@tanstack/react-query'
+import { useSession } from '@/lib/authClient'
+import { hasPermission } from '@/lib/permissions'
+import { projectQueries } from '@/lib/projects/queries'
+import { Button } from '@repo/ui'
+
+function ProjectsPage() {
+  const { data: session } = useSession()
+  const { data: projects, isLoading } = useQuery(projectQueries.list())
+
+  const canCreate = hasPermission(session, 'projects:write')
+
+  if (isLoading) return <ProjectsSkeleton />
+
+  return (
+    <div>
+      <div className="flex items-center justify-between">
+        <h1>Projects</h1>
+        {canCreate && (
+          <Button onClick={openCreateDialog}>New Project</Button>
+        )}
+      </div>
+      <ProjectList projects={projects ?? []} canManage={canCreate} />
+    </div>
+  )
+}
+```
+
+### 4.5 Permission-Based UI
+
+Use the helpers from `apps/web/src/lib/permissions.ts` to conditionally render UI:
+
+```tsx
+import { hasPermission, hasAnyPermission } from '@/lib/permissions'
+
+// Single permission check
+const canEdit = hasPermission(session, 'projects:write')
+
+// Any of multiple permissions
+const canManage = hasAnyPermission(session, ['projects:write', 'projects:delete'])
+```
+
+**Rules:**
+
+- Always check permissions client-side for UI visibility (hide buttons, disable inputs)
+- The backend enforces the real access control — frontend checks are UX only
+- Permissions are included in the session response, no extra API calls needed
+
+## 5. Adding Permissions for a New Resource
+
+When your feature introduces a new resource type, follow these steps:
+
+1. **Update type definitions** in `packages/types/src/rbac.ts`:
+
+```ts
+export type PermissionResource = '...' | 'projects'
+```
+
+2. **Create a database migration** to seed permissions:
+
+```sql
+INSERT INTO permissions (id, resource, action, description) VALUES
+  (gen_random_uuid(), 'projects', 'read', 'View projects'),
+  (gen_random_uuid(), 'projects', 'write', 'Create and edit projects'),
+  (gen_random_uuid(), 'projects', 'delete', 'Delete projects');
+```
+
+3. **Update default roles** in `apps/api/src/rbac/rbac.constants.ts` if default roles should include the new permissions.
+
+4. **Use the permission** in controllers (`@Permissions('projects:read')`) and components (`hasPermission(session, 'projects:read')`).
+
+Full details: [RBAC guide — Adding New Permissions](./rbac#adding-new-permissions).
+
+## 6. Checklist
+
+Use this checklist when building a new feature:
+
+### Backend
+
+- [ ] Module created with controller, service, DTOs, exceptions, filters
+- [ ] Auth decorators applied to all endpoints (`@Permissions`, `@Roles`, or `@AllowAnonymous`)
+- [ ] Zod schema for every request body, applied via `ZodValidationPipe`
+- [ ] Domain exceptions are pure TS (no NestJS imports)
+- [ ] Exception filters registered in module providers
+- [ ] Tenant-scoped data uses `TenantService.query()`, not raw DB
+- [ ] Module registered in `AppModule`
+- [ ] Service tests written
+
+### Shared
+
+- [ ] Shared types added to `@repo/types` if used by both apps
+- [ ] New permission resource added to `PermissionResource` union type
+- [ ] Permission migration created and default roles updated
+
+### Frontend
+
+- [ ] Route file created with `staticData.permission` + `enforceRoutePermission`
+- [ ] Query key factory in `lib/{feature}/queryKeys.ts`
+- [ ] Query options factory in `lib/{feature}/queries.ts`
+- [ ] Mutation hooks in `lib/{feature}/hooks.ts`
+- [ ] Route prefetches data in `beforeLoad` (auth guard first)
+- [ ] Permission-based UI uses `hasPermission()` helpers
+- [ ] Component tests written
+
+## Related Documentation
+
+- [Backend Patterns](../standards/backend-patterns) — Module structure, design patterns, error handling, SOLID
+- [Frontend Patterns](../standards/frontend-patterns) — Component patterns, TanStack Query, SOLID
+- [Authentication](./authentication) — Auth guard, session management, decorators
+- [RBAC](./rbac) — Permission system, custom roles, testing
+- [Multi-tenant](./multi-tenant) — RLS, TenantService, tenant-scoped tables
+- [Testing](../standards/testing) — Test structure, coverage, mocking

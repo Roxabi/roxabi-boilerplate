@@ -25,7 +25,7 @@ import appCss from '../styles.css?url'
 
 export type MyRouterContext = {
   queryClient: QueryClient
-  serverConsent?: ConsentCookiePayload | null
+  serverConsent: ConsentCookiePayload | null
   session: EnrichedSession | null
 }
 
@@ -65,13 +65,17 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
     // have no header and no permission guards, so a 401 from the API would
     // just be log noise with no functional impact.
     const isPublic = CHROMELESS_PREFIXES.some((p) => ctx.location.pathname.startsWith(p))
-    const session = isPublic ? null : await getServerEnrichedSession()
-    return { session }
-  },
-
-  loader: async () => {
-    const serverConsent = await getServerConsent()
-    return { serverConsent }
+    // Run session + consent fetches in parallel. getServerConsent is wrapped in
+    // try/catch because a missing/malformed cookie is non-fatal — the banner
+    // falls back to showing and the client-side useEffect handles recovery.
+    // Both values are returned into the router context so that shellComponent
+    // (RootDocument → AppShell) can read them via useRouteContext() before the
+    // first SSR pixel is painted (loader data is NOT available in shellComponent).
+    const [session, serverConsent] = await Promise.all([
+      isPublic ? null : getServerEnrichedSession(),
+      getServerConsent().catch(() => null),
+    ])
+    return { session, serverConsent }
   },
 
   head: () => ({
@@ -118,10 +122,11 @@ const CHROMELESS_PREFIXES = ['/docs', '/talks'] as const
 function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const isChromeless = CHROMELESS_PREFIXES.some((prefix) => pathname.startsWith(prefix))
-  const loaderData = Route.useLoaderData() as
-    | { serverConsent: ConsentCookiePayload | null }
-    | undefined
-  const serverConsent = loaderData?.serverConsent ?? null
+  // Read serverConsent from beforeLoad context — NOT from useLoaderData().
+  // shellComponent (RootDocument → AppShell) renders before loader data is available,
+  // so useLoaderData() always returns undefined here. beforeLoad context IS available.
+  // See ADR-004 for the full rationale.
+  const { serverConsent = null } = Route.useRouteContext()
 
   return (
     <RootProvider>

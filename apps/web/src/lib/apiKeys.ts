@@ -1,45 +1,22 @@
+import type {
+  ApiKey,
+  CreateApiKeyRequest,
+  CreateApiKeyResponse,
+  ListApiKeysResponse,
+  RevokeApiKeyResponse,
+} from '@repo/types'
+
 /**
  * API functions for API Key management.
  * All functions include credentials for cookie-based session auth.
  */
 
-export type ApiKey = {
-  id: string
-  name: string
-  keyPrefix: string
-  lastFour: string
-  scopes: string[]
-  rateLimitTier: string
-  expiresAt: string | null
-  lastUsedAt: string | null
-  revokedAt: string | null
-  createdAt: string
-}
-
-export type CreateApiKeyRequest = {
-  name: string
-  scopes: string[]
-  expiresAt?: string | null
-}
-
-export type CreateApiKeyResponse = {
-  id: string
-  name: string
-  key: string
-  keyPrefix: string
-  lastFour: string
-  scopes: string[]
-  expiresAt: string | null
-  createdAt: string
-}
-
-export type ListApiKeysResponse = {
-  data: ApiKey[]
-}
-
-export type RevokeApiKeyResponse = {
-  id: string
-  revokedAt: string
+export type {
+  ApiKey,
+  CreateApiKeyRequest,
+  CreateApiKeyResponse,
+  ListApiKeysResponse,
+  RevokeApiKeyResponse,
 }
 
 export async function listApiKeys(signal?: AbortSignal): Promise<ListApiKeysResponse> {

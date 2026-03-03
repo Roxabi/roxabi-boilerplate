@@ -1,0 +1,157 @@
+---
+title: 'Expand Playwright e2e coverage for missing flows'
+issue: 422
+status: approved
+tier: F-lite
+date: 2026-02-28
+promoted-from: artifacts/frames/e2e-coverage-expansion.mdx
+---
+
+## Context
+
+From approved frame: [e2e-coverage-expansion.mdx](../frames/e2e-coverage-expansion.mdx).
+Knowledge audit item #10 identified 17 tests across 3 specs as the current baseline. This spec covers 5 new flows to bring coverage to core user journeys.
+
+## Goal
+
+Add Playwright e2e specs for 5 priority flows (registration, admin panel, org switching, user profile, API keys) following the existing Page Object Model pattern, using existing seed users.
+
+## Users
+
+- **Primary:** Developers — gain confidence that core flows work after changes
+- **Secondary:** CI pipeline — catches regressions before merge
+
+## Test Data Strategy
+
+Use existing seed fixtures from `apps/api/scripts/fixtures/auth.fixture.ts`:
+
+| User | Email | Role | Used by |
+|------|-------|------|---------|
+| `TEST_USER` | `dev@roxabi.local` | Owner (Roxabi Dev), Admin (Acme Corp) — multi-org | Org admin tests, org switching, profile, API keys |
+| `TEST_USER_2` | `admin@roxabi.local` | Admin (Roxabi Dev) — single-org | Org admin tests (alternate) |
+| `SUPERADMIN_USER` (new) | `superadmin@roxabi.local` | Superadmin (system-level) | System admin tests |
+
+**Registration tests:** Use timestamp-based email (`test-{Date.now()}@e2e.local`) for happy-path signup. DB resets via seed on each `globalSetup.ts` run, so no teardown needed.
+
+**Profile update tests:** Must restore original display name after mutation (afterEach teardown) to avoid polluting seed state for other specs.
+
+**System admin tests:** Require a separate auth setup (`system-admin.setup.ts`) that authenticates as `superadmin@roxabi.local` and saves to `.auth/superadmin.json`. The existing shared session (`dev@roxabi.local`) does not have superadmin access — system admin routes will 403.
+
+## Expected Behavior
+
+### Flow 1: Registration
+
+A new user visits `/register` (canonical route — note: existing `auth.page.ts` has stale `/signup` reference), fills in name, email, and password, submits the form. On success, a **success card** is displayed (CheckCircle icon, success title, "Back to sign in" link to `/login`). The form does NOT redirect — it renders an inline success state. Invalid inputs show inline errors. Duplicate email shows an appropriate error.
+
+### Flow 2: Admin Panel (Org + System)
+
+**Org admin:** An authenticated user with `members:write` permission (e.g., `TEST_USER`) navigates to `/admin/members` and sees the member list. They can search members, see roles. They navigate to `/admin/settings` and see org name/slug.
+
+**System admin:** The admin layout conditionally shows SYSTEM_LINKS when `useCanAccess('/admin/users')` is true (superadmin role). A user authenticated as `superadmin@roxabi.local` navigates to `/admin/users` and sees the user list with filters (role, status, org). They navigate to `/admin/organizations` and see all orgs. `/admin/feature-flags` shows the flags interface. `/admin/audit-logs` shows log entries. `/admin/system-settings` shows system configuration.
+
+### Flow 3: Organization Switching + Settings
+
+An authenticated multi-org user (`TEST_USER` belongs to both "Roxabi Dev" and "Acme Corp") can see their current org context displayed in the sidebar/header. They navigate to `/admin/settings` to view org details (name, slug). They can switch between orgs via the org switcher — after switching, the active org context updates and sidebar/header reflects the new org.
+
+### Flow 4: User Profile / Settings
+
+An authenticated user navigates to `/settings/profile`. They see their current name and avatar. They can update their display name. The avatar section shows a DiceBear-generated image (assert `<img>` is visible and not broken). Changes persist after page reload. Test restores original name in teardown.
+
+### Flow 5: API Key Management
+
+An authenticated user navigates to `/settings/api-keys`. When no keys exist, the page shows an empty state message. They can create a new key — the key value is displayed once in a modal/banner (capture value before any close/navigation). They can revoke an existing key. Revoked keys no longer appear in the list.
+
+## Breadboard
+
+### Flow 1: Registration
+
+| ID | Affordance | Type | Handler | Data |
+|----|-----------|------|---------|------|
+| U1 | Name input | text field | — | user's full name |
+| U2 | Email input | text field | — | user's email |
+| U3 | Password input | text field | — | password (strength indicator) |
+| U4 | Submit button | button | POST /auth/register | renders success card (inline, not redirect) |
+| U5 | Success card | container | — | CheckCircle icon + success title + "Back to sign in" link |
+| U6 | Error alert | text | — | validation / duplicate errors |
+| U7 | Login link | link | navigate /login | — |
+
+### Flow 2: Admin Panel
+
+**Org admin:**
+
+| ID | Affordance | Type | Handler | Data |
+|----|-----------|------|---------|------|
+| N1 | Admin sidebar — org links | nav | navigate /admin/members, /admin/settings | active route highlight |
+| N2 | Members list | table | GET /organizations/:id/members | name, email, role |
+| N3 | Member search | text field | filter | filtered member list |
+| N4 | Org settings form | form | GET /organizations/:id | org name, slug |
+
+**System admin:**
+
+| ID | Affordance | Type | Handler | Data |
+|----|-----------|------|---------|------|
+| S1 | Admin sidebar — system links | nav | navigate /admin/users, etc. | visible only to superadmin |
+| S2 | Users list | table | GET /admin/users | name, email, role, status, org |
+| S3 | User filters | dropdowns | filter | role, status, org filters |
+| S4 | Organizations list | table | GET /admin/organizations | org name, slug, member count |
+| S5 | Feature flags list | table | GET /admin/feature-flags | flag name, status |
+| S6 | Audit logs list | table | GET /admin/audit-logs | action, user, timestamp |
+| S7 | System settings | form | GET /admin/system-settings | config values |
+
+### Flow 3: Organization Switching + Settings
+
+| ID | Affordance | Type | Handler | Data |
+|----|-----------|------|---------|------|
+| O0 | Current org display | text/badge | — | active org name in sidebar/header |
+| O1 | Org switcher | dropdown/menu | navigate | available orgs list |
+| O2 | Org settings name | text field | PUT /organizations/:id | org name |
+| O3 | Org settings slug | text | — | org slug (read-only or editable) |
+
+### Flow 4: User Profile
+
+| ID | Affordance | Type | Handler | Data |
+|----|-----------|------|---------|------|
+| P1 | Display name input | text field | PUT /users/me/profile | current name |
+| P2 | Avatar display | image | — | DiceBear `<img>`, visible + non-broken |
+| P3 | Save button | button | PUT /users/me/profile | success feedback |
+
+### Flow 5: API Keys
+
+| ID | Affordance | Type | Handler | Data |
+|----|-----------|------|---------|------|
+| K1 | API keys list / empty state | table or message | GET /api-keys | key name, created, last used — or empty state message |
+| K2 | Create key button | button | — | opens create form/dialog |
+| K3 | Key name input | text field | — | key name |
+| K4 | Create confirm | button | POST /api-keys | new key value (one-time display) |
+| K5 | Key value display | text | — | shown once; capture before close/navigate; assert non-empty |
+| K6 | Revoke button | button | DELETE /api-keys/:id | confirmation dialog |
+
+## Slices
+
+| # | Slice | Flows | Page Objects | Auth | Independently demo-able |
+|---|-------|-------|-------------|------|------------------------|
+| 1 | Registration spec | Flow 1 (U1–U7) | `registration.page.ts` | None (unauthenticated) | Yes — standalone signup flow |
+| 2 | User profile + settings spec | Flow 4 (P1–P3) | `profile.page.ts` | `TEST_USER` (shared session) | Yes — simple CRUD with teardown |
+| 3 | API key management spec | Flow 5 (K1–K6) | `api-keys.page.ts` | `TEST_USER` (shared session) | Yes — create/revoke cycle |
+| 4 | Org admin + switching spec | Flow 3 (O0–O3) + Flow 2 org (N1–N4) | `admin.page.ts` | `TEST_USER` (multi-org) | Yes — org switching + member/settings |
+| 5 | System admin spec | Flow 2 system (S1–S7) | reuse `admin.page.ts` | `SUPERADMIN_USER` (separate setup) | Yes — superadmin-only pages |
+
+**Dependencies:** Slice 1 independent. Slices 2–4 depend on existing `auth.setup.ts`. Slice 5 depends on new `system-admin.setup.ts`. Slice 5 reuses POM from Slice 4.
+
+## Success Criteria
+
+- [ ] `registration.spec.ts`: form display, successful signup (timestamp email → success card visible), validation errors, duplicate email error, "Back to sign in" link navigates to `/login`
+- [ ] `registration.page.ts` POM targets `/register` (canonical route), getter-based locators, no assertions in POM
+- [ ] `profile.spec.ts`: display current profile, update display name, avatar `<img>` visible and non-broken, persistence after reload, afterEach restores original name
+- [ ] `profile.page.ts` POM follows existing pattern
+- [ ] `api-keys.spec.ts`: empty state display, create new key, one-time key value captured and non-empty, revoke key, revoked key stays in list with "Revoked" badge (soft-delete — keys are not removed for audit-trail reasons)
+- [ ] `api-keys.page.ts` POM follows existing pattern
+- [ ] `admin.spec.ts`: sidebar org links visible, member list display, member search, org settings display (name/slug), current org display visible, org switcher switches active org context
+- [ ] `system-admin.spec.ts`: system sidebar links visible (superadmin only), users list with filters, organizations list, feature flags page, audit logs page, system settings page
+- [ ] `system-admin.setup.ts` authenticates as `superadmin@roxabi.local`, saves to `.auth/superadmin.json`
+- [ ] `SUPERADMIN_USER` added to `testHelpers.ts` (`superadmin@roxabi.local` / `password123`)
+- [ ] `admin.page.ts` POM covers org links, system links, member table, org settings, org switcher locators
+- [ ] All new specs use `test.skip` pattern for `DATABASE_URL` absence (CI compatibility)
+- [ ] All new specs pass locally with `bun run test:e2e`
+- [ ] All new specs pass in CI
+- [ ] No functional modifications to existing 3 specs (auth, landing, dashboard) — infrastructure fixes discovered during implementation are permitted (Nitro proxy Set-Cookie stripping, flaky `networkidle`)

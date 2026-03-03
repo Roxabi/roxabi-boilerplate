@@ -7,5 +7,6 @@ export class SelfRoleChangeException extends Error {
   constructor() {
     super('Cannot change your own role')
     this.name = 'SelfRoleChangeException'
+    Object.setPrototypeOf(this, new.target.prototype)
   }
 }

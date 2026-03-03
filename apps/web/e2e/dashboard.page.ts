@@ -14,9 +14,10 @@ export class DashboardPage {
 
   async goto() {
     await this.page.goto('/dashboard')
-    await this.page.waitForLoadState('domcontentloaded')
-    // Wait for client-side auth guard to settle (SSR renders shell only)
-    await this.page.waitForTimeout(500)
+    // Wait for the sidebar navigation to appear instead of using waitForTimeout.
+    // A fixed sleep is non-deterministic: too short on slow CI workers, wasteful on fast ones.
+    // The sidebar nav renders once client-side auth resolves, making it a reliable signal.
+    await this.page.waitForSelector('nav, [role="navigation"]', { timeout: 15_000 })
   }
 
   // ---------------------------------------------------------------------------

@@ -1,10 +1,10 @@
 import { Inject, Injectable, Logger } from '@nestjs/common'
-import type { AuditAction } from '@repo/types'
 import { and, count, desc, eq, ilike, isNotNull, isNull, or, type SQL } from 'drizzle-orm'
 import { ClsService } from 'nestjs-cls'
 import { AuditService } from '../audit/audit.service.js'
 import { buildCursorCondition, buildCursorResponse } from '../common/utils/cursorPagination.util.js'
 import { DRIZZLE, type DrizzleDB } from '../database/drizzle.provider.js'
+import { PG_UNIQUE_VIOLATION } from '../database/pgErrorCodes.js'
 import { members, organizations, users } from '../database/schema/auth.schema.js'
 import { roles } from '../database/schema/rbac.schema.js'
 import { getDepth, validateHierarchy } from './adminOrganizations.hierarchy.js'
@@ -12,6 +12,8 @@ import { findOrgSnapshotOrThrow } from './adminOrganizations.shared.js'
 import { OrgDepthExceededException } from './exceptions/orgDepthExceeded.exception.js'
 import { AdminOrgNotFoundException } from './exceptions/orgNotFound.exception.js'
 import { OrgSlugConflictException } from './exceptions/orgSlugConflict.exception.js'
+import { escapeIlikePattern } from './utils/escapeIlikePattern.js'
+import { logOrgAudit } from './utils/logAudit.js'
 
 /**
  * AdminOrganizationsService — cross-tenant org management for super admins.
@@ -64,11 +66,7 @@ export class AdminOrganizationsService {
     }
 
     if (filters.search) {
-      const escaped = filters.search
-        .replace(/\\/g, '\\\\')
-        .replace(/%/g, '\\%')
-        .replace(/_/g, '\\_')
-      const pattern = `%${escaped}%`
+      const pattern = `%${escapeIlikePattern(filters.search)}%`
       const searchCondition = or(
         ilike(organizations.name, pattern),
         ilike(organizations.slug, pattern)
@@ -289,7 +287,7 @@ export class AdminOrganizationsService {
       createdOrg = result
     } catch (err) {
       const pgErr = err as { code?: string }
-      if (pgErr.code === '23505') {
+      if (pgErr.code === PG_UNIQUE_VIOLATION) {
         throw new OrgSlugConflictException()
       }
       throw err
@@ -335,7 +333,16 @@ export class AdminOrganizationsService {
         ? 'org.parent_changed'
         : 'org.updated'
 
-    this.logOrgAudit(auditAction, orgId, actorId, beforeOrg, updatedOrg)
+    logOrgAudit(
+      this.auditService,
+      this.logger,
+      this.cls,
+      auditAction,
+      orgId,
+      actorId,
+      beforeOrg,
+      updatedOrg
+    )
 
     return updatedOrg
   }
@@ -354,33 +361,10 @@ export class AdminOrganizationsService {
       return result
     } catch (err) {
       const pgErr = err as { code?: string }
-      if (pgErr.code === '23505') {
+      if (pgErr.code === PG_UNIQUE_VIOLATION) {
         throw new OrgSlugConflictException()
       }
       throw err
     }
-  }
-
-  private logOrgAudit(
-    action: AuditAction,
-    orgId: string,
-    actorId: string,
-    before: Record<string, unknown> | undefined,
-    after: Record<string, unknown> | undefined
-  ) {
-    this.auditService
-      .log({
-        actorId,
-        actorType: 'user',
-        action,
-        resource: 'organization',
-        resourceId: orgId,
-        organizationId: orgId,
-        before: before ? { ...before } : null,
-        after: after ? { ...after } : null,
-      })
-      .catch((err) => {
-        this.logger.error(`[${this.cls.getId()}][audit] Failed to log ${action}`, err)
-      })
   }
 }

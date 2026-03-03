@@ -7,5 +7,6 @@ export class AdminOrgNotFoundException extends Error {
   constructor(orgId: string) {
     super(`Organization "${orgId}" not found`)
     this.name = 'AdminOrgNotFoundException'
+    Object.setPrototypeOf(this, new.target.prototype)
   }
 }

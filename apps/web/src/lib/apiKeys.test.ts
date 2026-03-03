@@ -1,10 +1,11 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
 import type {
+  ApiKey,
   CreateApiKeyRequest,
   CreateApiKeyResponse,
   ListApiKeysResponse,
   RevokeApiKeyResponse,
-} from './apiKeys'
+} from '@repo/types'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createApiKey, listApiKeys, revokeApiKey } from './apiKeys'
 
 // ---------------------------------------------------------------------------
@@ -29,9 +30,7 @@ function createErrorResponse(status: number, body?: Record<string, unknown>): Re
   return new Response('Internal Server Error', { status })
 }
 
-function makeApiKey(
-  overrides: Partial<import('./apiKeys').ApiKey> = {}
-): import('./apiKeys').ApiKey {
+function makeApiKey(overrides: Partial<ApiKey> = {}): ApiKey {
   return {
     id: 'key-1',
     name: 'Test Key',

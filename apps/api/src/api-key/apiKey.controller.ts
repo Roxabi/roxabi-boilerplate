@@ -59,7 +59,10 @@ export class ApiKeyController {
   @ApiOperation({ summary: 'Revoke an API key' })
   @ApiResponse({ status: 200, description: 'API key revoked' })
   @ApiResponse({ status: 404, description: 'API key not found' })
-  async revoke(@Param('id', ParseUUIDPipe) id: string, @Session() session: AuthenticatedSession) {
+  async revoke(
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Session() session: AuthenticatedSession
+  ) {
     return this.apiKeyService.revoke(id, session)
   }
 }

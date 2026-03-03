@@ -7,5 +7,6 @@ export class SuperadminProtectionException extends Error {
   constructor() {
     super('Cannot modify another superadmin account')
     this.name = 'SuperadminProtectionException'
+    Object.setPrototypeOf(this, new.target.prototype)
   }
 }

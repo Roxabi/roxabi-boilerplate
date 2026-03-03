@@ -8,5 +8,6 @@ export class AccountNotDeletedException extends Error {
   constructor() {
     super('Account must be scheduled for deletion before it can be permanently deleted')
     this.name = 'AccountNotDeletedException'
+    Object.setPrototypeOf(this, new.target.prototype)
   }
 }

@@ -1,10 +1,10 @@
 import { Reflector } from '@nestjs/core'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AuditService } from '../audit/audit.service.js'
+import { SettingNotFoundException } from '../system-settings/exceptions/settingNotFound.exception.js'
+import { SettingValidationException } from '../system-settings/exceptions/settingValidation.exception.js'
 import type { SystemSettingsService } from '../system-settings/systemSettings.service.js'
 import { AdminSettingsController, settingsUpdateSchema } from './adminSettings.controller.js'
-import { SettingNotFoundException } from './exceptions/settingNotFound.exception.js'
-import { SettingValidationException } from './exceptions/settingValidation.exception.js'
 
 // ---------------------------------------------------------------------------
 // Helpers

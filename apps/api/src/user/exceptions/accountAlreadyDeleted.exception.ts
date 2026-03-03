@@ -8,5 +8,6 @@ export class AccountAlreadyDeletedException extends Error {
   constructor() {
     super('Account is already scheduled for deletion')
     this.name = 'AccountAlreadyDeletedException'
+    Object.setPrototypeOf(this, new.target.prototype)
   }
 }

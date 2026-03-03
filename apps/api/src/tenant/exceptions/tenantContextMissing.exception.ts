@@ -6,5 +6,7 @@ export class TenantContextMissingException extends Error {
 
   constructor() {
     super('No tenant context available')
+    this.name = 'TenantContextMissingException'
+    Object.setPrototypeOf(this, new.target.prototype)
   }
 }

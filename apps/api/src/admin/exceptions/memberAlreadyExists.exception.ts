@@ -7,5 +7,6 @@ export class MemberAlreadyExistsException extends Error {
   constructor() {
     super('A member with this email already exists in this organization')
     this.name = 'MemberAlreadyExistsException'
+    Object.setPrototypeOf(this, new.target.prototype)
   }
 }

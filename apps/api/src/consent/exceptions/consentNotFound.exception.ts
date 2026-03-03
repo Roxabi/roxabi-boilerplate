@@ -8,6 +8,7 @@ export class ConsentNotFoundException extends Error {
   constructor(private readonly userId: string) {
     super('No consent record found')
     this.name = 'ConsentNotFoundException'
+    Object.setPrototypeOf(this, new.target.prototype)
   }
 
   getUserId(): string {

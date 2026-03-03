@@ -1,14 +1,15 @@
 import { Inject, Injectable, Logger } from '@nestjs/common'
-import type { AuditAction } from '@repo/types'
 import { and, count, eq, inArray, isNull } from 'drizzle-orm'
 import { ClsService } from 'nestjs-cls'
 import { AuditService } from '../audit/audit.service.js'
+import { DELETION_GRACE_PERIOD_MS } from '../common/constants.js'
 import { DRIZZLE, type DrizzleDB } from '../database/drizzle.provider.js'
 import { members, organizations, users } from '../database/schema/auth.schema.js'
 import { getDescendantOrgIds } from './adminOrganizations.hierarchy.js'
 import { findOrgSnapshotOrThrow } from './adminOrganizations.shared.js'
 import { NotDeletedException } from './exceptions/notDeleted.exception.js'
 import { AdminOrgNotFoundException } from './exceptions/orgNotFound.exception.js'
+import { logOrgAudit } from './utils/logAudit.js'
 
 /**
  * AdminOrganizationsDeletionService -- deletion-related operations for admin org management.
@@ -100,7 +101,7 @@ export class AdminOrganizationsDeletionService {
     }
 
     const now = new Date()
-    const scheduledFor = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+    const scheduledFor = new Date(now.getTime() + DELETION_GRACE_PERIOD_MS)
 
     const [updatedOrg] = await this.db
       .update(organizations)
@@ -108,7 +109,16 @@ export class AdminOrganizationsDeletionService {
       .where(eq(organizations.id, orgId))
       .returning()
 
-    this.logOrgAudit('org.deleted', orgId, actorId, org, updatedOrg)
+    logOrgAudit(
+      this.auditService,
+      this.logger,
+      this.cls,
+      'org.deleted',
+      orgId,
+      actorId,
+      org,
+      updatedOrg
+    )
 
     return updatedOrg
   }
@@ -129,31 +139,17 @@ export class AdminOrganizationsDeletionService {
       .where(eq(organizations.id, orgId))
       .returning()
 
-    this.logOrgAudit('org.restored', orgId, actorId, org, updatedOrg)
+    logOrgAudit(
+      this.auditService,
+      this.logger,
+      this.cls,
+      'org.restored',
+      orgId,
+      actorId,
+      org,
+      updatedOrg
+    )
 
     return updatedOrg
-  }
-
-  private logOrgAudit(
-    action: AuditAction,
-    orgId: string,
-    actorId: string,
-    before: Record<string, unknown> | undefined,
-    after: Record<string, unknown> | undefined
-  ) {
-    this.auditService
-      .log({
-        actorId,
-        actorType: 'user',
-        action,
-        resource: 'organization',
-        resourceId: orgId,
-        organizationId: orgId,
-        before: before ? { ...before } : null,
-        after: after ? { ...after } : null,
-      })
-      .catch((err) => {
-        this.logger.error(`[${this.cls.getId()}][audit] Failed to log ${action}`, err)
-      })
   }
 }

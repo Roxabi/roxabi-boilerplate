@@ -5,6 +5,7 @@ import type { TenantService } from '../tenant/tenant.service.js'
 import { DefaultRoleException } from './exceptions/defaultRole.exception.js'
 import { MemberNotFoundException } from './exceptions/memberNotFound.exception.js'
 import { OwnershipConstraintException } from './exceptions/ownershipConstraint.exception.js'
+import { RoleInsertFailedException } from './exceptions/roleInsertFailed.exception.js'
 import { RoleNotFoundException } from './exceptions/roleNotFound.exception.js'
 import { RoleSlugConflictException } from './exceptions/roleSlugConflict.exception.js'
 import { RbacService } from './rbac.service.js'
@@ -100,6 +101,28 @@ describe('RbacService', () => {
       const result = await service.createRole({ name: 'Custom', permissions: ['roles:read'] })
 
       expect(result).toEqual(newRole)
+    })
+
+    it('should throw RoleInsertFailedException when insert returns empty', async () => {
+      ;(mockTenantService.query as ReturnType<typeof vi.fn>).mockImplementation((cb) => {
+        const slugCheck = chain('limit', [])
+        const insertChain = chain('returning', [])
+        const permChain = chain('from', [{ id: 'p-1', resource: 'roles', action: 'read' }])
+
+        const tx = {
+          select: vi.fn().mockReturnValueOnce(slugCheck).mockReturnValueOnce(permChain),
+          insert: vi.fn().mockReturnValue(insertChain),
+        }
+        slugCheck.from.mockReturnValue(slugCheck)
+        slugCheck.where.mockReturnValue(slugCheck)
+
+        return cb(tx)
+      })
+
+      const service = new RbacService(mockTenantService, mockCls)
+      await expect(
+        service.createRole({ name: 'Ghost', permissions: ['roles:read'] })
+      ).rejects.toThrow(RoleInsertFailedException)
     })
 
     it('should reject duplicate slug within same tenant', async () => {

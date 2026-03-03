@@ -1,0 +1,87 @@
+---
+title: "fix(frontend): architecture gaps — profile.tsx fetch abstraction + ApiKey types in packages/types"
+issue: 409
+status: approved
+tier: F-lite
+date: 2026-03-03
+---
+
+## Problem
+
+Two of the three original frontend architecture gaps from the FE/BE standards audit (#400) remain open.
+One has been resolved since the issue was filed.
+
+### Resolved (since issue filed)
+
+**Item 1: Dual permission systems** — ✅ Mitigated. `permissions.ts` was refactored with a
+`SessionWithPermissions` type (accepts any object with optional `permissions[]`) and JSDoc clarifying
+correct usage. All RBAC callers (`settings.tsx`, `api-keys/index.tsx`, `admin/settings.tsx`) now
+correctly use `useEnrichedSession()`. No silent false returns possible from wrong session type.
+The two modules still coexist but serve distinct, documented purposes.
+
+### Open (2 items remain)
+
+**Item 2: Raw `fetch` at two abstraction layers in `profile.lazy.tsx`**
+
+`apps/web/src/routes/settings/profile.lazy.tsx` contains two raw HTTP calls not abstracted to
+a `lib/` module:
+
+- `fetchProfile` (line 99): module-level `fetch('/api/users/me', { credentials: 'include' })` — a
+  static function inside the route file.
+- `handleSave` (line 339): inline `fetch('/api/users/me', { method: 'PATCH', ... })` embedded
+  inside the form submit handler.
+
+All other routes delegate HTTP calls to `lib/`-level files (`lib/apiKeys.ts`, `lib/useOrganizations.ts`,
+etc.). Profile is the only route with inline raw fetch. This makes the component hard to test in
+isolation and creates a drift from the established abstraction pattern.
+
+Additionally, `profile.lazy.tsx` uses `useSession()` (Better Auth) at line 328 for user identity,
+while similar pages use `useEnrichedSession()`. This is not a bug (no RBAC checks made with it),
+but is inconsistent.
+
+**Item 3: ApiKey types not promoted to `packages/types`**
+
+`apps/web/src/lib/apiKeys.ts` defines 5 types locally:
+- `ApiKey`, `CreateApiKeyRequest`, `CreateApiKeyResponse`, `ListApiKeysResponse`, `RevokeApiKeyResponse`
+
+Other entity types (`FeatureFlag`, `SystemSetting`, `AdminUser`, `Profile`, `AuditLog`) live in
+`packages/types/src/`. The backend defines its own independent ApiKey shapes. Without a shared
+contract, frontend and backend types can silently drift — a serialization mismatch that only surfaces
+at runtime.
+
+## Who
+
+- **Primary:** Frontend developers maintaining `apps/web` — raw fetch coupling makes profile harder
+  to test and maintain; type drift risk between FE and BE.
+- **Secondary:** Backend developers — shared type contract in `packages/types` is the boundary.
+
+## Constraints
+
+- Changes limited to `apps/web/src/routes/settings/profile.lazy.tsx`, new `apps/web/src/lib/profile.ts`,
+  `apps/web/src/lib/apiKeys.ts`, and `packages/types/src/`.
+- ApiKey types in `packages/types` must match current backend response shapes exactly — verify against
+  `apps/api/src/api-keys/` DTOs before promoting (no backend changes allowed).
+- No UI/UX changes — structural refactors only.
+- Must not regress existing E2E tests (profile save flow, API key management flows).
+- `packages/types` must remain free of app-specific logic (pure type definitions only).
+
+## Out of Scope
+
+- Changing or consolidating the permission system (already mitigated in Item 1).
+- Migrating `useSession()` → `useEnrichedSession()` in `profile.lazy.tsx` if no RBAC checks needed.
+- Migrating other routes to the `lib/` fetch pattern (profile only, per issue scope).
+- Backend DTO changes or NestJS refactoring.
+- New permission rules, roles, or RBAC model changes (#24).
+
+## Complexity
+
+**Tier: F-lite** — Two well-scoped frontend fixes, all file paths identified, no new patterns
+introduced (follows existing `lib/` convention). Item 2 requires creating one new file; Item 3
+requires moving type definitions and updating two import sites.
+
+Signals observed:
+- M size label (reduced scope vs original — 1 of 3 items resolved)
+- Frontend-only domain (`apps/web`, `packages/types`)
+- All file paths explicitly identified in current codebase state
+- No architectural unknowns — pattern already established by `lib/apiKeys.ts`
+- Risk: type shape mismatch between local and backend ApiKey DTOs (verify before promoting)

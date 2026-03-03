@@ -1,3 +1,5 @@
+@.claude/stack.yml
+
 # Claude Configuration
 
 ## TL;DR
@@ -15,7 +17,6 @@
 
 SaaS framework with integrated AI team. Vision → [docs/product/vision.mdx](docs/product/vision.mdx).
 
-**Stack:** Bun | TurboRepo | TypeScript 5.x strict | Biome | TanStack Start | NestJS + Fastify | Vercel | Drizzle ORM + PostgreSQL 16
 **Style:** single quotes, no semicolons, trailing commas (es5), 2-space indent, 100-char width
 
 ```bash
@@ -49,7 +50,7 @@ packages/  ui(@repo/ui) types(@repo/types) config(@repo/config) email vitest-con
 | Env check | `bun run env:check` | .env ↔ .env.example |
 | License | `bun run license:check` | Dependency licenses |
 | Docs | `bun run docs` | Runs web only (port 3000) |
-| Dashboard | `bun run dashboard` | Issue dashboard :3333 |
+| Dashboard | `/issues` skill | Issue dashboard (plugin-provided) |
 
 ## Critical Rules
 
@@ -118,6 +119,7 @@ MUST read [code-review.mdx](docs/standards/code-review.mdx). Conventional Commen
 
 | Context | Read |
 |---------|------|
+| New feature (end-to-end) | [new-feature-pattern.mdx](docs/guides/new-feature-pattern.mdx) |
 | React / TanStack | [frontend-patterns.mdx](docs/standards/frontend-patterns.mdx) — see also [apps/web/CLAUDE.md](apps/web/CLAUDE.md) |
 | NestJS / API | [backend-patterns.mdx](docs/standards/backend-patterns.mdx) — see also [apps/api/CLAUDE.md](apps/api/CLAUDE.md) |
 | Tests | [testing.mdx](docs/standards/testing.mdx) |
@@ -126,10 +128,10 @@ MUST read [code-review.mdx](docs/standards/code-review.mdx). Conventional Commen
 
 ## Skills & Agents
 
-Skills: always use appropriate skill. Defs → `.claude/skills/*/SKILL.md`.
-Agents: rules → [AGENTS.md](AGENTS.md). Defs → `.claude/agents/*.md`. Guide → [agent-teams.mdx](docs/guides/agent-teams.mdx).
+Skills: always use appropriate skill. Workflow skills → `dev-core` plugin. Local skills (retro, agent-browser) → `.claude/skills/*/SKILL.md`.
+Agents: rules → [AGENTS.md](AGENTS.md). Defs → `dev-core` plugin. Guide → [agent-teams.mdx](docs/guides/agent-teams.mdx).
 
-**Agent models:** Sonnet = frontend-dev, backend-dev, devops, doc-writer, fixer, tester. Opus (inherited) = architect, product-lead, security-auditor.
+**Agent models:** Sonnet = all agents (frontend-dev, backend-dev, devops, doc-writer, fixer, tester, architect, product-lead, security-auditor).
 **Spawns:** Explore/research tasks → `model: "haiku"`. Simple mechanical tasks (grep, summarize, single-line fix) → `model: "haiku"`. Code generation, review, architecture → Sonnet/Opus (agent defaults).
 
 **Workflow skills (via `/dev #N` or standalone):** `dev` (orchestrator) | `frame` | `analyze` | `spec` | `plan` | `implement` | `fix`

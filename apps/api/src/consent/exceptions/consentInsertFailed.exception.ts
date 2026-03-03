@@ -8,6 +8,7 @@ export class ConsentInsertFailedException extends Error {
   constructor(private readonly userId: string) {
     super('Failed to save consent record')
     this.name = 'ConsentInsertFailedException'
+    Object.setPrototypeOf(this, new.target.prototype)
   }
 
   getUserId(): string {

@@ -7,5 +7,6 @@ export class UserAlreadyBannedException extends Error {
   constructor(userId: string) {
     super(`User "${userId}" is already banned`)
     this.name = 'UserAlreadyBannedException'
+    Object.setPrototypeOf(this, new.target.prototype)
   }
 }

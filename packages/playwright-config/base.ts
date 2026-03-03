@@ -3,6 +3,8 @@ import { devices } from '@playwright/test'
 
 const hasDatabase = Boolean(process.env.DATABASE_URL)
 const authFile = './apps/web/e2e/.auth/user.json'
+// Must match SUPERADMIN_AUTH_FILE in apps/web/e2e/testHelpers.ts
+const superadminAuthFile = './apps/web/e2e/.auth/superadmin.json'
 
 /**
  * Base Playwright configuration for the monorepo.
@@ -25,7 +27,7 @@ export const basePlaywrightConfig: PlaywrightTestConfig = {
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: process.env.CI ? 2 : undefined,
   timeout: process.env.CI ? 60_000 : 30_000,
   reporter: process.env.CI ? [['blob'], ['list']] : 'html',
   use: {
@@ -35,12 +37,23 @@ export const basePlaywrightConfig: PlaywrightTestConfig = {
     actionTimeout: process.env.CI ? 15_000 : 10_000,
   },
   projects: [
-    // Setup project — authenticates once and saves state
+    // Setup project — authenticates once as a regular user and saves state
     ...(hasDatabase
       ? [
           {
             name: 'setup',
             testMatch: /auth\.setup\.ts/,
+          },
+        ]
+      : []),
+
+    // System-admin setup project — authenticates once as superadmin and saves state
+    ...(hasDatabase
+      ? [
+          {
+            name: 'system-admin-setup',
+            testMatch: /systemAdmin\.setup\.ts/,
+            dependencies: ['setup'],
           },
         ]
       : []),
@@ -52,7 +65,7 @@ export const basePlaywrightConfig: PlaywrightTestConfig = {
         ...(hasDatabase ? { storageState: authFile } : {}),
       },
       dependencies: hasDatabase ? ['setup'] : [],
-      testIgnore: /auth\.setup\.ts/,
+      testIgnore: /(?:auth|systemAdmin)\.setup\.ts|systemAdmin\.spec\.ts/,
     },
     {
       name: 'firefox',
@@ -61,7 +74,7 @@ export const basePlaywrightConfig: PlaywrightTestConfig = {
         ...(hasDatabase ? { storageState: authFile } : {}),
       },
       dependencies: hasDatabase ? ['setup'] : [],
-      testIgnore: /auth\.setup\.ts/,
+      testIgnore: /(?:auth|systemAdmin)\.setup\.ts|systemAdmin\.spec\.ts/,
     },
     {
       name: 'webkit',
@@ -70,7 +83,7 @@ export const basePlaywrightConfig: PlaywrightTestConfig = {
         ...(hasDatabase ? { storageState: authFile } : {}),
       },
       dependencies: hasDatabase ? ['setup'] : [],
-      testIgnore: /auth\.setup\.ts/,
+      testIgnore: /(?:auth|systemAdmin)\.setup\.ts|systemAdmin\.spec\.ts/,
     },
     {
       name: 'mobile-chrome',
@@ -79,8 +92,24 @@ export const basePlaywrightConfig: PlaywrightTestConfig = {
         ...(hasDatabase ? { storageState: authFile } : {}),
       },
       dependencies: hasDatabase ? ['setup'] : [],
-      testIgnore: /auth\.setup\.ts/,
+      testIgnore: /(?:auth|systemAdmin)\.setup\.ts|systemAdmin\.spec\.ts/,
     },
+
+    // System-admin browser project — runs system-admin.spec.ts with superadmin session.
+    // Only registered when database is available (same guard as the setup project).
+    ...(hasDatabase
+      ? [
+          {
+            name: 'chromium-system-admin',
+            use: {
+              ...devices['Desktop Chrome'],
+              storageState: superadminAuthFile,
+            },
+            dependencies: ['system-admin-setup'],
+            testMatch: /systemAdmin\.spec\.ts/,
+          },
+        ]
+      : []),
   ],
   webServer: [
     {

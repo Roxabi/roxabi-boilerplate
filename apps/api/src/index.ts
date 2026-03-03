@@ -6,18 +6,27 @@ import { NestFactory } from '@nestjs/core'
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 import { AppModule } from './app.module.js'
+import { DEFAULT_LOG_LEVEL } from './config/env.validation.js'
 import { parseCorsOrigins } from './cors.js'
 import { registerRateLimitHeadersHook } from './throttler/index.js'
 
-async function configureSecurityHeaders(app: NestFastifyApplication): Promise<void> {
+async function configureSecurityHeaders(
+  app: NestFastifyApplication,
+  swaggerEnabled: boolean
+): Promise<void> {
+  // Swagger requires unsafe-inline and unpkg.com for its bundled UI assets.
+  // Tighten CSP to self-only when Swagger is disabled (production default).
+  const scriptSrc = swaggerEnabled ? ["'self'", "'unsafe-inline'", 'https://unpkg.com'] : ["'self'"]
+  const styleSrc = swaggerEnabled ? ["'self'", "'unsafe-inline'", 'https://unpkg.com'] : ["'self'"]
+
   // Security headers (must be registered before routes)
   await app.register(helmet, {
     global: true,
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'none'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", 'https://unpkg.com'],
-        styleSrc: ["'self'", "'unsafe-inline'", 'https://unpkg.com'],
+        scriptSrc,
+        styleSrc,
         imgSrc: ["'self'", 'data:', 'https://api.dicebear.com'],
         fontSrc: ["'self'"],
         connectSrc: ["'self'"],
@@ -68,11 +77,9 @@ function configureCors(
 
 function configureSwagger(
   app: NestFastifyApplication,
-  configService: ConfigService,
   logger: Logger,
-  nodeEnv: string
+  swaggerEnabled: boolean
 ): void {
-  const swaggerEnabled = configService.get<boolean>('SWAGGER_ENABLED', nodeEnv !== 'production')
   if (swaggerEnabled) {
     const config = new DocumentBuilder()
       .setTitle('Roxabi API')
@@ -99,7 +106,7 @@ async function bootstrap() {
     AppModule,
     new FastifyAdapter({
       logger: {
-        level: process.env.LOG_LEVEL || 'debug',
+        level: process.env.LOG_LEVEL || DEFAULT_LOG_LEVEL,
       },
       bodyLimit: 1_048_576, // 1 MiB — explicit limit
       trustProxy: 1, // trust single proxy hop (Vercel) for correct client IP from x-forwarded-for
@@ -110,8 +117,13 @@ async function bootstrap() {
 
   const configService = app.get(ConfigService)
   const logger = new Logger('Bootstrap')
+  const nodeEnv = configService.get<string>('NODE_ENV', 'development')
+  // ConfigService.get<boolean>() does not coerce strings at runtime; the boolean generic
+  // is type-level only. SWAGGER_ENABLED is pre-validated as a native boolean by the Zod
+  // schema in env.validation.ts before ConfigService is populated.
+  const swaggerEnabled = configService.get<boolean>('SWAGGER_ENABLED', nodeEnv === 'development')
 
-  await configureSecurityHeaders(app)
+  await configureSecurityHeaders(app, swaggerEnabled)
   registerRateLimitHeadersHook(app)
 
   // Global pipes
@@ -123,9 +135,8 @@ async function bootstrap() {
     })
   )
 
-  const nodeEnv = configService.get<string>('NODE_ENV', 'development')
   configureCors(app, configService, logger, nodeEnv)
-  configureSwagger(app, configService, logger, nodeEnv)
+  configureSwagger(app, logger, swaggerEnabled)
 
   const port = configService.get<number>('PORT', 4000)
   await app.listen(port, '0.0.0.0')

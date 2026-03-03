@@ -373,6 +373,46 @@ describe('createBetterAuth sendVerificationEmail', () => {
       text: 'Verify your email: http://localhost:3000/verify-email?token=abc',
     })
   })
+
+  it('should throw APIError when emailProvider.send fails', async () => {
+    // Arrange
+    const mockDb = createMockDb()
+    const mockEmail = { send: vi.fn().mockRejectedValue(new Error('Resend down')) }
+    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    const handler = getVerificationHandler()
+
+    mockRenderVerificationEmail.mockResolvedValueOnce({
+      html: '<p>Verify</p>',
+      text: 'Verify',
+      subject: 'Verify your email',
+    })
+
+    // Act & Assert — send failure surfaces as a controlled APIError, not a raw exception
+    await expect(
+      handler({
+        user: { email: 'user@example.com' },
+        url: 'http://localhost:4000/api/auth/verify-email?token=abc',
+      })
+    ).rejects.toThrow('EMAIL_SEND_FAILED')
+  })
+
+  it('should throw APIError when send fails after render also fails', async () => {
+    // Arrange
+    const mockDb = createMockDb()
+    const mockEmail = { send: vi.fn().mockRejectedValue(new Error('Resend down')) }
+    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    const handler = getVerificationHandler()
+
+    mockRenderVerificationEmail.mockRejectedValueOnce(new Error('Render failed'))
+
+    // Act & Assert — double failure still throws APIError (not an unhandled exception)
+    await expect(
+      handler({
+        user: { email: 'user@example.com' },
+        url: 'http://localhost:4000/api/auth/verify-email?token=abc',
+      })
+    ).rejects.toThrow('EMAIL_SEND_FAILED')
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -478,6 +518,46 @@ describe('createBetterAuth sendResetPassword', () => {
       html: '<p>Click <a href="http://localhost:3000/reset-password/confirm?token=xyz">here</a> to reset your password.</p>',
       text: 'Reset your password: http://localhost:3000/reset-password/confirm?token=xyz',
     })
+  })
+
+  it('should throw APIError when emailProvider.send fails', async () => {
+    // Arrange
+    const mockDb = createMockDb()
+    const mockEmail = { send: vi.fn().mockRejectedValue(new Error('Resend down')) }
+    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    const handler = getResetPasswordHandler()
+
+    mockRenderResetEmail.mockResolvedValueOnce({
+      html: '<p>Reset</p>',
+      text: 'Reset',
+      subject: 'Reset your password',
+    })
+
+    // Act & Assert — send failure surfaces as a controlled APIError, not a raw exception
+    await expect(
+      handler({
+        user: { email: 'user@example.com' },
+        url: 'http://localhost:4000/api/auth/reset-password?token=xyz',
+      })
+    ).rejects.toThrow('EMAIL_SEND_FAILED')
+  })
+
+  it('should throw APIError when send fails after render also fails', async () => {
+    // Arrange
+    const mockDb = createMockDb()
+    const mockEmail = { send: vi.fn().mockRejectedValue(new Error('Resend down')) }
+    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    const handler = getResetPasswordHandler()
+
+    mockRenderResetEmail.mockRejectedValueOnce(new Error('Render failed'))
+
+    // Act & Assert — double failure still throws APIError (not an unhandled exception)
+    await expect(
+      handler({
+        user: { email: 'user@example.com' },
+        url: 'http://localhost:4000/api/auth/reset-password?token=xyz',
+      })
+    ).rejects.toThrow('EMAIL_SEND_FAILED')
   })
 })
 
@@ -607,6 +687,48 @@ describe('createBetterAuth sendMagicLink', () => {
       html: '<p>Click <a href="http://localhost:3000/magic-link/verify?token=m3">here</a> to sign in.</p>',
       text: 'Sign in to Roxabi: http://localhost:3000/magic-link/verify?token=m3',
     })
+  })
+
+  it('should throw APIError when emailProvider.send fails', async () => {
+    // Arrange
+    const mockDb = createMockDb()
+    const mockEmail = { send: vi.fn().mockRejectedValue(new Error('Resend down')) }
+    mockDb._mocks.selectWhereFn.mockResolvedValueOnce([{ locale: 'en' }])
+    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    const handler = getMagicLinkHandler()
+
+    mockRenderMagicLinkEmail.mockResolvedValueOnce({
+      html: '<p>Magic</p>',
+      text: 'Sign in',
+      subject: 'Sign in to Roxabi',
+    })
+
+    // Act & Assert — send failure surfaces as a controlled APIError, not a raw exception
+    await expect(
+      handler({
+        email: 'user@example.com',
+        url: 'http://localhost:4000/api/auth/magic-link/verify?token=m5',
+      })
+    ).rejects.toThrow('EMAIL_SEND_FAILED')
+  })
+
+  it('should throw APIError when send fails after render also fails', async () => {
+    // Arrange
+    const mockDb = createMockDb()
+    const mockEmail = { send: vi.fn().mockRejectedValue(new Error('Resend down')) }
+    mockDb._mocks.selectWhereFn.mockResolvedValueOnce([{ locale: 'en' }])
+    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    const handler = getMagicLinkHandler()
+
+    mockRenderMagicLinkEmail.mockRejectedValueOnce(new Error('Render failed'))
+
+    // Act & Assert — double failure still throws APIError (not an unhandled exception)
+    await expect(
+      handler({
+        email: 'user@example.com',
+        url: 'http://localhost:4000/api/auth/magic-link/verify?token=m6',
+      })
+    ).rejects.toThrow('EMAIL_SEND_FAILED')
   })
 
   it('should propagate error when DB query throws', async () => {

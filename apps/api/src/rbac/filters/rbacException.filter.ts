@@ -1,9 +1,11 @@
 import { type ArgumentsHost, Catch, type ExceptionFilter, HttpStatus } from '@nestjs/common'
 import type { FastifyReply, FastifyRequest } from 'fastify'
 import { ClsService } from 'nestjs-cls'
+import { sendErrorResponse } from '../../common/filters/sendErrorResponse.js'
 import { DefaultRoleException } from '../exceptions/defaultRole.exception.js'
 import { MemberNotFoundException } from '../exceptions/memberNotFound.exception.js'
 import { OwnershipConstraintException } from '../exceptions/ownershipConstraint.exception.js'
+import { RoleInsertFailedException } from '../exceptions/roleInsertFailed.exception.js'
 import { RoleNotFoundException } from '../exceptions/roleNotFound.exception.js'
 import { RoleSlugConflictException } from '../exceptions/roleSlugConflict.exception.js'
 
@@ -13,13 +15,15 @@ type RbacException =
   | DefaultRoleException
   | RoleSlugConflictException
   | MemberNotFoundException
+  | RoleInsertFailedException
 
 @Catch(
   RoleNotFoundException,
   OwnershipConstraintException,
   DefaultRoleException,
   RoleSlugConflictException,
-  MemberNotFoundException
+  MemberNotFoundException,
+  RoleInsertFailedException
 )
 export class RbacExceptionFilter implements ExceptionFilter {
   constructor(private readonly cls: ClsService) {}
@@ -38,18 +42,12 @@ export class RbacExceptionFilter implements ExceptionFilter {
       statusCode = HttpStatus.NOT_FOUND
     } else if (exception instanceof RoleSlugConflictException) {
       statusCode = HttpStatus.CONFLICT
+    } else if (exception instanceof RoleInsertFailedException) {
+      statusCode = HttpStatus.INTERNAL_SERVER_ERROR
     } else {
       statusCode = HttpStatus.BAD_REQUEST
     }
 
-    response.header('x-correlation-id', correlationId)
-    response.status(statusCode).send({
-      statusCode,
-      timestamp: new Date().toISOString(),
-      path: request.url,
-      correlationId,
-      message: exception.message,
-      errorCode: exception.errorCode,
-    })
+    sendErrorResponse(response, request, correlationId, statusCode, exception)
   }
 }

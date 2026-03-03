@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common'
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post } from '@nestjs/common'
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger'
 import { z } from 'zod'
 import { Permissions } from '../auth/decorators/permissions.decorator.js'
@@ -37,7 +37,7 @@ export class OrganizationController {
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
   @ApiResponse({ status: 404, description: 'Organization not found' })
   async deleteOrganization(
-    @Param('id') orgId: string,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) orgId: string,
     @Session() session: { user: { id: string } },
     @Body(new ZodValidationPipe(deleteOrgSchema)) body: DeleteOrgDto
   ) {
@@ -52,7 +52,7 @@ export class OrganizationController {
   @ApiResponse({ status: 403, description: 'Insufficient permissions or not owner' })
   @ApiResponse({ status: 404, description: 'Organization not found' })
   async reactivateOrganization(
-    @Param('id') orgId: string,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) orgId: string,
     @Session() session: { user: { id: string } }
   ) {
     return this.organizationService.reactivate(orgId, session.user.id)
@@ -63,7 +63,7 @@ export class OrganizationController {
   @ApiOperation({ summary: 'Get deletion impact summary' })
   @ApiResponse({ status: 200, description: 'Impact summary' })
   @ApiResponse({ status: 404, description: 'Organization not found' })
-  async getDeletionImpact(@Param('id') orgId: string) {
+  async getDeletionImpact(@Param('id', new ParseUUIDPipe({ version: '4' })) orgId: string) {
     return this.organizationService.getDeletionImpact(orgId)
   }
 }

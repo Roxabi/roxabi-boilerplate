@@ -213,7 +213,7 @@ MCP tools (Context7, Vercel) are only available to the **orchestrator** (main Cl
 
 ## Agent Configuration
 
-Each agent's `.md` file contains YAML frontmatter that controls its behavior:
+Agent definitions are provided by the `dev-core` plugin (`dev-core@roxabi-marketplace`). Each agent's `.md` file contains YAML frontmatter that controls its behavior:
 
 ### `permissionMode`
 
@@ -239,7 +239,7 @@ All agents use `memory: project`, which enables persistent learnings stored in `
 
 ### `skills`
 
-Some agents have skills preloaded, matching their primary function:
+Some agents have skills preloaded (provided by `dev-core` and other plugins), matching their primary function:
 
 | Agent | Skill | Purpose |
 |-------|-------|---------|

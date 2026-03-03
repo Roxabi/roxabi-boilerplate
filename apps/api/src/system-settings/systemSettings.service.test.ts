@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { SettingNotFoundException } from '../admin/exceptions/settingNotFound.exception.js'
-import { SettingValidationException } from '../admin/exceptions/settingValidation.exception.js'
+import { SettingNotFoundException } from './exceptions/settingNotFound.exception.js'
+import { SettingValidationException } from './exceptions/settingValidation.exception.js'
 import { SystemSettingsService } from './systemSettings.service.js'
 
 // Drizzle builder chain shapes used by SystemSettingsService:
@@ -326,6 +326,138 @@ describe('SystemSettingsService', () => {
       await expect(
         service.batchUpdate([{ key: 'app.theme', value: 'invalid-theme' }])
       ).rejects.toThrow(SettingValidationException)
+    })
+
+    it('should accept a valid string value for a string setting', async () => {
+      // Arrange
+      const stringSetting = {
+        id: '1',
+        key: 'app.name',
+        value: 'Roxabi',
+        type: 'string',
+        name: 'App Name',
+        description: null,
+        category: 'General',
+        metadata: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+      const updatedSetting = { ...stringSetting, value: 'NewName' }
+      const db = createMockDb()
+      db._limitFn.mockResolvedValue([stringSetting])
+      db._returningFn.mockResolvedValue([updatedSetting])
+      const service = new SystemSettingsService(db as never)
+
+      // Act — valid string value must NOT throw
+      const result = await service.batchUpdate([{ key: 'app.name', value: 'NewName' }])
+
+      // Assert
+      expect(result.updated).toEqual([updatedSetting])
+    })
+
+    it('should accept a valid number value for a number setting', async () => {
+      // Arrange
+      const numberSetting = {
+        id: '1',
+        key: 'app.max_users',
+        value: 100,
+        type: 'number',
+        name: 'Max Users',
+        description: null,
+        category: 'General',
+        metadata: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+      const updatedSetting = { ...numberSetting, value: 200 }
+      const db = createMockDb()
+      db._limitFn.mockResolvedValue([numberSetting])
+      db._returningFn.mockResolvedValue([updatedSetting])
+      const service = new SystemSettingsService(db as never)
+
+      // Act — valid number value must NOT throw
+      const result = await service.batchUpdate([{ key: 'app.max_users', value: 200 }])
+
+      // Assert
+      expect(result.updated).toEqual([updatedSetting])
+    })
+
+    it('should throw SettingValidationException when number setting receives NaN', async () => {
+      // Arrange
+      const numberSetting = {
+        id: '1',
+        key: 'app.max_users',
+        value: 100,
+        type: 'number',
+        name: 'Max Users',
+        description: null,
+        category: 'General',
+        metadata: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+      const db = createMockDb()
+      db._limitFn.mockResolvedValue([numberSetting])
+      const service = new SystemSettingsService(db as never)
+
+      // Act & Assert — NaN is typeof 'number' but should still be rejected
+      await expect(
+        service.batchUpdate([{ key: 'app.max_users', value: Number.NaN }])
+      ).rejects.toThrow(SettingValidationException)
+    })
+
+    it('should accept a valid boolean value for a boolean setting', async () => {
+      // Arrange
+      const boolSetting = {
+        id: '1',
+        key: 'app.feature_enabled',
+        value: true,
+        type: 'boolean',
+        name: 'Feature Enabled',
+        description: null,
+        category: 'General',
+        metadata: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+      const updatedSetting = { ...boolSetting, value: false }
+      const db = createMockDb()
+      db._limitFn.mockResolvedValue([boolSetting])
+      db._returningFn.mockResolvedValue([updatedSetting])
+      const service = new SystemSettingsService(db as never)
+
+      // Act — valid boolean value must NOT throw
+      const result = await service.batchUpdate([{ key: 'app.feature_enabled', value: false }])
+
+      // Assert
+      expect(result.updated).toEqual([updatedSetting])
+    })
+
+    it('should accept a valid option value for a select setting', async () => {
+      // Arrange
+      const selectSetting = {
+        id: '1',
+        key: 'app.theme',
+        value: 'light',
+        type: 'select',
+        name: 'Theme',
+        description: null,
+        category: 'General',
+        metadata: { options: ['light', 'dark', 'system'] },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+      const updatedSetting = { ...selectSetting, value: 'dark' }
+      const db = createMockDb()
+      db._limitFn.mockResolvedValue([selectSetting])
+      db._returningFn.mockResolvedValue([updatedSetting])
+      const service = new SystemSettingsService(db as never)
+
+      // Act — valid option in the options list must NOT throw
+      const result = await service.batchUpdate([{ key: 'app.theme', value: 'dark' }])
+
+      // Assert
+      expect(result.updated).toEqual([updatedSetting])
     })
 
     it('should return empty updated array and empty beforeState for empty updates array', async () => {

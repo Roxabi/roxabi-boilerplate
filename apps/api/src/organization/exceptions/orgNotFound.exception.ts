@@ -8,5 +8,6 @@ export class OrgNotFoundException extends Error {
   constructor(public readonly orgId: string) {
     super(`Organization ${orgId} not found`)
     this.name = 'OrgNotFoundException'
+    Object.setPrototypeOf(this, new.target.prototype)
   }
 }

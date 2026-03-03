@@ -7,5 +7,6 @@ export class InvitationAlreadyPendingException extends Error {
   constructor() {
     super('A pending invitation already exists for this email')
     this.name = 'InvitationAlreadyPendingException'
+    Object.setPrototypeOf(this, new.target.prototype)
   }
 }

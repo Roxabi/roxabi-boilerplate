@@ -63,7 +63,7 @@ describe('TransferTargetNotMemberFilter', () => {
     expect(body.statusCode).toBe(400)
     expect(body.path).toBe('/api/organizations/org-123/transfer')
     expect(body.correlationId).toBe('test-correlation-id')
-    expect(body.message).toBe('Transfer target is not a member of the organization')
+    expect(body.message).toBe('User user-123 is not a member of organization org-456')
     expect(body.errorCode).toBe('TRANSFER_TARGET_NOT_MEMBER')
     expect(body.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/)
   })

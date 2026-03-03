@@ -9,5 +9,6 @@ export class FlagKeyInvalidException extends Error {
       `Invalid feature flag key "${key}". Must match /^[a-z0-9][a-z0-9_-]*$/ and be at most 100 characters`
     )
     this.name = 'FlagKeyInvalidException'
+    Object.setPrototypeOf(this, new.target.prototype)
   }
 }

@@ -1,4 +1,4 @@
-import type { SettingsByCategory, SystemSetting } from '@repo/types'
+import type { SettingsByCategory } from '@repo/types'
 import { Card, CardContent, CardHeader, Skeleton } from '@repo/ui'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
@@ -14,16 +14,6 @@ export const Route = createFileRoute('/admin/system-settings')({
   component: SystemSettingsPage,
   head: () => ({ meta: [{ title: 'System Settings | Admin | Roxabi' }] }),
 })
-
-function groupByCategory(settings: SystemSetting[]): SettingsByCategory {
-  const grouped: SettingsByCategory = {}
-  for (const setting of settings) {
-    const cat = setting.category || 'general'
-    if (!grouped[cat]) grouped[cat] = []
-    grouped[cat].push(setting)
-  }
-  return grouped
-}
 
 function SettingsSkeleton() {
   return (
@@ -62,7 +52,7 @@ function EmptyState() {
 function SystemSettingsPage() {
   const queryClient = useQueryClient()
 
-  const { data, isLoading } = useQuery<SystemSetting[]>({
+  const { data, isLoading } = useQuery<SettingsByCategory>({
     queryKey: ['admin', 'system-settings'],
     queryFn: async () => {
       const res = await fetch('/api/admin/settings', { credentials: 'include' })
@@ -71,8 +61,7 @@ function SystemSettingsPage() {
     },
   })
 
-  const settings = data ?? []
-  const grouped = groupByCategory(settings)
+  const grouped = data ?? {}
   const sortedCategories = Object.keys(grouped).sort()
 
   async function handleSave(updates: Array<{ key: string; value: unknown }>) {
@@ -106,11 +95,11 @@ function SystemSettingsPage() {
       {isLoading && <SettingsSkeleton />}
 
       {/* Empty state */}
-      {!isLoading && settings.length === 0 && <EmptyState />}
+      {!isLoading && sortedCategories.length === 0 && <EmptyState />}
 
       {/* Settings cards by category */}
       {!isLoading &&
-        settings.length > 0 &&
+        sortedCategories.length > 0 &&
         sortedCategories.map((category) => (
           <SettingsCard
             key={category}

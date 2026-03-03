@@ -1,4 +1,4 @@
-import { forwardRef, Inject, Injectable } from '@nestjs/common'
+import { Inject, Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { EventEmitter2 } from '@nestjs/event-emitter'
 import type { FastifyRequest } from 'fastify'
@@ -7,9 +7,9 @@ import {
   OrganizationCreatedEvent,
 } from '../common/events/organizationCreated.event.js'
 import { DRIZZLE, type DrizzleDB } from '../database/drizzle.provider.js'
+import { EMAIL_PROVIDER, type EmailProvider } from '../email/email.provider.js'
 import { PermissionService } from '../rbac/permission.service.js'
 import { type BetterAuthInstance, createBetterAuth } from './auth.instance.js'
-import { EMAIL_PROVIDER, type EmailProvider } from './email/email.provider.js'
 import { toFetchHeaders } from './fastifyHeaders.js'
 
 @Injectable()
@@ -22,7 +22,6 @@ export class AuthService {
     @Inject(EMAIL_PROVIDER) emailProvider: EmailProvider,
     config: ConfigService,
     private readonly eventEmitter: EventEmitter2,
-    @Inject(forwardRef(() => PermissionService))
     private readonly permissionService: PermissionService
   ) {
     const googleClientId = config.get<string>('GOOGLE_CLIENT_ID')

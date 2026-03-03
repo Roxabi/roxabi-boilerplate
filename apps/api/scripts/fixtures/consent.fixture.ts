@@ -7,9 +7,9 @@ export async function seed(tx: Tx, _preset: Preset, ctx: FixtureContext): Promis
     await tx.insert(schema.consentRecords).values({
       id: crypto.randomUUID(),
       userId,
-      categories: { analytics: true, marketing: false, functional: true },
-      policyVersion: '1.0',
-      action: 'accepted',
+      categories: { necessary: true, analytics: false, marketing: false },
+      policyVersion: '2026-02-v1',
+      action: 'rejected',
       ipAddress: '0.0.0.0',
       userAgent: 'roxabi-seed/1.0',
     })

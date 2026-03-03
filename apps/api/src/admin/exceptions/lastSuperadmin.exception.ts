@@ -7,5 +7,6 @@ export class LastSuperadminException extends Error {
   constructor() {
     super('You are the last active superadmin and cannot change your role')
     this.name = 'LastSuperadminException'
+    Object.setPrototypeOf(this, new.target.prototype)
   }
 }

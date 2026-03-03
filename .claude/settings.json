@@ -1,37 +1,4 @@
 {
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "case \"$CLAUDE_FILE_PATHS\" in *.ts|*.tsx|*.js|*.jsx|*.json) timeout 10s bunx biome check --write \"$CLAUDE_FILE_PATHS\" 2>/dev/null || true ;; esac"
-          }
-        ]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": ".claude/hooks/security-check.js"
-          }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash -c 'CMD=$(echo \"$CLAUDE_TOOL_INPUT\" | jq -r .command 2>/dev/null); if echo \"$CMD\" | grep -qP \"\\bbun\\s+test\\b\" && ! echo \"$CMD\" | grep -qP \"\\bbun\\s+run\\s+test\\b\"; then echo \"BLOCKED: Use '\\''bun run test'\\'' (vitest) instead of '\\''bun test'\\'' (Bun'\\''s built-in runner). Bare '\\''bun test'\\'' causes infinite CPU spin.\"; exit 1; fi'"
-          }
-        ]
-      }
-    ]
-  },
   "enabledPlugins": {
     "frontend-design@claude-plugins-official": true,
     "ui-ux-pro-max@ui-ux-pro-max-skill": true,
@@ -40,18 +7,26 @@
     "security-guidance@claude-plugins-official": true,
     "claude-md-management@claude-plugins-official": true,
     "vercel@claude-plugins-official": true,
-    "sales@knowledge-work-plugins": true,
-    "design@knowledge-work-plugins": true,
-    "legal@knowledge-work-plugins": true,
-    "marketing@knowledge-work-plugins": true,
-    "product-management@knowledge-work-plugins": true
+    "memory-audit@roxabi-marketplace": true,
+    "dev-core@roxabi-marketplace": true,
+    "web-intel@roxabi-marketplace": true,
+    "1b1@roxabi-marketplace": true,
+    "compress@roxabi-marketplace": true
   },
   "extraKnownMarketplaces": {
     "claude-plugins-official": {
       "source": {
         "source": "github",
         "repo": "anthropics/claude-plugins-official"
-      }
+      },
+      "autoUpdate": true
+    },
+    "roxabi-marketplace": {
+      "source": {
+        "source": "github",
+        "repo": "Roxabi/roxabi-plugins"
+      },
+      "autoUpdate": true
     }
   }
 }

@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common'
 import { Reflector } from '@nestjs/core'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
@@ -165,6 +166,13 @@ describe('AdminOrganizationsController', () => {
         expect.anything(),
         undefined,
         100
+      )
+    })
+
+    it('should reject invalid status value', async () => {
+      // Act & Assert
+      await expect(controller.listOrganizations(undefined, undefined, 'deleted')).rejects.toThrow(
+        BadRequestException
       )
     })
 

@@ -142,6 +142,19 @@ export default defineConfig({
 import { describe, it, expect, vi } from 'vitest'
 ```
 
+**ESM import extensions:** When the project uses Node ESM (e.g., `"type": "module"` in `package.json` or `moduleResolution: "bundler"` with `verbatimModuleSyntax`), all relative imports in test files must include the `.js` extension:
+
+```typescript
+// Correct — ESM-compatible
+import { UserService } from './userService.js'
+import { createMockDb } from './__mocks__/db.js'
+
+// Wrong — omitting the extension breaks Node ESM resolution
+import { UserService } from './userService'
+```
+
+This applies to both source and test imports. The project's Vitest config resolves `.js` to `.ts` at test time, so the extension is always `.js` even when the source file is `.ts`.
+
 ## Coverage Guidelines
 
 **Threshold:** 80% minimum coverage floor (76% for branches). Thresholds auto-ratchet upward via `autoUpdate: true` in the root `vitest.config.ts` — current minimums are higher than the initial floor.
@@ -180,6 +193,139 @@ function createMockConfig(values: Record<string, string | undefined>) {
 
 - Call `useFactory` functions directly with the mock config.
 - Verify null handling for optional dependencies and error throwing in production mode.
+
+### Controller Testing (Unit)
+
+Controllers are unit-tested by instantiating them directly — no NestJS DI, no `Test.createTestingModule()`.
+
+**Pattern:**
+
+```typescript
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { Reflector } from '@nestjs/core'
+import { UsersController } from './users.controller.js'
+import type { UsersService } from './users.service.js'
+
+// Module-level mock — stable reference across tests
+const mockUsersService = {
+  findAll: vi.fn(),
+  findById: vi.fn(),
+} as unknown as UsersService
+
+describe('UsersController', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('should return users from the service', async () => {
+    mockUsersService.findAll = vi.fn().mockResolvedValue([{ id: '1' }])
+    const controller = new UsersController(mockUsersService)
+
+    const result = await controller.findAll()
+
+    expect(result).toHaveLength(1)
+  })
+})
+```
+
+**Rules:**
+- Mock services as module-level `const` with the shape typed `as unknown as ServiceType`.
+- Instantiate the controller directly: `new Controller(mockService1, mockService2, ...)`.
+- Use `beforeEach(() => { vi.restoreAllMocks() })` — no shared setup, only mock resets.
+- Do not initialize state in `beforeEach`; create fresh instances inside each `it` block.
+
+**Decorator verification** — verify guard metadata without mounting a NestJS app:
+
+```typescript
+import { Reflector } from '@nestjs/core'
+import { describe, it, expect } from 'vitest'
+import { AdminController } from './admin.controller.js'
+
+describe('AdminController — decorator metadata', () => {
+  it('should require superadmin role', () => {
+    const reflector = new Reflector()
+    const roles = reflector.get<string[]>('ROLES', AdminController)
+    expect(roles).toContain('superadmin')
+  })
+
+  it('should skip org check on public endpoints', () => {
+    const reflector = new Reflector()
+    const skipOrg = reflector.get<boolean>('SKIP_ORG', AdminController)
+    expect(skipOrg).toBe(true)
+  })
+})
+```
+
+Metadata key mapping: `@Roles(...)` → `'ROLES'` | `@SkipOrg()` → `'SKIP_ORG'`
+
+### Service Testing — Drizzle ORM Mock
+
+Mock the entire Drizzle query chain using a factory helper. Override the terminal function per test to control the result.
+
+```typescript
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { UsersService } from './users.service.js'
+
+function createMockDb() {
+  const terminal = vi.fn()
+
+  return {
+    // Chainable methods return `this` so the full chain resolves
+    select: vi.fn().mockReturnThis(),
+    from: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockImplementation(() => terminal()),
+    update: vi.fn().mockReturnThis(),
+    set: vi.fn().mockReturnThis(),
+    returning: vi.fn().mockImplementation(() => terminal()),
+    insert: vi.fn().mockReturnThis(),
+    values: vi.fn().mockImplementation(() => terminal()),
+    delete: vi.fn().mockReturnThis(),
+    _terminal: terminal,
+  }
+}
+
+describe('UsersService', () => {
+  let mockDb: ReturnType<typeof createMockDb>
+  let service: UsersService
+
+  beforeEach(() => {
+    vi.restoreAllMocks()
+    mockDb = createMockDb()
+    service = new UsersService(mockDb as never)
+  })
+
+  it('should return a user by id', async () => {
+    mockDb._terminal.mockResolvedValueOnce([{ id: '1', name: 'Ada' }])
+
+    const user = await service.findById('1')
+
+    expect(user).toEqual({ id: '1', name: 'Ada' })
+    expect(mockDb.select).toHaveBeenCalled()
+    expect(mockDb.where).toHaveBeenCalled()
+  })
+
+  it('should handle multi-call sequences', async () => {
+    // First call returns empty, second returns data
+    mockDb._terminal
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: '2' }])
+
+    await service.findById('missing')
+    const user = await service.findById('2')
+
+    expect(user).toEqual({ id: '2' })
+  })
+})
+```
+
+**Chains by operation:**
+- Select: `select().from().where().limit()` — terminal is the `limit()` call
+- Update: `update().set().where().returning()` — terminal is `returning()`
+- Insert: `insert().values()` — terminal is `values()`
+- Delete: `delete().where()` — terminal is `where()`
+
+Use `vi.fn().mockResolvedValueOnce([])` for multi-call sequences within a single test.
 
 ### When to Use `Test.createTestingModule()` (Integration)
 

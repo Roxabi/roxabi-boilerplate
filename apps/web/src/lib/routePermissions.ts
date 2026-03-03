@@ -163,6 +163,13 @@ export async function enforceRoutePermission(ctx: any): Promise<void> {
 // ---------------------------------------------------------------------------
 
 /**
+ * Shared query key for the enriched session cache.
+ * Use this constant in setQueryData / ensureQueryData / useQuery
+ * to guarantee the key stays in sync across all call-sites.
+ */
+export const enrichedSessionKeys = { all: ['enriched-session'] as const }
+
+/**
  * Fetch and cache the enriched session (with RBAC permissions).
  *
  * Better Auth's `useSession()` returns the standard session without the
@@ -172,7 +179,7 @@ export async function enforceRoutePermission(ctx: any): Promise<void> {
  */
 export function useEnrichedSession() {
   return useQuery({
-    queryKey: ['enriched-session'],
+    queryKey: enrichedSessionKeys.all,
     queryFn: fetchEnrichedSession,
     staleTime: 30_000,
     retry: false,

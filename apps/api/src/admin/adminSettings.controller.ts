@@ -10,7 +10,10 @@ import type { AuthenticatedSession } from '../auth/types.js'
 import { SkipOrg } from '../common/decorators/skipOrg.decorator.js'
 import { ZodValidationPipe } from '../common/pipes/zodValidation.pipe.js'
 import { SystemSettingsService } from '../system-settings/systemSettings.service.js'
-import { AdminExceptionFilter } from './filters/adminException.filter.js'
+import { AdminBadRequestFilter } from './filters/adminBadRequest.filter.js'
+import { AdminConflictFilter } from './filters/adminConflict.filter.js'
+import { AdminInternalErrorFilter } from './filters/adminInternalError.filter.js'
+import { AdminNotFoundFilter } from './filters/adminNotFound.filter.js'
 
 export const settingsUpdateSchema = z.object({
   updates: z
@@ -30,7 +33,12 @@ export const settingsUpdateSchema = z.object({
 
 @ApiTags('Admin Settings')
 @ApiBearerAuth()
-@UseFilters(AdminExceptionFilter)
+@UseFilters(
+  AdminNotFoundFilter,
+  AdminConflictFilter,
+  AdminBadRequestFilter,
+  AdminInternalErrorFilter
+)
 @Throttle({ global: { ttl: 60_000, limit: 30 } })
 @Roles('superadmin')
 @SkipOrg()

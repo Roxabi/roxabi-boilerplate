@@ -5,6 +5,7 @@ import {
   Get,
   HttpCode,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   UseFilters,
@@ -18,12 +19,15 @@ import { Session } from '../auth/decorators/session.decorator.js'
 import type { AuthenticatedSession } from '../auth/types.js'
 import { SkipOrg } from '../common/decorators/skipOrg.decorator.js'
 import { ZodValidationPipe } from '../common/pipes/zodValidation.pipe.js'
+import { PG_UNIQUE_VIOLATION } from '../database/pgErrorCodes.js'
 import { FeatureFlagService } from '../feature-flags/featureFlags.service.js'
+import { FeatureFlagCreateFailedException } from './exceptions/featureFlagCreateFailed.exception.js'
 import { FlagKeyConflictException } from './exceptions/flagKeyConflict.exception.js'
 import { FlagNotFoundException } from './exceptions/flagNotFound.exception.js'
-import { AdminExceptionFilter } from './filters/adminException.filter.js'
-
-const PG_UNIQUE_VIOLATION = '23505'
+import { AdminBadRequestFilter } from './filters/adminBadRequest.filter.js'
+import { AdminConflictFilter } from './filters/adminConflict.filter.js'
+import { AdminInternalErrorFilter } from './filters/adminInternalError.filter.js'
+import { AdminNotFoundFilter } from './filters/adminNotFound.filter.js'
 
 const FLAG_KEY_REGEX = /^[a-z0-9][a-z0-9_-]*$/
 
@@ -45,7 +49,12 @@ const updateFlagSchema = z
 
 @ApiTags('Admin Feature Flags')
 @ApiBearerAuth()
-@UseFilters(AdminExceptionFilter)
+@UseFilters(
+  AdminNotFoundFilter,
+  AdminConflictFilter,
+  AdminBadRequestFilter,
+  AdminInternalErrorFilter
+)
 @Throttle({ global: { ttl: 60_000, limit: 30 } })
 @Roles('superadmin')
 @SkipOrg()
@@ -74,7 +83,7 @@ export class AdminFeatureFlagsController {
     let result: NonNullable<Awaited<ReturnType<FeatureFlagService['create']>>>
     try {
       const row = await this.featureFlagService.create(body)
-      if (!row) throw new Error('Failed to create feature flag')
+      if (!row) throw new FeatureFlagCreateFailedException()
       result = row
     } catch (error: unknown) {
       if (
@@ -105,7 +114,7 @@ export class AdminFeatureFlagsController {
   @ApiResponse({ status: 404, description: 'Feature flag not found' })
   async update(
     @Session() session: AuthenticatedSession,
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @Body(new ZodValidationPipe(updateFlagSchema)) body: z.infer<typeof updateFlagSchema>
   ) {
     const before = await this.featureFlagService.getById(id)
@@ -140,7 +149,10 @@ export class AdminFeatureFlagsController {
   @ApiOperation({ summary: 'Delete a feature flag' })
   @ApiResponse({ status: 204, description: 'Feature flag deleted' })
   @ApiResponse({ status: 404, description: 'Feature flag not found' })
-  async delete(@Session() session: AuthenticatedSession, @Param('id') id: string) {
+  async delete(
+    @Session() session: AuthenticatedSession,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string
+  ) {
     const existing = await this.featureFlagService.getById(id)
     if (!existing) {
       throw new FlagNotFoundException(id)

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AuditService } from '../audit/audit.service.js'
 import type { FeatureFlagService } from '../feature-flags/featureFlags.service.js'
 import { AdminFeatureFlagsController } from './adminFeatureFlags.controller.js'
+import { FeatureFlagCreateFailedException } from './exceptions/featureFlagCreateFailed.exception.js'
 import { FlagKeyConflictException } from './exceptions/flagKeyConflict.exception.js'
 import { FlagNotFoundException } from './exceptions/flagNotFound.exception.js'
 
@@ -146,6 +147,18 @@ describe('AdminFeatureFlagsController', () => {
       // Assert
       expect(mockFeatureFlagService.create).toHaveBeenCalledWith(body)
       expect(result).toEqual(created)
+    })
+
+    it('should throw FeatureFlagCreateFailedException when service returns null', async () => {
+      // Arrange
+      const body = { name: 'Ghost Flag', key: 'ghost-flag' }
+      vi.mocked(mockFeatureFlagService.create).mockResolvedValue(null as never)
+
+      // Act & Assert
+      await expect(controller.create(mockSession as never, body)).rejects.toThrow(
+        FeatureFlagCreateFailedException
+      )
+      expect(mockAuditService.log).not.toHaveBeenCalled()
     })
 
     it('should throw FlagKeyConflictException when service throws unique constraint error', async () => {

@@ -1,0 +1,296 @@
+---
+title: "ADR-004: SSR Data Availability in shellComponent and Safe Prefetching Patterns"
+description: Establishes correct patterns for passing server-read data into the TanStack Start shell, and rules out unsafe SSR prefetching via ensureQueryData in beforeLoad.
+---
+
+## Status
+
+Accepted
+
+## Context
+
+A persistent pattern of E2E CI failures was traced to two independent architectural
+misunderstandings of TanStack Start's SSR rendering pipeline:
+
+1. **ConsentProvider received a permanently-null `initialConsent` prop on every SSR render.**
+   The consent cookie was read in the root route `loader`, but the component that consumed
+   it (`AppShell`, which renders `ConsentProvider`) lives inside `shellComponent`. TanStack
+   Start renders `shellComponent` as the outer HTML wrapper before loader data is available.
+   `Route.useLoaderData()` called inside `shellComponent` always returns `undefined` at SSR
+   time, so `serverConsent` was always `null`. `computeShowBanner(null)` always returns
+   `true`, meaning the consent banner always rendered on first paint. A client-side
+   `useEffect` subsequently read the cookie from `document.cookie` and hid the banner, but
+   the brief window between SSR render and hydration was enough for Playwright's interaction
+   actions (e.g. clicking the Save button on the profile page) to be intercepted by the
+   banner overlay. The failure was non-deterministic: it occurred most often on mobile
+   viewports (smaller click targets) and slow CI shards.
+
+2. **`ensureQueryData` called in `beforeLoad` during SSR issued unauthenticated fetch
+   requests.** When `beforeLoad` runs server-side, cookies from the browser are not
+   forwarded to outbound `fetch()` calls unless explicitly threaded through. The TanStack
+   Query fetcher functions used in route files called relative URLs (e.g.
+   `/api/admin/feature-flags`) which, in a Node.js SSR context, resolve to
+   `localhost:4000/api/admin/feature-flags` without a cookie header. The API returned 401.
+   TanStack Query's default retry logic then issued up to 3 retries, delaying the
+   `networkidle` event and causing test timeouts.
+
+A third, compounding issue was discovered during this analysis:
+
+3. **`waitForLoadState('networkidle')` is unusable as a general readiness signal** in any
+   environment where TanStack Query is active. Background refetches, stale-while-revalidate
+   cycles, and retry delays make the network never truly idle in a long-lived React app.
+   This was masked in CI (production build, no HMR) because `networkidle` settled quickly
+   after the initial page load, but it created a latent fragility that any new
+   `useQuery` call can reactivate.
+
+**Related files investigated:**
+- `apps/web/src/routes/__root.tsx` — shellComponent / loader placement
+- `apps/web/src/lib/consent/consentProvider.tsx` — ConsentProvider state initialization
+- `apps/web/src/lib/consent/server.ts` — `getServerConsent` (createServerFn)
+- `apps/web/src/routes/admin/feature-flags.tsx` — removed `ensureQueryData` from `beforeLoad`
+- `apps/web/e2e/auth.setup.ts` — consent cookie injection via `addCookies`
+
+### TanStack Start rendering lifecycle (summary)
+
+```
+SSR render order:
+  1. shellComponent renders (html > head > body wrapper)
+       → Route.useLoaderData() is undefined here
+       → beforeLoad context IS available here via useRouteContext()
+  2. loader runs (concurrent with or after shellComponent)
+  3. route component renders (loader data IS available)
+  4. HTML sent to client
+  5. React hydrates
+  6. useEffect hooks run (client-only)
+```
+
+The critical invariant: **loader data is never available inside `shellComponent`**. This is
+by design in TanStack Start — the shell is the document skeleton, rendered before any data
+fetch completes.
+
+---
+
+## Options Considered
+
+### Option A: Move ConsentProvider from shellComponent to root component
+
+Move `AppShell` (which contains `ConsentProvider`) out of `RootDocument` (the
+`shellComponent`) and into the root route's `component`. Route `component` renders after
+loader data is available, so `Route.useLoaderData()` returns the correct value.
+
+- **Pros:**
+  - Simplest mechanical change: move one function call from `shellComponent` to `component`
+  - `Route.useLoaderData()` works correctly in `component` — no API change
+  - No new concepts introduced; conforms to the framework's intended usage
+  - `ConsentProvider` already handles the CSR fallback (`readCookieClient()`) so there is
+    no regression for routes that do not go through the root loader
+- **Cons:**
+  - The `<html>`, `<head>`, and `<body>` tags remain in `shellComponent` while the
+    consent banner lives in `component`; they are rendered in two distinct tree positions
+    at SSR time. This is the correct TanStack Start model but can be surprising to readers.
+  - Any future data placed in `loader` that is needed by the shell HTML (e.g. a `lang`
+    attribute that depends on per-user preferences) still cannot be sourced from the loader
+    and must use `beforeLoad` context instead.
+
+### Option B: Move server consent read from loader to beforeLoad; pass via context
+
+Read the consent cookie in `beforeLoad` using `getServerConsent()` (a `createServerFn`).
+Return `{ serverConsent }` from `beforeLoad`, which merges into the router context available
+as `ctx.context` in downstream `beforeLoad` calls and, crucially, is accessible via
+`useRouteContext()` inside `shellComponent`.
+
+- **Pros:**
+  - `beforeLoad` context IS available in `shellComponent` — this is the documented mechanism
+    for passing server-side data into the shell
+  - Enables true zero-flash SSR for the consent banner: the cookie is read, parsed, and
+    injected into the React tree before the first pixel is painted
+  - Consistent with how the session (`getServerEnrichedSession`) is already threaded through
+    `beforeLoad` context in the root route
+  - The pattern is composable: any server-read cookie that affects shell rendering can follow
+    the same pattern
+- **Cons:**
+  - `beforeLoad` runs for every navigation (client and server), not just initial SSR. The
+    server function call is cheap (cookie read + parse), but it does run on every route
+    change. In practice, `createServerFn` with `method: 'GET'` is a lightweight RPC; this
+    is acceptable.
+  - Requires updating `MyRouterContext` to include `serverConsent`, then reading it in
+    `AppShell` via `useRouteContext()` instead of `useLoaderData()`. Minor but a real change.
+  - If `beforeLoad` throws, the shell fails to render. The consent read is non-critical; it
+    must be wrapped in try/catch and default to `null` on error.
+
+### Option C: Inject consent via Nitro middleware before SSR (meta tag or global)
+
+In `apps/web/src/server.ts`, read the consent cookie in the Nitro/H3 request handler
+before delegating to the TanStack Start handler. Serialize the consent value into a
+`<meta>` tag injected into the `<head>`, or pass it as a header that the SSR runtime picks
+up via `getRequestHeader`.
+
+- **Pros:**
+  - Consent data available at the very first byte of SSR output, with zero round-trips
+  - Does not touch TanStack Router's lifecycle at all
+- **Cons:**
+  - Requires custom Nitro middleware plumbing (`app.use`, H3 event manipulation)
+  - Meta-tag injection requires a `document.querySelector` read on the client side, which
+    is fragile (timing, CSP, SSR mismatch)
+  - The existing `createServerFn` approach (`getServerConsent`) is already correct and
+    simple; this option replaces it with lower-level plumbing for no material gain
+  - Couples cookie-reading logic to the Nitro layer rather than keeping it in
+    TanStack Router's data model
+
+### Option D: Keep loader; add a client-side synchronous cookie read before first render
+
+Add synchronous `document.cookie` parsing in `ConsentProvider` initial state computation
+(before any `useState` initializer or `useEffect`). Since this runs both server-side
+(returns `null` — `document` is undefined in Node) and client-side (returns the real
+cookie), the client would compute the correct initial state during React hydration.
+
+- **Pros:**
+  - No change to routing lifecycle
+  - The `readCookieClient()` function already exists; it just needs to be called earlier
+- **Cons:**
+  - Does not fix the SSR render path: the server still sends `showBanner: true` HTML.
+    React hydrates with `showBanner: false` (from the client read), causing a hydration
+    mismatch. React suppresses these mismatches with `suppressHydrationWarning` but the
+    behavior is undefined for dynamic state.
+  - The banner flash still occurs: the server sends visible-banner HTML; the browser renders
+    it; React hydrates and hides it. The race window with Playwright is smaller but not
+    eliminated.
+  - Does not address the architectural root cause; trades a correctness problem for a
+    hydration warning.
+
+---
+
+## Decision
+
+**Adopt Option B** (move consent read to `beforeLoad`, pass via router context) as the
+canonical pattern for all shell-level server data in this codebase.
+
+### Rationale
+
+Option B is preferred over Option A because it eliminates the banner flash entirely rather
+than merely reducing it. When consent is read in `beforeLoad`, the value is available
+before `shellComponent` renders, so `ConsentProvider` receives the correct `initialConsent`
+during the SSR pass. The resulting HTML does not include a visible banner for users who
+have already consented. Option A (move to component) still emits SSR HTML with
+`showBanner: true` because the loader runs concurrently with, not before, the shell render;
+it fixes the Playwright race but not the UX flash.
+
+Option B is also the idiomatic TanStack Start pattern. The project already uses it for the
+session: `getServerEnrichedSession` is called in `beforeLoad` and the result is threaded
+into `ctx.context.session`, which is then read by downstream `beforeLoad` guards
+(`enforceRoutePermission`) and by `shellComponent` via `useRouteContext`. Consent should
+follow the same pattern for consistency.
+
+### Safe prefetching pattern for SSR (addresses Root Cause #2)
+
+`ensureQueryData` in `beforeLoad` is unsafe during SSR because:
+
+1. TanStack Query's `queryFn` functions use relative URLs (`/api/...`) that are resolved
+   against `localhost` in the Node.js context.
+2. Outbound server-side `fetch()` does not automatically forward the browser's cookies.
+3. The resulting 401 triggers TanStack Query retries, which delay page load.
+
+**The correct patterns are:**
+
+- **For data that must be available before first render:** Read it in `beforeLoad` using
+  a `createServerFn` that explicitly calls `getRequestHeader('cookie')` and forwards
+  cookies to the NestJS API (identical pattern to `getServerEnrichedSession`). Return the
+  data from `beforeLoad` so it enters the router context.
+
+- **For data that improves time-to-content but is not critical:** Use TanStack Router's
+  `loader` (not `beforeLoad`) with TanStack Query's `ensureQueryData`. The `loader` runs
+  after `beforeLoad` has completed and its return value is NOT available in
+  `shellComponent`. The `queryFn` inside the loader must use a server function that
+  forwards cookies, not a plain `fetch` call.
+
+- **For data fetched purely client-side:** Use `useQuery` in components with no
+  prefetching. This is the default and is always safe.
+
+**The pattern to avoid:**
+
+```ts
+// UNSAFE: ensureQueryData in beforeLoad with a plain fetch queryFn
+beforeLoad: async (ctx) => {
+  await enforceRoutePermission(ctx)
+  await ctx.context.queryClient.ensureQueryData(someQuery.list())  // <- DO NOT DO THIS
+},
+```
+
+**The replacement pattern (loader with cookie-forwarding server function):**
+
+```ts
+// SAFE: prefetch in loader using a server function that forwards cookies
+loader: async ({ context }) => {
+  await context.queryClient.prefetchQuery({
+    queryKey: someQueryKeys.list(),
+    queryFn: () => fetchSomeListServerFn(),  // createServerFn that forwards cookies
+  })
+},
+```
+
+### `waitForLoadState('networkidle')` prohibition (addresses Root Cause #4)
+
+`waitForLoadState('networkidle')` MUST NOT be used in E2E tests in this codebase. The
+correct readiness signals are:
+
+- `page.waitForURL(pattern)` — confirms navigation completed
+- `page.waitForLoadState('domcontentloaded')` — confirms DOM is parseable
+- `expect(locator).toBeVisible()` / `locator.waitFor()` — confirms the specific element
+  the test cares about is rendered
+- `page.waitForSelector('form')` — confirms a key structural element is present
+
+The `networkidle` signal is unreliable whenever TanStack Query is mounted: background
+refetches, stale-while-revalidate, retry delays, and dev-mode HMR websockets all prevent
+the network from reaching the 500ms idle threshold that Playwright requires.
+
+---
+
+## Consequences
+
+### Positive
+
+- **Zero-flash consent banner:** SSR HTML is rendered with the correct initial consent
+  state. Users who have already accepted consent never see the banner, not even for one
+  frame. This is a meaningful UX improvement.
+- **E2E test stability:** The primary cause of the `[mobile-chrome] profile.spec.ts`
+  failures (banner intercepting Save button click) is eliminated at the root, not patched.
+- **Consistent server-data pattern:** `beforeLoad` + `createServerFn` + `useRouteContext`
+  becomes the single canonical pattern for all shell-level server data. The session already
+  uses this; consent follows.
+- **SSR prefetching is safe:** The loader-based prefetch pattern with cookie-forwarding
+  server functions prevents 401 errors and their associated retry storms.
+- **`networkidle` prohibition eliminates a class of flaky tests** that pass in CI
+  (production build) but fail locally (dev mode), masking real issues.
+
+### Negative
+
+- **`MyRouterContext` widens:** Adding `serverConsent` to the root context means every
+  route's `beforeLoad` context carries this field. It is cheap (a small JSON object or
+  null) but it is a permanent addition to the context shape.
+- **`beforeLoad` runs on every navigation:** `getServerConsent` (a cookie read + Zod
+  parse) is called on every client-side navigation, not just the initial SSR. The cost is
+  negligible but it is a behavioral difference from the loader approach.
+- **Pattern requires documentation:** The two-tier distinction (shellComponent data via
+  beforeLoad context vs. route component data via loader) is non-obvious. New contributors
+  must read this ADR before adding data to the root route.
+
+### Neutral
+
+- **`loader` is not removed from `__root.tsx`:** The `loader` remains valid for data
+  consumed in the root route's `component` (not `shellComponent`). If no such data exists,
+  the loader may be removed as a cleanup step; this ADR does not mandate it.
+- **Test setup `addCookies` call in `auth.setup.ts` is correct:** The Playwright setup
+  correctly injects the consent cookie into `storageState` via `page.context().addCookies()`.
+  This ensures the cookie is present in the browser's cookie jar for all downstream tests,
+  which means `getServerConsent` (in `beforeLoad`) will read the correct value on the first
+  SSR call. No change to the setup file is needed.
+
+## Patterns to Avoid — Summary
+
+| Pattern | Why it fails | Correct alternative |
+|---|---|---|
+| `Route.useLoaderData()` inside `shellComponent` | Always `undefined` during SSR | `useRouteContext()` reading data placed in `beforeLoad` return value |
+| `ensureQueryData` in `beforeLoad` | Runs SSR without forwarded cookies → 401 → retry storm | `prefetchQuery` in `loader` using `createServerFn` that forwards cookies |
+| `waitForLoadState('networkidle')` in E2E | TanStack Query prevents idle | `waitForLoadState('domcontentloaded')` + `expect(locator).toBeVisible()` |
+| `ConsentProvider` initialised from loader data | Banner always shows on first SSR render | Read cookie in `beforeLoad`, pass via context to `ConsentProvider` |
+| Plain `fetch('/api/...')` inside a server-side `queryFn` | Relative URL + no cookie → 401 | `createServerFn` that calls `getRequestHeader('cookie')` and forwards it |

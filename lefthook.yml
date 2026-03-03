@@ -5,10 +5,14 @@ commit-msg:
 
 pre-commit:
   parallel: true
+  output:
+    - meta
+    - summary
+    - failure
   commands:
     biome:
       glob: "*.{js,ts,jsx,tsx,json,jsonc}"
-      run: bunx biome check --write --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
+      run: bash .lefthook/run-quiet.sh 'bunx biome check --write --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}'
       stage_fixed: true
 
 pre-push:
@@ -17,15 +21,14 @@ pre-push:
     - meta
     - summary
     - failure
-    - execution_out
   commands:
     lint:
-      run: CI=true bun run lint
+      run: bash .lefthook/run-quiet.sh 'CI=true bun run lint'
     typecheck:
-      run: CI=true bun run typecheck
+      run: bash .lefthook/run-quiet.sh 'CI=true bun run typecheck'
     test:
-      run: CI=true bun run test:coverage
+      run: bash .lefthook/run-quiet.sh 'CI=true bun run test:coverage'
     i18n:
-      run: bun run i18n:check
+      run: bash .lefthook/run-quiet.sh 'bun run i18n:check'
     license:
-      run: bun run license:check
+      run: bash .lefthook/run-quiet.sh 'bun run license:check'

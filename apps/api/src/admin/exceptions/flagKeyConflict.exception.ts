@@ -7,5 +7,6 @@ export class FlagKeyConflictException extends Error {
   constructor(key: string) {
     super(`Feature flag with key "${key}" already exists`)
     this.name = 'FlagKeyConflictException'
+    Object.setPrototypeOf(this, new.target.prototype)
   }
 }

@@ -86,7 +86,7 @@ Use the provided GitHub templates:
 Use `/issue-triage create` to create an issue, add it to the project board, and set all fields in one shot:
 
 ```bash
-bun .claude/skills/issue-triage/triage.ts create \
+/issue-triage create \
   --title "feat: notification preferences" \
   --body "Allow users to configure notification channels" \
   --label "feature" \
@@ -131,29 +131,29 @@ Triage ensures every issue has a **Size** and **Priority** assigned.
 
 ### Triage Process
 
-Use the `/issue-triage` skill to list untriaged issues, set fields, create new issues, and manage parent/child relationships:
+Use the `/issue-triage` skill (provided by `dev-core` plugin) to list untriaged issues, set fields, create new issues, and manage parent/child relationships:
 
 ```bash
 # List issues missing Size or Priority
-bun .claude/skills/issue-triage/triage.ts list
+/issue-triage list
 
 # Set size, priority, and status
-bun .claude/skills/issue-triage/triage.ts set 42 --size M --priority High
-bun .claude/skills/issue-triage/triage.ts set 42 --status "In Progress"
+/issue-triage set 42 --size M --priority High
+/issue-triage set 42 --status "In Progress"
 
 # Create a new issue with full setup
-bun .claude/skills/issue-triage/triage.ts create \
+/issue-triage create \
   --title "feat: avatar upload" \
   --size M --priority High --parent 163
 
 # Manage parent/child (sub-issue) relationships
-bun .claude/skills/issue-triage/triage.ts set 164 --parent 163
-bun .claude/skills/issue-triage/triage.ts set 163 --add-child 164,165
-bun .claude/skills/issue-triage/triage.ts set 164 --rm-parent
+/issue-triage set 164 --parent 163
+/issue-triage set 163 --add-child 164,165
+/issue-triage set 164 --rm-parent
 
 # Manage blocked-by dependencies
-bun .claude/skills/issue-triage/triage.ts set 91 --blocked-by 117
-bun .claude/skills/issue-triage/triage.ts set 91 --rm-blocked-by 117
+/issue-triage set 91 --blocked-by 117
+/issue-triage set 91 --rm-blocked-by 117
 ```
 
 ---
@@ -198,8 +198,8 @@ When an issue blocks another, use the `/issue-triage` skill (preferred) or the r
 
 ```bash
 # Preferred — via /issue-triage
-bun .claude/skills/issue-triage/triage.ts set 51 --blocked-by 19
-bun .claude/skills/issue-triage/triage.ts set 19 --blocks 51
+/issue-triage set 51 --blocked-by 19
+/issue-triage set 19 --blocks 51
 ```
 
 If using the API directly:
@@ -238,10 +238,10 @@ When a blocking issue is closed:
 
 ### Viewing Dependencies
 
-Use the `/issues` skill to see the full dependency graph:
+Use the `/issues` skill (provided by `dev-core` plugin) to see the full dependency graph:
 
 ```bash
-.claude/skills/issues/fetch_issues.sh
+/issues
 ```
 
 The output shows block status for each issue:

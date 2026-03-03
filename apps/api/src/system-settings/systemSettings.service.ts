@@ -1,9 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common'
 import { eq } from 'drizzle-orm'
-import { SettingNotFoundException } from '../admin/exceptions/settingNotFound.exception.js'
-import { SettingValidationException } from '../admin/exceptions/settingValidation.exception.js'
 import { DRIZZLE, type DrizzleDB } from '../database/drizzle.provider.js'
 import { systemSettings } from '../database/schema/systemSettings.schema.js'
+import { SettingNotFoundException } from './exceptions/settingNotFound.exception.js'
+import { SettingValidationException } from './exceptions/settingValidation.exception.js'
 
 @Injectable()
 export class SystemSettingsService {

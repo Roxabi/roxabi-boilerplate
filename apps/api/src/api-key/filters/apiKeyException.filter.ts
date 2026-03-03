@@ -1,6 +1,7 @@
 import { type ArgumentsHost, Catch, type ExceptionFilter, HttpStatus } from '@nestjs/common'
 import type { FastifyReply, FastifyRequest } from 'fastify'
 import { ClsService } from 'nestjs-cls'
+import { sendErrorResponse } from '../../common/filters/sendErrorResponse.js'
 import { ApiKeyExpiryInPastException } from '../exceptions/apiKeyExpiryInPast.exception.js'
 import { ApiKeyNotFoundException } from '../exceptions/apiKeyNotFound.exception.js'
 import { ApiKeyScopesExceededException } from '../exceptions/apiKeyScopesExceeded.exception.js'
@@ -27,14 +28,6 @@ export class ApiKeyExceptionFilter implements ExceptionFilter {
       statusCode = HttpStatus.BAD_REQUEST
     }
 
-    response.header('x-correlation-id', correlationId)
-    response.status(statusCode).send({
-      statusCode,
-      timestamp: new Date().toISOString(),
-      path: request.url,
-      correlationId,
-      message: exception.message,
-      errorCode: exception.errorCode,
-    })
+    sendErrorResponse(response, request, correlationId, statusCode, exception)
   }
 }

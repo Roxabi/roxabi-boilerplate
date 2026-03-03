@@ -16,10 +16,10 @@ import { createFileRoute, useBlocker } from '@tanstack/react-router'
 import { AlertTriangleIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { authClient, useSession } from '@/lib/authClient'
+import { authClient } from '@/lib/authClient'
 import { isErrorWithMessage } from '@/lib/errorUtils'
 import { hasPermission } from '@/lib/permissions'
-import { enforceRoutePermission } from '@/lib/routePermissions'
+import { enforceRoutePermission, useEnrichedSession } from '@/lib/routePermissions'
 import { useOrganizations } from '@/lib/useOrganizations'
 import { m } from '@/paraglide/messages'
 import { getLocale } from '@/paraglide/runtime'
@@ -435,7 +435,7 @@ function useOrgDeletionStatus(
 }
 
 function AdminSettingsPage() {
-  const { data: session } = useSession()
+  const { data: session } = useEnrichedSession()
   const { data: activeOrg } = authClient.useActiveOrganization()
   const { data: orgs } = useOrganizations(session?.user?.id)
 

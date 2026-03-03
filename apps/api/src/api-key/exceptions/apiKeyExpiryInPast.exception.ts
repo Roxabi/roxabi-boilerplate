@@ -7,5 +7,6 @@ export class ApiKeyExpiryInPastException extends Error {
   constructor() {
     super('Expiry date must be in the future')
     this.name = 'ApiKeyExpiryInPastException'
+    Object.setPrototypeOf(this, new.target.prototype)
   }
 }

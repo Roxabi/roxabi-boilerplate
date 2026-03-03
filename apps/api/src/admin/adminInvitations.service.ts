@@ -3,6 +3,7 @@ import { and, eq } from 'drizzle-orm'
 import { ClsService } from 'nestjs-cls'
 import { AuditService } from '../audit/audit.service.js'
 import { DRIZZLE, type DrizzleDB } from '../database/drizzle.provider.js'
+import { PG_UNIQUE_VIOLATION } from '../database/pgErrorCodes.js'
 import { invitations, members, users } from '../database/schema/auth.schema.js'
 import { roles } from '../database/schema/rbac.schema.js'
 import { InvitationAlreadyPendingException } from './exceptions/invitationAlreadyPending.exception.js'
@@ -150,7 +151,10 @@ export class AdminInvitationsService {
     expiresAt: Date
   ): Promise<typeof invitations.$inferSelect | undefined> {
     const pgErr = err as { code?: string; constraint_name?: string }
-    if (pgErr.code !== '23505' || pgErr.constraint_name !== 'invitations_org_email_unique') {
+    if (
+      pgErr.code !== PG_UNIQUE_VIOLATION ||
+      pgErr.constraint_name !== 'invitations_org_email_unique'
+    ) {
       throw err
     }
 

@@ -19,6 +19,8 @@ export type UserProfile = {
   role: string | null
   createdAt: Date
   updatedAt: Date
+  deletedAt: Date | null
+  deleteScheduledFor: Date | null
 }
 
 export type UpdateProfilePayload = {

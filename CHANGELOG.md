@@ -7,6 +7,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Entries are generated automatically by `/promote` and committed to staging before the promotion PR.
 
+## [v0.6.0] - 2026-03-03
+
+### Added
+- feat(dev-core): add stack.yml config as reference consumer
+- feat(skills): redesign memory-audit — drain-to-zero + audit log + recurrence detection
+- feat(dashboard): add workflow runs section for deploy-preview
+
+### Fixed
+- fix(api): handle Resend failures gracefully and extract global EmailModule (#413)
+- fix(api): move softDeleteCache from file scope to class property (#414)
+- fix(api): unify user anonymization logic between purge paths (#416)
+- fix(api): harden path param validation, CRON_SECRET, and Swagger exposure (#418)
+- fix(api): domain exception standards — typed throws + Object.setPrototypeOf (#417)
+- fix(api): prevent auth tokens from being logged in console email fallback (#415)
+- fix(api): move setting exceptions to system-settings and remove Auth/Rbac circular dep (#419)
+- fix(api,web): serializable tx on admin update (M3), tighten CSP, devtools to devDeps (#436)
+- fix(api): log full verification URL in dev console email fallback
+- fix(build): resolve Shiki4 SSR OOM with lazy splits and heap increase
+- fix(dx): add class-validator and fix tsup clean race condition in dev
+- fix(env): add dev-core tooling vars to TOOLING_ALLOWLIST (#441)
+- fix(frontend): extract profile fetch to lib + promote ApiKey types (#440)
+- fix(web): add serverConsent to initial router context
+- fix(ci): generate ephemeral BETTER_AUTH_SECRET for API preview deploys
+- fix(ci): restore shared package dist/ in E2E jobs via turbo cache
+- fix(ci): upload hidden .output/ dir by enabling include-hidden-files
+- fix(ci): force turbo build to bypass silent cache-hit output loss
+- fix(e2e): fix full E2E test suite — 16 failures → 0 (#439)
+- fix(e2e): fix consent fixture policyVersion and mobile nav waitForSelector
+- fix(e2e): skip org-switcher tests on mobile viewports
+
+### Performance
+- perf(ci): implement ADR-004 + CI parallelism improvements
+
+### Changed
+- refactor(api): extract shared utilities and consolidate exception filters
+- refactor(web): extract validateEnvPlugin as named Plugin function (#442)
+
+### Tests
+- test(e2e): expand Playwright coverage for 5 missing flows (#429)
+
+### Documentation
+- docs(guides): add new feature pattern guide (#428)
+- docs(architecture): add ADR-004 SSR consent and data fetching patterns
+
+### Maintenance
+- chore(plugins): consume dev-core and memory-audit from Roxabi plugin repo
+- chore(deps): bun update — biome 2.4.5, lucide-react 0.576.0, shiki 4.0.0
+- chore(deps): batch dependabot updates (#437)
+- chore(ci): disable PR Review & Auto-fix workflow
+- chore(agents): set explicit sonnet model on architect, product-lead, security-auditor
+
 ## [v0.5.1] - 2026-02-27
 
 ### Fixed

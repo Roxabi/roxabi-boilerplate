@@ -22,7 +22,7 @@ describe('env validation', () => {
     expect(result.NODE_ENV).toBe('development')
     expect(result.PORT).toBe(4000)
     expect(result.CORS_ORIGIN).toBe('http://localhost:3000')
-    expect(result.LOG_LEVEL).toBe('debug')
+    expect(result.LOG_LEVEL).toBe('warn')
     expect(result.DATABASE_URL).toBeUndefined()
     expect(result.APP_URL).toBeUndefined()
   })
@@ -32,6 +32,10 @@ describe('env validation', () => {
       const result = validate({
         NODE_ENV: env,
         BETTER_AUTH_SECRET: 'a-safe-secret-for-testing-purposes',
+        ...(env !== 'development' && {
+          RESEND_API_KEY: 're_test_123',
+          CRON_SECRET: 'test-cron-secret-minimum-32-chars!',
+        }),
         ...(env === 'production' && {
           KV_REST_API_URL: 'https://redis.upstash.io',
           KV_REST_API_TOKEN: 'test-token',
@@ -129,6 +133,8 @@ describe('env validation', () => {
       const result = validate({
         NODE_ENV: 'test',
         BETTER_AUTH_SECRET: 'test-secret-minimum-32-characters-long',
+        RESEND_API_KEY: 're_test_123',
+        CRON_SECRET: 'test-cron-secret-minimum-32-chars!',
       })
       expect(result.BETTER_AUTH_SECRET).toBe('test-secret-minimum-32-characters-long')
     })
@@ -137,6 +143,8 @@ describe('env validation', () => {
       const result = validate({
         NODE_ENV: 'production',
         BETTER_AUTH_SECRET: 'a-real-secret-that-is-safe-for-prod',
+        RESEND_API_KEY: 're_test_123',
+        CRON_SECRET: 'test-cron-secret-minimum-32-chars!',
         KV_REST_API_URL: 'https://redis.upstash.io',
         KV_REST_API_TOKEN: 'test-token',
       })
@@ -150,6 +158,7 @@ describe('env validation', () => {
         const result = validate({
           VERCEL_ENV: env,
           BETTER_AUTH_SECRET: 'test-secret-minimum-32-characters-long',
+          RESEND_API_KEY: 're_test_123',
           ...(env === 'production' && {
             KV_REST_API_URL: 'https://redis.upstash.io',
             KV_REST_API_TOKEN: 'test-token',
@@ -197,8 +206,48 @@ describe('env validation', () => {
         NODE_ENV: 'development',
         VERCEL_ENV: 'preview',
         BETTER_AUTH_SECRET: 'test-secret-minimum-32-characters-long',
+        RESEND_API_KEY: 're_test_123',
       })
       expect(result.BETTER_AUTH_SECRET).toBe('test-secret-minimum-32-characters-long')
+    })
+  })
+
+  describe('CRON_SECRET non-development guard', () => {
+    it('should throw when CRON_SECRET is missing in production', () => {
+      expect(() =>
+        validate({
+          NODE_ENV: 'production',
+          BETTER_AUTH_SECRET: 'a-real-secret-that-is-safe-for-prod',
+          RESEND_API_KEY: 're_test_123',
+          KV_REST_API_URL: 'https://redis.upstash.io',
+          KV_REST_API_TOKEN: 'test-token',
+        })
+      ).toThrow('CRON_SECRET is required in non-development environments')
+    })
+
+    it('should throw when CRON_SECRET is missing in test', () => {
+      expect(() =>
+        validate({
+          NODE_ENV: 'test',
+          BETTER_AUTH_SECRET: 'test-secret-minimum-32-characters-long',
+          RESEND_API_KEY: 're_test_123',
+        })
+      ).toThrow('CRON_SECRET is required in non-development environments')
+    })
+
+    it('should allow missing CRON_SECRET in development', () => {
+      const result = validate({ NODE_ENV: 'development' })
+      expect(result.CRON_SECRET).toBeUndefined()
+    })
+
+    it('should accept CRON_SECRET when provided', () => {
+      const result = validate({
+        NODE_ENV: 'test',
+        BETTER_AUTH_SECRET: 'test-secret-minimum-32-characters-long',
+        RESEND_API_KEY: 're_test_123',
+        CRON_SECRET: 'my-cron-secret-minimum-32-characters!',
+      })
+      expect(result.CRON_SECRET).toBe('my-cron-secret-minimum-32-characters!')
     })
   })
 
@@ -208,6 +257,8 @@ describe('env validation', () => {
         validate({
           NODE_ENV: 'production',
           BETTER_AUTH_SECRET: 'a-real-secret-that-is-safe-for-prod',
+          RESEND_API_KEY: 're_test_123',
+          CRON_SECRET: 'test-cron-secret-minimum-32-chars!',
           RATE_LIMIT_ENABLED: true,
         })
       ).toThrow('KV_REST_API_URL and KV_REST_API_TOKEN are required in production')
@@ -218,6 +269,8 @@ describe('env validation', () => {
         validate({
           NODE_ENV: 'production',
           BETTER_AUTH_SECRET: 'a-real-secret-that-is-safe-for-prod',
+          RESEND_API_KEY: 're_test_123',
+          CRON_SECRET: 'test-cron-secret-minimum-32-chars!',
           RATE_LIMIT_ENABLED: true,
           KV_REST_API_URL: 'https://redis.upstash.io',
         })
@@ -228,6 +281,8 @@ describe('env validation', () => {
       const result = validate({
         NODE_ENV: 'production',
         BETTER_AUTH_SECRET: 'a-real-secret-that-is-safe-for-prod',
+        RESEND_API_KEY: 're_test_123',
+        CRON_SECRET: 'test-cron-secret-minimum-32-chars!',
         RATE_LIMIT_ENABLED: false,
       })
       expect(result.KV_REST_API_URL).toBeUndefined()
@@ -239,6 +294,8 @@ describe('env validation', () => {
       validate({
         NODE_ENV: 'production',
         BETTER_AUTH_SECRET: 'a-real-secret-that-is-safe-for-prod',
+        RESEND_API_KEY: 're_test_123',
+        CRON_SECRET: 'test-cron-secret-minimum-32-chars!',
         RATE_LIMIT_ENABLED: false,
       })
       expect(errorSpy).toHaveBeenCalledWith(
@@ -279,6 +336,58 @@ describe('env validation', () => {
       })
       expect(result.RATE_LIMIT_GLOBAL_LIMIT).toBe(120)
       expect(result.RATE_LIMIT_AUTH_LIMIT).toBe(10)
+    })
+  })
+
+  describe('RESEND_API_KEY non-development guard', () => {
+    it('should throw when RESEND_API_KEY is missing in test environment', () => {
+      expect(() =>
+        validate({
+          NODE_ENV: 'test',
+          BETTER_AUTH_SECRET: 'test-secret-minimum-32-characters-long',
+        })
+      ).toThrow('RESEND_API_KEY must be set in non-development environments')
+    })
+
+    it('should throw non-development error (not Vercel error) when both NODE_ENV=test and VERCEL_ENV=preview', () => {
+      expect(() =>
+        validate({
+          NODE_ENV: 'test',
+          VERCEL_ENV: 'preview',
+          BETTER_AUTH_SECRET: 'test-secret-minimum-32-characters-long',
+        })
+      ).toThrow('RESEND_API_KEY must be set in non-development environments')
+    })
+
+    it('should throw when RESEND_API_KEY is missing in production', () => {
+      expect(() =>
+        validate({
+          NODE_ENV: 'production',
+          BETTER_AUTH_SECRET: 'a-real-secret-that-is-safe-for-prod',
+          KV_REST_API_URL: 'https://redis.upstash.io',
+          KV_REST_API_TOKEN: 'test-token',
+        })
+      ).toThrow('RESEND_API_KEY must be set in non-development environments')
+    })
+
+    it('should throw when RESEND_API_KEY is missing on Vercel deployments', () => {
+      expect(() =>
+        validate({
+          NODE_ENV: 'development',
+          VERCEL_ENV: 'preview',
+          BETTER_AUTH_SECRET: 'test-secret-minimum-32-characters-long',
+        })
+      ).toThrow('RESEND_API_KEY must be set on Vercel deployments')
+    })
+
+    it('should accept RESEND_API_KEY when provided', () => {
+      const result = validate({
+        NODE_ENV: 'test',
+        BETTER_AUTH_SECRET: 'test-secret-minimum-32-characters-long',
+        RESEND_API_KEY: 're_test_123',
+        CRON_SECRET: 'test-cron-secret-minimum-32-chars!',
+      })
+      expect(result.RESEND_API_KEY).toBe('re_test_123')
     })
   })
 

@@ -8,5 +8,6 @@ export class OrgNotOwnerException extends Error {
   constructor(public readonly orgId: string) {
     super(`User is not an owner of organization ${orgId}`)
     this.name = 'OrgNotOwnerException'
+    Object.setPrototypeOf(this, new.target.prototype)
   }
 }

@@ -8,6 +8,8 @@ const booleanFromEnv = z.preprocess((val) => {
 
 const Environment = z.enum(['development', 'production', 'test'])
 
+export const DEFAULT_LOG_LEVEL = 'warn' as const
+
 export const envSchema = z.object({
   NODE_ENV: Environment.default('development'),
   PORT: z.coerce.number().default(4000),
@@ -15,14 +17,16 @@ export const envSchema = z.object({
   DATABASE_URL: z.string().optional(),
   DATABASE_APP_URL: z.string().optional(),
   CORS_ORIGIN: z.string().default('http://localhost:3000'),
-  LOG_LEVEL: z.string().default('debug'),
+  LOG_LEVEL: z
+    .enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal', 'silent'])
+    .default(DEFAULT_LOG_LEVEL),
   BETTER_AUTH_SECRET: z.string().min(32).default('dev-secret-do-not-use-in-production'),
   BETTER_AUTH_URL: z.string().url().default('http://localhost:4000'),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
-  RESEND_API_KEY: z.string().optional(),
+  RESEND_API_KEY: z.string().optional(), // Required outside development — see validateResendApiKey(). Safe to assert non-null (!) in non-dev contexts.
   EMAIL_FROM: z.string().default('noreply@yourdomain.com'),
   APP_URL: z.string().url().optional(),
   // Rate limiting & Upstash Redis
@@ -36,7 +40,7 @@ export const envSchema = z.object({
   RATE_LIMIT_AUTH_LIMIT: z.coerce.number().positive().default(5),
   RATE_LIMIT_AUTH_BLOCK_DURATION: z.coerce.number().positive().default(300_000),
   // CRON secret for scheduled jobs (purge, etc.)
-  CRON_SECRET: z.string().optional(),
+  CRON_SECRET: z.string().min(32).optional(),
   // Reserved for the future API key rate-limit tier
   RATE_LIMIT_API_TTL: z.coerce.number().default(60_000),
   RATE_LIMIT_API_LIMIT: z.coerce.number().default(100),
@@ -60,6 +64,7 @@ export function validate(config: Record<string, unknown>): EnvironmentVariables 
 
   const validatedConfig = result.data
   validateAuthSecret(validatedConfig)
+  validateResendApiKey(validatedConfig)
   validateSecurityWarnings(validatedConfig)
   validateRateLimitRedis(validatedConfig)
 
@@ -86,6 +91,23 @@ function validateAuthSecret(config: EnvironmentVariables) {
   }
 }
 
+function validateResendApiKey(config: EnvironmentVariables) {
+  // Guard uses !== 'development' to cover production and test environments.
+  if (config.NODE_ENV !== 'development' && !config.RESEND_API_KEY) {
+    throw new Error(
+      'RESEND_API_KEY must be set in non-development environments. ' +
+        'Get an API key at https://resend.com'
+    )
+  }
+
+  // Secondary guard: catches Vercel deployments where NODE_ENV may still be 'development'.
+  if (config.VERCEL_ENV && !config.RESEND_API_KEY) {
+    throw new Error(
+      'RESEND_API_KEY must be set on Vercel deployments. ' + 'Get an API key at https://resend.com'
+    )
+  }
+}
+
 function validateSecurityWarnings(config: EnvironmentVariables) {
   if (config.NODE_ENV === 'production' && config.RATE_LIMIT_ENABLED === false) {
     console.error(
@@ -94,14 +116,11 @@ function validateSecurityWarnings(config: EnvironmentVariables) {
     )
   }
 
-  // Warn when CRON_SECRET is unset in non-development environments.
-  // The purge endpoint degrades gracefully (rejects unauthenticated requests),
-  // so this is a warning, not a hard failure.
   if (config.NODE_ENV !== 'development' && !config.CRON_SECRET) {
-    console.warn(
-      '[SECURITY] CRON_SECRET is not set in a non-development environment. ' +
-        'Scheduled job endpoints (e.g., purge) will reject all requests. ' +
-        'Set CRON_SECRET to a secure value: openssl rand -base64 32'
+    throw new Error(
+      'CRON_SECRET is required in non-development environments. ' +
+        'Scheduled job endpoints (e.g., purge) will reject all requests without it. ' +
+        'Generate one with: openssl rand -base64 32'
     )
   }
 }
