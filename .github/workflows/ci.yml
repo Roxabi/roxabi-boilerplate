@@ -400,6 +400,15 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Build shared packages
+        # Restores packages/*/dist/ from turbo remote cache (written by the Build job).
+        # Required because apps/api/node_modules/@repo/* are workspace symlinks pointing
+        # to packages/*/dist/ which don't exist in the checked-out repo.
+        run: bun run build --filter=@repo/types --filter=@repo/config --filter=@repo/email --filter=@repo/ui
+        env:
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+
       - name: Cache Playwright browsers
         id: playwright-cache
         uses: actions/cache@v5
@@ -510,6 +519,15 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
+
+      - name: Build shared packages
+        # Restores packages/*/dist/ from turbo remote cache (written by the Build job).
+        # Required because apps/api/node_modules/@repo/* are workspace symlinks pointing
+        # to packages/*/dist/ which don't exist in the checked-out repo.
+        run: bun run build --filter=@repo/types --filter=@repo/config --filter=@repo/email --filter=@repo/ui
+        env:
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAM: ${{ vars.TURBO_TEAM }}
 
       - name: Cache Playwright browsers
         id: playwright-cache
