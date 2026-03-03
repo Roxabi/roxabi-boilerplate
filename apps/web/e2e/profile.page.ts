@@ -15,8 +15,9 @@ export class ProfilePage {
 
   async goto() {
     await this.page.goto('/settings/profile')
-    // Wait for the name input to be visible.
-    await this.displayNameInput.waitFor({ state: 'visible', timeout: 15_000 })
+    // Wait for the form element — faster and cross-browser reliable.
+    // The displayNameInput value loads async; spec tests assert on it directly.
+    await this.page.waitForSelector('form', { timeout: 15_000 })
   }
 
   // ---------------------------------------------------------------------------

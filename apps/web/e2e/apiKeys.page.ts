@@ -109,12 +109,11 @@ export class ApiKeysPage {
   }
 
   /**
-   * The destructive "Delete" confirm button inside the DestructiveConfirmDialog.
-   * The component hardcodes "Delete" as the confirm button text regardless of the action.
-   * If the component is updated to render the action name, update the name matcher here.
+   * The destructive "Revoke" confirm button inside the DestructiveConfirmDialog.
+   * RevokeKeyDialog passes actionLabel="Revoke" to DestructiveConfirmDialog.
    */
   get revokeConfirmButton(): Locator {
-    return this.page.getByRole('alertdialog').getByRole('button', { name: /delete/i })
+    return this.page.getByRole('alertdialog').getByRole('button', { name: /revoke/i })
   }
 
   // ---------------------------------------------------------------------------
