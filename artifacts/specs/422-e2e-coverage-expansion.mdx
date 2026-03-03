@@ -144,7 +144,7 @@ An authenticated user navigates to `/settings/api-keys`. When no keys exist, the
 - [ ] `registration.page.ts` POM targets `/register` (canonical route), getter-based locators, no assertions in POM
 - [ ] `profile.spec.ts`: display current profile, update display name, avatar `<img>` visible and non-broken, persistence after reload, afterEach restores original name
 - [ ] `profile.page.ts` POM follows existing pattern
-- [ ] `api-keys.spec.ts`: empty state display, create new key, one-time key value captured and non-empty, revoke key, revoked key removed from list
+- [ ] `api-keys.spec.ts`: empty state display, create new key, one-time key value captured and non-empty, revoke key, revoked key stays in list with "Revoked" badge (soft-delete — keys are not removed for audit-trail reasons)
 - [ ] `api-keys.page.ts` POM follows existing pattern
 - [ ] `admin.spec.ts`: sidebar org links visible, member list display, member search, org settings display (name/slug), current org display visible, org switcher switches active org context
 - [ ] `system-admin.spec.ts`: system sidebar links visible (superadmin only), users list with filters, organizations list, feature flags page, audit logs page, system settings page
@@ -154,4 +154,4 @@ An authenticated user navigates to `/settings/api-keys`. When no keys exist, the
 - [ ] All new specs use `test.skip` pattern for `DATABASE_URL` absence (CI compatibility)
 - [ ] All new specs pass locally with `bun run test:e2e`
 - [ ] All new specs pass in CI
-- [ ] No modifications to existing 3 specs (auth, landing, dashboard)
+- [ ] No functional modifications to existing 3 specs (auth, landing, dashboard) — infrastructure fixes discovered during implementation are permitted (Nitro proxy Set-Cookie stripping, flaky `networkidle`)
