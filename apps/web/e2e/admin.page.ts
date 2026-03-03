@@ -1,5 +1,7 @@
 import type { Locator, Page } from '@playwright/test'
 
+const ORG_SWITCHER_EXCLUDE = /menu|theme|locale|github|sign in|sign up|open|close/i
+
 /**
  * Page Object Model for Admin flows (org admin and system admin navigation).
  *
@@ -107,10 +109,14 @@ export class AdminPage {
   }
 
   /**
-   * The members table (Card containing the table/list of members).
+   * The members heading — the "Active Members" text shown above the members table.
+   * Renders as a generic div (not a heading), so use text-based matching.
    */
-  get membersCard(): Locator {
-    return this.page.getByRole('heading', { name: /active members/i }).first()
+  get membersHeading(): Locator {
+    return this.page
+      .locator('main')
+      .getByText(/active members/i)
+      .first()
   }
 
   /**
@@ -195,6 +201,26 @@ export class AdminPage {
   }
 
   /**
+   * Wait for the org switcher button to appear in the header.
+   *
+   * The sidebar nav is SSR-rendered and appears immediately, but the header user menu
+   * (including the org switcher) is rendered client-side after useSession() loads.
+   * Call this before `getCurrentOrgName()` to avoid race conditions.
+   */
+  async waitForOrgSwitcher(timeout = 15_000): Promise<void> {
+    // Wait for a header button that has actual text content (not icon-only) and is not a known
+    // utility button. Icon buttons (Language, Toggle theme, GitHub) have empty textContent even
+    // though they have an accessible name — so we require at least one non-whitespace character.
+    await this.page
+      .locator('header')
+      .getByRole('button')
+      .filter({ hasText: /\S/ })
+      .filter({ hasNotText: ORG_SWITCHER_EXCLUDE })
+      .first()
+      .waitFor({ state: 'visible', timeout })
+  }
+
+  /**
    * Scan header buttons to find the org switcher.
    * Returns the first button that has non-empty text and is not a known icon-only button.
    */
@@ -202,9 +228,7 @@ export class AdminPage {
     const header = this.page.locator('header')
     const buttons = header.getByRole('button')
     const texts = await buttons.allTextContents()
-    const idx = texts.findIndex(
-      (t) => t.trim().length > 0 && !/menu|theme|locale|github|sign in|sign up|open|close/i.test(t)
-    )
+    const idx = texts.findIndex((t) => t.trim().length > 0 && !ORG_SWITCHER_EXCLUDE.test(t))
     return idx === -1 ? null : buttons.nth(idx)
   }
 }

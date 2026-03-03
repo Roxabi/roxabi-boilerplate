@@ -79,9 +79,15 @@ const config = defineConfig(async () => ({
     nitro({
       config: {
         builder: 'rolldown',
-        devProxy: {
-          '/api/**': { target: apiTarget, changeOrigin: true },
-        },
+        // NOTE: do NOT add `devProxy` here. Nitro's devProxy uses http-proxy via
+        // h3's fromNodeHandler, which stores response headers in a Web API Headers
+        // object that silently merges multiple Set-Cookie values into a single
+        // comma-joined string — corrupting multi-cookie responses (e.g. better-auth's
+        // set-active-org which sets both the session and activeOrganizationId cookies).
+        //
+        // The routeRules proxy below uses h3's proxyRequest(), which explicitly
+        // appends each Set-Cookie header separately and works correctly. It is active
+        // in both dev and production, giving full dev/prod parity.
         // Prerender all /docs/** pages at build time.
         // Doc content is static — no need for runtime SSR per request.
         // Routes are enumerated explicitly (crawler can't follow React-rendered links).

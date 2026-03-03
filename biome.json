@@ -154,7 +154,8 @@
       "!**/playwright-report",
       "!**/test-results",
       "!**/reports/licenses.json",
-      "!**/.vercel"
+      "!**/.vercel",
+      "!**/e2e/.auth"
     ]
   }
 }

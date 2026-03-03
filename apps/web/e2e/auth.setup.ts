@@ -17,6 +17,29 @@ setup('authenticate', async ({ page }) => {
   // Verify we're actually authenticated
   await expect(page).not.toHaveURL(/\/login/)
 
+  // Set the active organization so permission-based routes work.
+  // TEST_USER (dev@roxabi.local) is owner of 'roxabi-dev'. Without an active
+  // org, activeOrganizationId is null and permissions are empty, causing admin
+  // and api-keys tests to fail.
+  //
+  // We call the NestJS API directly (bypassing the Nitro proxy layer) for test setup
+  // reliability. page.context().request shares the browser's cookie jar: cookies sent
+  // in the request and Set-Cookie headers in the response are both applied to the context.
+  const setActiveResponse = await page
+    .context()
+    .request.post(
+      `${process.env.API_URL ?? 'http://localhost:4000'}/api/auth/organization/set-active`,
+      {
+        data: { organizationSlug: 'roxabi-dev' },
+        headers: {
+          'Content-Type': 'application/json',
+          // Required by better-auth's CSRF origin check (trustedOrigins = [APP_URL])
+          Origin: process.env.BASE_URL ?? 'http://localhost:3000',
+        },
+      }
+    )
+  expect(setActiveResponse.ok()).toBe(true)
+
   // Save signed-in state for reuse by other projects
   await page.context().storageState({ path: AUTH_FILE })
 })

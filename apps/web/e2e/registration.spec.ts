@@ -55,8 +55,10 @@ test.describe('Registration', () => {
     // Act — attempt to register with an already-existing email
     await registration.register(TEST_USER.name, TEST_USER.email, 'Password1!')
 
-    // Assert — an error alert is shown (USER_ALREADY_EXISTS or similar)
-    await expect(registration.errorAlert).toBeVisible({ timeout: 15_000 })
+    // Assert — with requireEmailVerification enabled, better-auth returns a synthetic
+    // success response for duplicate emails (privacy protection: prevents user enumeration).
+    // The "Account Created" success card is shown — backToLoginLink confirms this.
+    await expect(registration.backToLoginLink).toBeVisible({ timeout: NAVIGATION_TIMEOUT })
   })
 
   test('should have back to sign in link', async ({ page }) => {
@@ -64,8 +66,9 @@ test.describe('Registration', () => {
     const registration = new RegistrationPage(page)
     await registration.goto()
 
-    // Assert — the "Already have an account? Sign in" link points to /login
-    const signInLink = page.getByRole('link', { name: /sign in/i })
+    // Assert — the "Already have an account? Sign in" link points to /login.
+    // Use .first() since the header also has a "Sign In" link (strict mode guard).
+    const signInLink = page.getByRole('link', { name: /sign in/i }).first()
     await expect(signInLink).toBeVisible()
     const href = await signInLink.getAttribute('href')
     expect(href).toMatch(/\/login/)

@@ -32,6 +32,11 @@ vi.mock('@/lib/authClient', () => ({
   useSession: vi.fn(() => ({ data: null })),
 }))
 
+vi.mock('@/lib/routePermissions', () => ({
+  enforceRoutePermission: vi.fn(),
+  useEnrichedSession: vi.fn(() => ({ data: null })),
+}))
+
 vi.mock('@/lib/useOrganizations', () => ({
   useOrganizations: vi.fn(() => ({
     data: [
@@ -51,7 +56,8 @@ mockParaglideMessages()
 
 // Import after mocks to trigger createFileRoute and capture the component
 import { toast } from 'sonner'
-import { authClient, useSession } from '@/lib/authClient'
+import { authClient } from '@/lib/authClient'
+import { useEnrichedSession } from '@/lib/routePermissions'
 import { slugify } from './settings'
 
 function setupActiveOrg({ withOwnerMembers = false }: { withOwnerMembers?: boolean } = {}) {
@@ -68,16 +74,16 @@ function setupActiveOrg({ withOwnerMembers = false }: { withOwnerMembers?: boole
 }
 
 function setupOwnerMember() {
-  vi.mocked(useSession).mockReturnValue({
-    data: { user: { id: 'user-1' }, permissions: ['organizations:delete'] },
-  } as unknown as ReturnType<typeof useSession>)
+  vi.mocked(useEnrichedSession).mockReturnValue({
+    data: { user: { id: 'user-1' }, session: {}, permissions: ['organizations:delete'] },
+  } as unknown as ReturnType<typeof useEnrichedSession>)
   mockHasPermission.mockReturnValue(true)
 }
 
 function setupMemberRole() {
-  vi.mocked(useSession).mockReturnValue({
-    data: { user: { id: 'user-1' } },
-  } as unknown as ReturnType<typeof useSession>)
+  vi.mocked(useEnrichedSession).mockReturnValue({
+    data: { user: { id: 'user-1' }, session: {}, permissions: [] },
+  } as unknown as ReturnType<typeof useEnrichedSession>)
   mockHasPermission.mockReturnValue(false)
 }
 

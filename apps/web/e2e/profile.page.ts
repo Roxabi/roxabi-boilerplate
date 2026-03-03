@@ -15,8 +15,8 @@ export class ProfilePage {
 
   async goto() {
     await this.page.goto('/settings/profile')
-    // Wait for the form to be present (profile data loads after session is available)
-    await this.page.waitForSelector('form', { timeout: 15_000 })
+    // Wait for the name input to be visible.
+    await this.displayNameInput.waitFor({ state: 'visible', timeout: 15_000 })
   }
 
   // ---------------------------------------------------------------------------
