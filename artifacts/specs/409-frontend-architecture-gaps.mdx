@@ -1,0 +1,113 @@
+---
+title: "fix(frontend): profile.tsx fetch abstraction + ApiKey types in packages/types"
+issue: 409
+status: approved
+tier: F-lite
+date: 2026-03-03
+promoted-from: artifacts/frames/409-frontend-architecture-gaps.mdx
+---
+
+## Context
+
+Sub-issue of #400 (code quality gaps from FE/BE standards audit). One of three original items
+(dual permission systems) was already resolved before this spec. Two remain.
+
+Source: [Frame #409](../frames/409-frontend-architecture-gaps.mdx)
+
+## Goal
+
+Extract raw `fetch` calls from `profile.lazy.tsx` into a `lib/profile.ts` module (consistent
+with the `lib/apiKeys.ts` pattern), and promote `ApiKey*` types from `apps/web` to `packages/types`
+so frontend and backend share a single type contract.
+
+## Users
+
+- **Frontend developers** — profile page becomes testable in isolation; raw fetch calls consolidated.
+- **Backend developers** — shared ApiKey type contract eliminates silent drift risk.
+
+## Expected Behavior
+
+### Item A: profile.ts lib extraction
+
+`apps/web/src/lib/profile.ts` is created with two exported functions:
+
+```ts
+export async function getProfile(fallbackName: string, fallbackId: string): Promise<ProfileData>
+export async function updateProfile(payload: UpdateProfilePayload): Promise<void>
+```
+
+Both functions return raw `UserProfile` / void — the existing `parseProfileResponse()` helper
+that transforms the API response into UI form state remains in `profile.lazy.tsx` (it is UI
+transformation logic, not a reusable HTTP abstraction).
+
+`fetchProfile` (module-level raw GET) and the inline `PATCH fetch` inside `handleSave` are removed
+from `profile.lazy.tsx`. The component imports and calls `lib/profile.ts` functions instead.
+
+`UserProfile` and `UpdateProfilePayload` are already in `packages/types/src/profile.ts` — the new
+`lib/profile.ts` imports from there. No type duplication. Error propagation follows existing
+pattern: `getProfile` throws on `!res.ok`; `handleSave` continues to catch in the component.
+
+### Item B: ApiKey types in packages/types
+
+A new file `packages/types/src/api-keys.ts` is created with the 5 types currently local to
+`apps/web/src/lib/apiKeys.ts`:
+
+```ts
+export type ApiKey = { ... }
+export type CreateApiKeyRequest = { ... }
+export type CreateApiKeyResponse = { ... }
+export type ListApiKeysResponse = { ... }
+export type RevokeApiKeyResponse = { ... }
+```
+
+`packages/types/src/index.ts` re-exports `from './api-keys'` inserted alphabetically (after `./api`,
+before `./audit`).
+
+`apps/web/src/lib/apiKeys.ts` drops the local type definitions and imports from `@repo/types`.
+
+Backend type shapes verified — serialized JSON responses match frontend string types for date fields
+(backend returns `Date` objects, JSON serialization produces ISO strings → frontend `string | null`
+is correct). No backend changes required.
+
+## Breadboard
+
+### Item A: profile.ts extraction
+
+| Affordance | Handler | Data |
+|------------|---------|------|
+| `getProfile(fallbackName, fallbackId)` | GET `/api/users/me` | → `UserProfile` (from `@repo/types`) |
+| `updateProfile(payload)` | PATCH `/api/users/me` | `UpdateProfilePayload` (from `@repo/types`) |
+| `profile.lazy.tsx useProfileData()` | calls `getProfile()` | removes direct `fetch` |
+| `profile.lazy.tsx handleSave()` | calls `updateProfile()` | removes inline `fetch` |
+
+### Item B: ApiKey types promotion
+
+| Affordance | Before | After |
+|------------|--------|-------|
+| `ApiKey` type | `apps/web/src/lib/apiKeys.ts` | `packages/types/src/api-keys.ts` |
+| `CreateApiKeyRequest` | same | same |
+| `CreateApiKeyResponse` | same | same |
+| `ListApiKeysResponse` | same | same |
+| `RevokeApiKeyResponse` | same | same |
+| Import site | local | `import type { ApiKey } from '@repo/types'` |
+
+## Slices
+
+| # | Slice | Files touched | Demo-able |
+|---|-------|--------------|-----------|
+| 1 | Extract profile fetch to `lib/profile.ts` | `apps/web/src/lib/profile.ts` (new), `apps/web/src/routes/settings/profile.lazy.tsx` | Profile page saves and loads without regression |
+| 2 | Promote ApiKey types to `packages/types` | `packages/types/src/api-keys.ts` (new), `packages/types/src/index.ts`, `apps/web/src/lib/apiKeys.ts` | API key page renders; `bun run typecheck` passes |
+
+## Success Criteria
+
+- [ ] `apps/web/src/lib/profile.ts` exists and exports `getProfile` and `updateProfile`.
+- [ ] `profile.lazy.tsx` has no direct `fetch('/api/users/me', ...)` calls — all HTTP delegated to `lib/profile.ts`.
+- [ ] `profile.lazy.tsx` imports `getProfile` and `updateProfile` from `@/lib/profile` and calls them at the former `fetchProfile` and `handleSave` fetch sites.
+- [ ] `getProfile` and `updateProfile` import `UserProfile` / `UpdateProfilePayload` from `@repo/types`.
+- [ ] `packages/types/src/api-keys.ts` exists and exports all 5 ApiKey types (`ApiKey`, `CreateApiKeyRequest`, `CreateApiKeyResponse`, `ListApiKeysResponse`, `RevokeApiKeyResponse`).
+- [ ] `packages/types/src/index.ts` re-exports from `./api-keys` (alphabetical position: after `./api`, before `./audit`).
+- [ ] `apps/web/src/lib/apiKeys.ts` has no local type definitions for ApiKey types — all 5 types imported from `@repo/types`.
+- [ ] `apps/web/src/lib/apiKeys.test.ts` type imports updated from local to `@repo/types` (no residual local type references).
+- [ ] `bun run typecheck` passes with zero new errors across all packages.
+- [ ] `bun run test` passes — `apiKeys.test.ts` and `profile.test.tsx` show no regressions.
+- [ ] E2E: profile save, avatar change, API key create, and API key revoke flows pass without regression.
