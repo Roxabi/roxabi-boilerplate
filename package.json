@@ -28,6 +28,7 @@
     "test:affected": "turbo run test --filter=...[origin/main]",
     "license:check": "bun run tools/licenseChecker.ts",
     "env:check": "bun run scripts/checkEnvSync.ts",
+    "vercel:env:check": "bun run scripts/checkVercelEnv.ts",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:generate": "bash scripts/db.sh generate",
