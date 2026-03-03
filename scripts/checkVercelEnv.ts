@@ -46,7 +46,9 @@ console.log(`Checking Vercel env vars for project "${PROJECT}" (target: ${target
 console.log(`Team: ${TEAM_SLUG}`)
 console.log()
 
-const url = `https://api.vercel.com/v10/projects/${encodeURIComponent(PROJECT)}/env?teamSlug=${encodeURIComponent(TEAM_SLUG)}&target=${target}`
+// decrypt=true returns actual values when the token has sufficient permissions,
+// allowing semantic checks (e.g. BETTER_AUTH_URL == APP_URL).
+const url = `https://api.vercel.com/v10/projects/${encodeURIComponent(PROJECT)}/env?teamSlug=${encodeURIComponent(TEAM_SLUG)}&target=${target}&decrypt=true`
 
 const response = await fetch(url, {
   headers: {
@@ -62,14 +64,16 @@ if (!response.ok) {
   process.exit(1)
 }
 
-const data = (await response.json()) as { envs: Array<{ key: string; target: string[] }> }
+const data = (await response.json()) as {
+  envs: Array<{ key: string; value: string; target: string[] }>
+}
 
-// Collect all keys declared for this target (envs can target multiple environments)
-const declaredKeys = new Set(
-  data.envs
-    .filter((e) => e.target.includes(target) || e.target.includes('production'))
-    .map((e) => e.key)
+// Collect all env vars declared for this target
+const declaredEnvs = data.envs.filter(
+  (e) => e.target.includes(target) || e.target.includes('production')
 )
+const declaredKeys = new Set(declaredEnvs.map((e) => e.key))
+const envMap = new Map(declaredEnvs.map((e) => [e.key, e.value]))
 
 const missing = required.filter((k) => !declaredKeys.has(k))
 const present = required.filter((k) => declaredKeys.has(k))
@@ -79,21 +83,60 @@ for (const key of present) {
   console.log(`  ✓ ${key}`)
 }
 
+let failed = missing.length > 0
+
 if (missing.length > 0) {
   console.log()
   console.log(`Missing (${missing.length}):`)
   for (const key of missing) {
     console.log(`  ✗ ${key}`)
   }
+}
+
+// Semantic check: BETTER_AUTH_URL must equal APP_URL.
+// better-auth resolves relative callbackURLs (e.g. /dashboard) against its baseURL.
+// If BETTER_AUTH_URL points to the API domain instead of the web app, post-auth
+// redirects land on the API (404) instead of the frontend.
+const betterAuthUrl = envMap.get('BETTER_AUTH_URL')
+const appUrl = envMap.get('APP_URL')
+
+// Values that don't start with http are still encrypted (decrypt=true needs a higher-privilege token).
+// In that case, skip the semantic check rather than block CI with a false negative.
+const isUrl = (v: string) => v.startsWith('http://') || v.startsWith('https://')
+
+if (betterAuthUrl && appUrl) {
+  if (!(isUrl(betterAuthUrl) && isUrl(appUrl))) {
+    console.log()
+    console.log('  ⚠ BETTER_AUTH_URL / APP_URL values are encrypted — skipping equality check.')
+    console.log('    Re-run with a token that has decrypt access to enable this check.')
+  } else {
+    const normalise = (u: string) => u.replace(/\/+$/, '')
+    if (normalise(betterAuthUrl) !== normalise(appUrl)) {
+      console.log()
+      console.error('Mismatch: BETTER_AUTH_URL ≠ APP_URL')
+      console.error(`  BETTER_AUTH_URL = ${betterAuthUrl}`)
+      console.error(`  APP_URL         = ${appUrl}`)
+      console.error(
+        'BETTER_AUTH_URL must equal APP_URL (the web app URL). ' +
+          'better-auth resolves relative callbackURLs against BETTER_AUTH_URL — ' +
+          'if it points to the API domain, post-auth redirects return 404.'
+      )
+      failed = true
+    } else {
+      console.log()
+      console.log(`  ✓ BETTER_AUTH_URL == APP_URL (${appUrl})`)
+    }
+  }
+}
+
+if (failed) {
   console.log()
+  console.error(`One or more checks failed for target "${target}".`)
   console.error(
-    `Error: ${missing.length} required env var(s) not declared in Vercel for target "${target}".`
-  )
-  console.error(
-    'Add them at: https://vercel.com/dashboard → Project → Settings → Environment Variables'
+    'Fix env vars at: https://vercel.com/dashboard → Project → Settings → Environment Variables'
   )
   process.exit(1)
 }
 
 console.log()
-console.log(`All required env vars are declared for target "${target}". ✓`)
+console.log(`All checks passed for target "${target}". ✓`)
