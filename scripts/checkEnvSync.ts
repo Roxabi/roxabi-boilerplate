@@ -33,6 +33,19 @@ const TOOLING_ALLOWLIST = new Set([
   'ANTHROPIC_API_KEY',
   'VERCEL_ENV',
   'NODE_ENV',
+  // Vercel deploy tooling — used by /deploy skill, not app runtime
+  'VERCEL_TOKEN',
+  'VERCEL_PROJECT_ID',
+  'VERCEL_TEAM_ID',
+  // GitHub Projects issue-triage tooling — used by dev-core scripts
+  'GITHUB_REPO',
+  'GH_PROJECT_ID',
+  'STATUS_FIELD_ID',
+  'SIZE_FIELD_ID',
+  'PRIORITY_FIELD_ID',
+  'STATUS_OPTIONS_JSON',
+  'SIZE_OPTIONS_JSON',
+  'PRIORITY_OPTIONS_JSON',
 ])
 
 /** Prefix for client-side environment variables exposed by Vite. */
