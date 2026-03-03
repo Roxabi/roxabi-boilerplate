@@ -1,8 +1,8 @@
 import { cn } from '@repo/ui'
 import { createFileRoute, Link, Outlet, useRouterState } from '@tanstack/react-router'
-import { useSession } from '@/lib/authClient'
 import { hasPermission } from '@/lib/permissions'
 import { requireAuth } from '@/lib/routeGuards'
+import { useEnrichedSession } from '@/lib/routePermissions'
 import { m } from '@/paraglide/messages'
 
 export const Route = createFileRoute('/settings')({
@@ -19,7 +19,7 @@ type SettingsTab = {
 
 function SettingsLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
-  const { data: session } = useSession()
+  const { data: session } = useEnrichedSession()
 
   const canReadApiKeys = hasPermission(session, 'api_keys:read')
 
