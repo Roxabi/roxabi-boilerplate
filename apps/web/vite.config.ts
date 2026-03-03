@@ -7,7 +7,7 @@ import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import viteReact from '@vitejs/plugin-react'
 import mdx from 'fumadocs-mdx/vite'
 import { nitro } from 'nitro/vite'
-import { defineConfig, loadEnv, type PluginOption, type ResolvedConfig } from 'vite'
+import { defineConfig, loadEnv, type Plugin, type PluginOption, type ResolvedConfig } from 'vite'
 import viteTsConfigPaths from 'vite-tsconfig-paths'
 import { z } from 'zod'
 
@@ -35,40 +35,32 @@ function getDocRoutes(): string[] {
   }
 }
 
-const config = defineConfig(async () => ({
-  envDir: '../..',
-  build: {
-    chunkSizeWarningLimit: 1000,
-  },
-  server: {
-    port: Number(process.env.WEB_PORT) || 3000,
-  },
-  resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
-    },
-  },
-  plugins: [
-    {
-      name: 'validate-env',
-      configResolved(config: ResolvedConfig) {
-        if (config.command === 'build') {
-          const envVars = loadEnv(config.mode, config.envDir ?? process.cwd(), 'VITE_')
-          // Duplicated from env.shared.ts — Vite config runs outside the app bundle
-          // and cannot import app source. Keep in sync manually; check-env-sync.ts
-          // will detect drift between this schema and env.shared.ts.
-          const schema = z.object({
-            VITE_GITHUB_REPO_URL: z.string().url().optional(),
-          })
-          const result = schema.safeParse(envVars)
-          if (!result.success) {
-            throw new Error(
-              `Client env validation failed:\n${result.error.issues.map((i) => `  ${i.path.join('.')}: ${i.message}`).join('\n')}`
-            )
-          }
+// Duplicated from env.shared.ts — Vite config runs outside the app bundle
+// and cannot import app source. Keep in sync manually; check-env-sync.ts
+// will detect drift between this schema and env.shared.ts.
+function validateEnvPlugin(): Plugin {
+  return {
+    name: 'validate-env',
+    configResolved(config: ResolvedConfig) {
+      if (config.command === 'build') {
+        const envVars = loadEnv(config.mode, config.envDir ?? process.cwd(), 'VITE_')
+        const schema = z.object({
+          VITE_GITHUB_REPO_URL: z.string().url().optional(),
+        })
+        const result = schema.safeParse(envVars)
+        if (!result.success) {
+          throw new Error(
+            `Client env validation failed:\n${result.error.issues.map((i) => `  ${i.path.join('.')}: ${i.message}`).join('\n')}`
+          )
         }
-      },
+      }
     },
+  }
+}
+
+async function getPlugins() {
+  return [
+    validateEnvPlugin(),
     mdx(await import('./source.config')),
     devtools(),
     paraglideVitePlugin({
@@ -112,7 +104,15 @@ const config = defineConfig(async () => ({
     tailwindcss(),
     tanstackStart(),
     viteReact(),
-  ] as PluginOption[],
+  ] as PluginOption[]
+}
+
+const config = defineConfig(async () => ({
+  envDir: '../..',
+  build: { chunkSizeWarningLimit: 1000 },
+  server: { port: Number(process.env.WEB_PORT) || 3000 },
+  resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
+  plugins: await getPlugins(),
 }))
 
 export default config
