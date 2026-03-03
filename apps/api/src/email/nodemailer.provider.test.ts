@@ -21,7 +21,7 @@ describe('NodemailerEmailProvider', () => {
   })
 
   describe('constructor', () => {
-    it('should read SMTP_HOST and SMTP_PORT from config', () => {
+    it('should read SMTP_HOST, SMTP_PORT, SMTP_SECURE and EMAIL_FROM from config', () => {
       // Arrange
       const config = createMockConfig({ SMTP_HOST: 'mailpit.local', SMTP_PORT: 1025 })
 
@@ -31,14 +31,16 @@ describe('NodemailerEmailProvider', () => {
       // Assert
       expect(config.get).toHaveBeenCalledWith('SMTP_HOST', 'localhost')
       expect(config.get).toHaveBeenCalledWith('SMTP_PORT', 1025)
+      expect(config.get).toHaveBeenCalledWith('SMTP_SECURE', false)
+      expect(config.get).toHaveBeenCalledWith('EMAIL_FROM', 'dev@localhost')
     })
   })
 
   describe('send()', () => {
-    it('should call sendMail with from: dev@localhost and all provided params', async () => {
+    it('should call sendMail with from: EMAIL_FROM config and all provided params', async () => {
       // Arrange
       mockSendMail.mockResolvedValueOnce({})
-      const config = createMockConfig({})
+      const config = createMockConfig({ EMAIL_FROM: 'noreply@example.com' })
       const provider = new NodemailerEmailProvider(config as never)
 
       // Act
@@ -51,11 +53,33 @@ describe('NodemailerEmailProvider', () => {
 
       // Assert
       expect(mockSendMail).toHaveBeenCalledWith({
-        from: 'dev@localhost',
+        from: 'noreply@example.com',
         to: 'user@example.com',
         subject: 'Welcome',
         html: '<h1>Welcome!</h1>',
         text: 'Welcome!',
+      })
+    })
+
+    it('should default from to dev@localhost when EMAIL_FROM is not set', async () => {
+      // Arrange
+      mockSendMail.mockResolvedValueOnce({})
+      const config = createMockConfig({})
+      const provider = new NodemailerEmailProvider(config as never)
+
+      // Act
+      await provider.send({
+        to: 'user@example.com',
+        subject: 'Hello',
+        html: '<p>Hello</p>',
+      })
+
+      // Assert
+      expect(mockSendMail).toHaveBeenCalledWith({
+        from: 'dev@localhost',
+        to: 'user@example.com',
+        subject: 'Hello',
+        html: '<p>Hello</p>',
       })
     })
 
@@ -99,7 +123,7 @@ describe('NodemailerEmailProvider', () => {
       ).rejects.toThrow(EmailSendException)
     })
 
-    it('should log error and include recipient and message when sendMail rejects', async () => {
+    it('should log error with redacted recipient and subject when sendMail rejects', async () => {
       // Arrange
       const transportError = new Error('SMTP timeout')
       mockSendMail.mockRejectedValueOnce(transportError)
@@ -118,7 +142,7 @@ describe('NodemailerEmailProvider', () => {
 
       // Assert
       expect(errorSpy).toHaveBeenCalledWith(
-        'Failed to send email to user@example.com: SMTP timeout',
+        'Failed to send email to us***@example.com (subject: "Verify email"): SMTP timeout',
         transportError.stack
       )
 

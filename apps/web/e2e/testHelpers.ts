@@ -63,12 +63,31 @@ export async function waitForReactHydration(page: Page): Promise<void> {
  * Requires Mailpit running at http://localhost:8025 (started via `bun run db:up`).
  */
 export async function getMagicLinkToken(
-  request: import('@playwright/test').APIRequestContext
+  request: import('@playwright/test').APIRequestContext,
+  maxAttempts = 8
 ): Promise<string> {
-  const res = await request.get('http://localhost:8025/api/v1/messages?limit=1')
-  const { messages } = (await res.json()) as { messages: Array<{ HTML: string }> }
-  const html = messages[0]?.HTML ?? ''
-  const match = html.match(/href="[^"]*\/magic-link\/verify\?token=([^"&]+)/)
-  if (!match) throw new Error('Magic link token not found in Mailpit')
-  return `/magic-link/verify?token=${match[1]}`
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      const res = await request.get('http://localhost:8025/api/v1/messages?limit=1', {
+        timeout: 5_000,
+      })
+      if (!res.ok()) throw new Error(`Mailpit returned HTTP ${res.status()}`)
+      const body = (await res.json()) as { messages?: Array<{ HTML: string }> }
+      const html = body.messages?.[0]?.HTML
+      if (!html) throw new Error('No emails in Mailpit yet')
+      const match = html.match(/href="[^"]*\/magic-link\/verify\?token=([^"&]+)/)
+      if (!match) throw new Error('Magic link token not found in email HTML')
+      return `/magic-link/verify?token=${match[1]}`
+    } catch (err) {
+      if (attempt === maxAttempts - 1) {
+        throw new Error(
+          `getMagicLinkToken failed after ${maxAttempts} attempts: ${err instanceof Error ? err.message : err}`
+        )
+      }
+      const waitMs = Math.min(500 * 2 ** attempt, 5_000)
+      await new Promise((resolve) => setTimeout(resolve, waitMs))
+    }
+  }
+  // unreachable — satisfies TypeScript
+  throw new Error('getMagicLinkToken: exhausted attempts')
 }

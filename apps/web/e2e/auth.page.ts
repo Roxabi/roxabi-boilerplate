@@ -79,7 +79,7 @@ export class AuthPage {
   // ---------------------------------------------------------------------------
 
   get loginMagicLinkTab(): Locator {
-    return this.page.getByRole('tab', { name: /magic.link/i })
+    return this.page.getByRole('tab', { name: /magic\s*link/i })
   }
 
   get loginMagicLinkEmailInput(): Locator {
@@ -87,7 +87,7 @@ export class AuthPage {
   }
 
   get loginMagicLinkSubmitButton(): Locator {
-    return this.page.getByRole('button', { name: /send.magic.link/i })
+    return this.page.getByRole('button', { name: /send\s*magic\s*link/i })
   }
 
   async requestMagicLink(email: string): Promise<void> {
