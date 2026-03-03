@@ -1,0 +1,405 @@
+---
+title: "Plan: fix(frontend): profile.tsx fetch abstraction + ApiKey types in packages/types"
+issue: 409
+spec: artifacts/specs/409-frontend-architecture-gaps.mdx
+complexity: 3/10
+tier: F-lite
+generated: 2026-03-03
+---
+
+## Summary
+
+Two independent structural refactors: extract raw `fetch` calls from `profile.lazy.tsx` into
+`lib/profile.ts` (following the `lib/apiKeys.ts` pattern), then promote ApiKey type definitions
+from `apps/web` to `packages/types` for a shared frontend/backend contract.
+
+## Agents
+
+| Agent | Tasks | Files |
+|-------|-------|-------|
+| frontend-dev | 1–6 | `apps/web/src/lib/profile.ts` (new), `apps/web/src/routes/settings/profile.lazy.tsx`, `packages/types/src/api-keys.ts` (new), `packages/types/src/index.ts`, `apps/web/src/lib/apiKeys.ts`, `apps/web/src/lib/apiKeys.test.ts` |
+
+## Reference Patterns
+
+- `apps/web/src/lib/apiKeys.ts` — lib module shape (fetch wrapper, error handling, `credentials: 'include'`)
+- `apps/web/src/lib/apiKeys.test.ts` — type import pattern to update in Task 6
+- `packages/types/src/profile.ts` — existing types `UserProfile`, `UpdateProfilePayload` (use, don't duplicate)
+- `packages/types/src/index.ts` — alphabetical export ordering convention
+
+## Consistency Report
+
+| Spec criterion | Covered by task(s) |
+|----------------|--------------------|
+| SC-1: `lib/profile.ts` exports `getProfile` + `updateProfile` | T1 |
+| SC-2: No direct `fetch('/api/users/me')` in `profile.lazy.tsx` | T2 |
+| SC-3: `profile.lazy.tsx` imports + calls `getProfile` / `updateProfile` | T2 |
+| SC-4: `getProfile`/`updateProfile` import types from `@repo/types` | T1 |
+| SC-5: `packages/types/src/api-keys.ts` with 5 types | T3 |
+| SC-6: `packages/types/src/index.ts` re-exports alphabetically | T4 |
+| SC-7: `apiKeys.ts` imports types from `@repo/types` | T5 |
+| SC-8: `apiKeys.test.ts` type imports updated | T6 |
+| SC-9: typecheck passes | verified after T4 + T6 |
+| SC-10: unit tests pass | verified after T2 + T6 |
+| SC-11: E2E passes | verified after all tasks |
+
+Uncovered: none. Untraced: none.
+
+---
+
+## V1 — Profile fetch extraction
+
+**RED-GATE V1:** `bun run typecheck 2>&1 | grep -c 'error' | xargs -I{} test {} -eq 0 && echo PASS || echo FAIL`
+
+---
+
+### T1 — Create `apps/web/src/lib/profile.ts` [P]
+
+**Phase:** RED · **Agent:** frontend-dev · **Difficulty:** 2 · **SC:** SC-1, SC-4
+
+**File:** `apps/web/src/lib/profile.ts` (new)
+
+Model after `lib/apiKeys.ts`: fetch wrapper, `credentials: 'include'`, throw on `!res.ok`.
+
+```ts
+import type { UpdateProfilePayload, UserProfile } from '@repo/types'
+import { isErrorWithMessage } from '@/lib/errorUtils'
+
+/**
+ * Fetch the current user's profile from the API.
+ * Throws on network error or non-ok response.
+ */
+export async function getProfile(): Promise<UserProfile> {
+  const res = await fetch('/api/users/me', { credentials: 'include' })
+  if (!res.ok) throw new Error('fetch failed')
+  return res.json() as Promise<UserProfile>
+}
+
+/**
+ * Update the current user's profile.
+ *
+ * On API error (non-ok response): throws Error with `message` from the response body
+ * (empty string if body has no message). Component distinguishes this from network errors
+ * via the `isApiError` property.
+ *
+ * On network error: throws a generic Error (no `isApiError` property).
+ */
+export async function updateProfile(payload: UpdateProfilePayload): Promise<void> {
+  const res = await fetch('/api/users/me', {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) {
+    const data: unknown = await res.json().catch(() => null)
+    const err = Object.assign(
+      new Error(isErrorWithMessage(data) ? data.message : ''),
+      { isApiError: true as const }
+    )
+    throw err
+  }
+}
+```
+
+**Verify:**
+```bash
+grep -c "export.*getProfile\|export.*updateProfile" apps/web/src/lib/profile.ts
+# Expected: 2
+grep "from '@repo/types'" apps/web/src/lib/profile.ts
+# Expected: line with UserProfile + UpdateProfilePayload
+```
+
+**Time estimate:** 5 min
+
+---
+
+### T2 — Update `profile.lazy.tsx` to use `lib/profile.ts` [P]
+
+**Phase:** GREEN · **Agent:** frontend-dev · **Difficulty:** 2 · **SC:** SC-2, SC-3
+
+**File:** `apps/web/src/routes/settings/profile.lazy.tsx`
+
+**Changes:**
+
+1. Add import at top of file:
+   ```ts
+   import { getProfile, updateProfile } from '@/lib/profile'
+   ```
+
+2. Remove the `async function fetchProfile(...)` definition entirely (lines ~99–104).
+
+3. In `useProfileData` hook, replace the `fetchProfile(...)` call with `getProfile()`, then call
+   `parseProfileResponse()` in the `.then()`:
+   ```ts
+   // BEFORE:
+   fetchProfile(user.name ?? '', user.id)
+     .then((p) => set({ ...p, loaded: true }))
+     .catch(() => set({ fullName: user.name ?? '', avatarSeed: user.id, loaded: true }))
+
+   // AFTER:
+   getProfile()
+     .then((data) => {
+       const p = parseProfileResponse(data, user.name ?? '', user.id)
+       set({ ...p, loaded: true })
+     })
+     .catch(() => set({ fullName: user.name ?? '', avatarSeed: user.id, loaded: true }))
+   ```
+
+4. In `handleSave`, replace the inline `fetch('/api/users/me', { method: 'PATCH', ... })` block
+   with a call to `updateProfile(payload)`. Distinguish API errors (thrown by `updateProfile`
+   with `isApiError: true`) from network errors:
+   ```ts
+   async function handleSave(e: React.FormEvent) {
+     e.preventDefault()
+     actions.setSaving(true)
+     try {
+       await updateProfile({
+         firstName: state.firstName || undefined,
+         lastName: state.lastName || undefined,
+         fullName: state.fullName,
+         avatarSeed: state.avatarSeed || undefined,
+         avatarStyle: state.avatarStyle,
+         avatarOptions: state.avatarOptions,
+         image: cdnUrl,
+       })
+       try {
+         await authClient.updateUser({ image: cdnUrl })
+       } catch {
+         // Session update failed — avatar will update on next page load
+       }
+       toast.success(m.avatar_save_success())
+     } catch (err) {
+       const isApiErr = err instanceof Error && (err as { isApiError?: true }).isApiError
+       const message = isApiErr && err.message ? err.message : null
+       toast.error(message ?? m.avatar_save_error())
+     } finally {
+       actions.setSaving(false)
+     }
+   }
+   ```
+
+   This preserves existing test expectations:
+   - API error with `{ message: 'Validation failed' }` → `toast.error('Validation failed')` ✅
+   - API error with no message → `toast.error(m.avatar_save_error())` ✅
+   - Network error (fetch throws) → `toast.error(m.avatar_save_error())` ✅
+
+**Verify:**
+```bash
+grep -c "fetch.*api/users/me" apps/web/src/routes/settings/profile.lazy.tsx
+# Expected: 0
+grep "from '@/lib/profile'" apps/web/src/routes/settings/profile.lazy.tsx
+# Expected: 1 line
+bun run test --run profile 2>&1 | tail -5
+# Expected: no failures
+```
+
+**Time estimate:** 8 min
+
+---
+
+**RED-GATE V1 check:**
+```bash
+bun run typecheck 2>&1 | grep "error TS" | wc -l
+# Expected: 0 new errors
+```
+
+---
+
+## V2 — ApiKey types promotion
+
+**RED-GATE V2:** `bun run typecheck 2>&1 | grep -c 'error' | xargs -I{} test {} -eq 0 && echo PASS || echo FAIL`
+
+---
+
+### T3 — Create `packages/types/src/api-keys.ts` [P]
+
+**Phase:** RED · **Agent:** frontend-dev · **Difficulty:** 1 · **SC:** SC-5
+
+**File:** `packages/types/src/api-keys.ts` (new)
+
+Move the 5 type definitions verbatim from `apps/web/src/lib/apiKeys.ts`.
+
+```ts
+export type ApiKey = {
+  id: string
+  name: string
+  keyPrefix: string
+  lastFour: string
+  scopes: string[]
+  rateLimitTier: string
+  expiresAt: string | null
+  lastUsedAt: string | null
+  revokedAt: string | null
+  createdAt: string
+}
+
+export type CreateApiKeyRequest = {
+  name: string
+  scopes: string[]
+  expiresAt?: string | null
+}
+
+export type CreateApiKeyResponse = {
+  id: string
+  name: string
+  key: string
+  keyPrefix: string
+  lastFour: string
+  scopes: string[]
+  expiresAt: string | null
+  createdAt: string
+}
+
+export type ListApiKeysResponse = {
+  data: ApiKey[]
+}
+
+export type RevokeApiKeyResponse = {
+  id: string
+  revokedAt: string
+}
+```
+
+**Verify:**
+```bash
+grep -c "^export type" packages/types/src/api-keys.ts
+# Expected: 5
+```
+
+**Time estimate:** 2 min
+
+---
+
+### T4 — Update `packages/types/src/index.ts` [P]
+
+**Phase:** GREEN · **Agent:** frontend-dev · **Difficulty:** 1 · **SC:** SC-6
+
+**File:** `packages/types/src/index.ts`
+
+Add `export * from './api-keys'` after `export * from './api'` and before `export * from './audit'`
+(alphabetical order):
+
+```ts
+export * from './account'
+export * from './admin'
+export * from './api'
+export * from './api-keys'   // ← add here
+export * from './audit'
+export * from './auth'
+// ... rest unchanged
+```
+
+**Verify:**
+```bash
+grep "api-keys" packages/types/src/index.ts
+# Expected: 1 line: export * from './api-keys'
+```
+
+**Time estimate:** 1 min
+
+---
+
+### T5 — Update `apps/web/src/lib/apiKeys.ts` — remove local types, import from `@repo/types` [P]
+
+**Phase:** GREEN · **Agent:** frontend-dev · **Difficulty:** 1 · **SC:** SC-7
+
+**File:** `apps/web/src/lib/apiKeys.ts`
+
+Remove the 5 `export type` definitions (lines ~6–43). Add import at top:
+
+```ts
+import type {
+  ApiKey,
+  CreateApiKeyRequest,
+  CreateApiKeyResponse,
+  ListApiKeysResponse,
+  RevokeApiKeyResponse,
+} from '@repo/types'
+```
+
+All 3 functions (`listApiKeys`, `createApiKey`, `revokeApiKey`) remain unchanged — they already
+use these types via local definitions.
+
+**Verify:**
+```bash
+grep -c "^export type" apps/web/src/lib/apiKeys.ts
+# Expected: 0
+grep "from '@repo/types'" apps/web/src/lib/apiKeys.ts
+# Expected: 1 import block
+```
+
+**Time estimate:** 3 min
+
+---
+
+### T6 — Update `apps/web/src/lib/apiKeys.test.ts` — fix type imports [P]
+
+**Phase:** REFACTOR · **Agent:** frontend-dev · **Difficulty:** 1 · **SC:** SC-8
+
+**File:** `apps/web/src/lib/apiKeys.test.ts`
+
+The test file imports types from the local module:
+```ts
+import type {
+  CreateApiKeyRequest,
+  CreateApiKeyResponse,
+  ListApiKeysResponse,
+  RevokeApiKeyResponse,
+} from './apiKeys'
+```
+
+Update to import from `@repo/types` (types have moved):
+```ts
+import type {
+  CreateApiKeyRequest,
+  CreateApiKeyResponse,
+  ListApiKeysResponse,
+  RevokeApiKeyResponse,
+} from '@repo/types'
+```
+
+The `makeApiKey` helper uses `import('./apiKeys').ApiKey` inline — update to `import('@repo/types').ApiKey`:
+```ts
+function makeApiKey(
+  overrides: Partial<import('@repo/types').ApiKey> = {}
+): import('@repo/types').ApiKey {
+```
+
+Function imports (`createApiKey`, `listApiKeys`, `revokeApiKey`) from `'./apiKeys'` remain unchanged.
+
+**Verify:**
+```bash
+grep "from './apiKeys'" apps/web/src/lib/apiKeys.test.ts
+# Expected: 1 line only (the function import: createApiKey, listApiKeys, revokeApiKey)
+grep "from '@repo/types'" apps/web/src/lib/apiKeys.test.ts
+# Expected: 1 import block
+bun run test --run apiKeys 2>&1 | tail -5
+# Expected: no failures
+```
+
+**Time estimate:** 3 min
+
+---
+
+**RED-GATE V2 check:**
+```bash
+bun run typecheck 2>&1 | grep "error TS" | wc -l
+# Expected: 0 new errors
+bun run test 2>&1 | tail -10
+# Expected: all pass, no regressions
+```
+
+---
+
+## Final Verification
+
+```bash
+# Typecheck across all packages
+bun run typecheck
+
+# Unit tests
+bun run test
+
+# E2E (if dev server running): profile save + api key create/revoke flows
+# bun run test:e2e --grep "profile|api-key"
+```
