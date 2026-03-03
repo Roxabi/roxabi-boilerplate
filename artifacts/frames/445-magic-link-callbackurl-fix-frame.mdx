@@ -1,0 +1,62 @@
+---
+title: "fix(auth): magic link verification broken — callbackURL missing at request time + no E2E coverage"
+issue: 445
+status: approved
+tier: F-full
+date: 2026-03-03
+---
+
+## Problem
+
+Magic link authentication is broken in both dev and production. The root cause is that
+`authClient.signIn.magicLink({ email })` in `apps/web/src/routes/-login-handlers.ts` does
+not pass a `callbackURL`. Better Auth stores the `callbackURL` **at request time** (embedded
+in the token), so the missing parameter means the post-auth redirect defaults to the API base
+URL instead of `/dashboard`.
+
+A prior fix (commit `7bfb328`) attempted to address this by appending `callbackURL` as a query
+param to the verify endpoint redirect — but Better Auth's verify handler reads the `callbackURL`
+from the token, not from the query param. The fix targeted the wrong layer and shipped silently
+because the magic link flow has **zero real E2E coverage**.
+
+The combined effect: users who request a magic link end up misdirected or in an error loop,
+making passwordless login non-functional.
+
+## Who
+
+- **Primary:** End users authenticating via magic link (passwordless). They request a link,
+  click it, and expect to land on `/dashboard` with an active session.
+- **Secondary:** Developers maintaining or extending the auth flow — they need accurate test
+  coverage to know when the flow regresses.
+
+## Constraints
+
+- Better Auth stores `callbackURL` in the token at request time — the verify endpoint does not
+  accept it as a query param override. Fix must pass `callbackURL` in
+  `signIn.magicLink({ email, callbackURL })`.
+- The E2E test cannot receive real email in CI; it must intercept the magic link token (via DB
+  query or API probe) to simulate clicking the link.
+- Must not break existing auth flows (OAuth, credentials, passkeys).
+- `window.location.origin` is browser-only — any `callbackURL` construction must be safe for
+  SSR/edge contexts where `window` is undefined.
+
+## Out of Scope
+
+- Other authentication methods (OAuth, credentials, passkeys)
+- Magic link expiry / rate limiting policies
+- Email delivery infrastructure or template changes
+- Vercel environment variable configuration
+- Any UI changes beyond the handler fix
+
+## Complexity
+
+**Tier: F-full** — The fix itself is small (one line in `-login-handlers.ts`), but the issue
+exposes a test layer problem that requires analysis before spec: how to intercept the token in
+E2E, whether `verify.tsx`'s `callbackURL` query param is still needed at all, and how to
+structure a unit test that tests behavior rather than URL construction.
+
+Signals observed:
+- Prior fix targeted wrong layer → root cause needs analysis before spec to avoid another miss
+- E2E token interception strategy is an open design question (DB probe vs API hook vs email stub)
+- 4 files across code + unit + e2e layers
+- Auth domain only (single domain), but test infrastructure involves non-trivial CI considerations
