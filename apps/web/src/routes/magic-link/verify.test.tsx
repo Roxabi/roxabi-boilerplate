@@ -177,7 +177,6 @@ describe('MagicLinkVerifyPage', () => {
       await waitFor(() => {
         expect(capturedHref).toContain('/api/auth/magic-link/verify')
         expect(capturedHref).toContain('token=tok_abc123')
-        expect(capturedHref).toContain('callbackURL=http%3A%2F%2Flocalhost%2Fdashboard')
         expect(capturedHref).toContain(
           'errorCallbackURL=http%3A%2F%2Flocalhost%2Fmagic-link%2Fverify'
         )

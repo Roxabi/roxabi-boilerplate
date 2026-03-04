@@ -155,7 +155,10 @@ describe('MagicLinkSentPage', () => {
 
     // Assert
     await waitFor(() => {
-      expect(authClient.signIn.magicLink).toHaveBeenCalledWith({ email: 'user@example.com' })
+      expect(authClient.signIn.magicLink).toHaveBeenCalledWith({
+        email: 'user@example.com',
+        callbackURL: `${window.location.origin}/dashboard`,
+      })
     })
     await waitFor(() => {
       expect(vi.mocked(toast.success)).toHaveBeenCalledWith('auth_toast_magic_link_resent')

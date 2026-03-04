@@ -82,6 +82,7 @@ export function createLoginAuthHandlers(deps: AuthHandlerDeps) {
     try {
       const { error: mlError } = await authClient.signIn.magicLink({
         email: form.magicLinkEmail,
+        callbackURL: `${window.location.origin}/dashboard`,
       })
       if (mlError) {
         if (mlError.status === 429) {

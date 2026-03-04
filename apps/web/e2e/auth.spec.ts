@@ -1,6 +1,12 @@
 import { expect, test } from '@playwright/test'
 import { AuthPage } from './auth.page'
-import { hasApi, NAVIGATION_TIMEOUT, TEST_USER_2 } from './testHelpers'
+import {
+  getMagicLinkToken,
+  hasApi,
+  NAVIGATION_TIMEOUT,
+  TEST_USER,
+  TEST_USER_2,
+} from './testHelpers'
 
 // Tests that need a clean (unauthenticated) browser context.
 // Using test.use() avoids clearCookies() which could invalidate the
@@ -65,6 +71,39 @@ test.describe('Authentication — unauthenticated', () => {
     if (isVisible) {
       await expect(auth.githubOAuthButton).toBeVisible()
     }
+  })
+})
+
+test.describe('Authentication — magic link', () => {
+  test.use({ storageState: { cookies: [], origins: [] } })
+  test.skip(() => !hasApi, 'Skipped: no DATABASE_URL / Mailpit in CI')
+
+  test('should authenticate via magic link and redirect to dashboard', async ({
+    page,
+    request,
+  }) => {
+    const auth = new AuthPage(page)
+    await auth.gotoLogin()
+    await auth.requestMagicLink(TEST_USER.email)
+    const verifyPath = await getMagicLinkToken(request)
+    const token = new URLSearchParams(verifyPath.split('?')[1]).get('token') ?? ''
+    // Navigate directly to port 4000 to bypass the Nitro dev proxy which follows
+    // Better Auth's 302 redirect internally (returning 200) — causing TanStack
+    // Router to render 404 for the unrecognised /api/auth/* path. The browser
+    // handles the native 302→/dashboard redirect correctly when calling port 4000 directly.
+    await page.goto(
+      `http://localhost:4000/api/auth/magic-link/verify?token=${token}&callbackURL=http://localhost:3000/dashboard`
+    )
+    await page.waitForURL(/\/dashboard/, { timeout: NAVIGATION_TIMEOUT })
+  })
+
+  test('should show error for invalid magic link token', async ({ page }) => {
+    // Navigate to the pre-error URL directly — the Nitro dev proxy follows Better
+    // Auth's 302 redirect internally (converting it to 200) so the browser URL stays
+    // on /api/auth/... causing a TanStack Router 404. Testing the error UI via
+    // ?error=INVALID_TOKEN bypasses the redirect chain and directly exercises ErrorState.
+    await page.goto('/magic-link/verify?error=INVALID_TOKEN')
+    await expect(page.getByRole('alert')).toBeVisible({ timeout: 10_000 })
   })
 })
 

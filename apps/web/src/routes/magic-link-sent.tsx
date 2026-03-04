@@ -63,7 +63,10 @@ function MagicLinkSentPage() {
     if (!email) return
     setLoading(true)
     try {
-      const { error } = await authClient.signIn.magicLink({ email })
+      const { error } = await authClient.signIn.magicLink({
+        email,
+        callbackURL: `${window.location.origin}/dashboard`,
+      })
       if (error) {
         toast.error(error.message ?? m.auth_toast_error())
       } else {
