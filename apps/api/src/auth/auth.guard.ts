@@ -60,7 +60,6 @@ export class AuthGuard implements CanActivate {
       context.getHandler(),
       context.getClass(),
     ])
-
     const isPublic = this.reflector.getAllAndOverride<boolean>('PUBLIC', [
       context.getHandler(),
       context.getClass(),
@@ -68,42 +67,13 @@ export class AuthGuard implements CanActivate {
     if (isPublic && !requireApiKey) return true
 
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>()
-
-    // --- API key Bearer fallback ---
     const authHeader = request.headers?.['authorization'] as string | undefined
     const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null
 
-    let session: AuthenticatedSession | null = null
-
-    if (bearerToken?.startsWith('sk_live_')) {
-      // API key path — throws on invalid/revoked/expired
-      const keyData = await this.apiKeyService.validateBearerToken(bearerToken)
-      const orgPermissions = await this.permissionService.getPermissions(
-        keyData.userId,
-        keyData.tenantId
-      )
-      const effectiveScopes = keyData.scopes.filter((s) => orgPermissions.includes(s))
-
-      session = {
-        user: { id: keyData.userId, role: (keyData.role ?? 'user') as Role },
-        session: { id: keyData.id, activeOrganizationId: keyData.tenantId },
-        permissions: effectiveScopes,
-        actorType: 'api_key',
-        apiKeyId: keyData.id,
-      }
-
-      // fire-and-forget lastUsedAt update
-      this.apiKeyService.touchLastUsedAt(keyData.id)
-    } else {
-      // Session auth path (existing behavior)
-      const raw = await this.authService.getSession(request)
-      session = isAuthenticatedSession(raw) ? raw : null
-    }
-
+    const session = await this.resolveSession(request, bearerToken)
     request.session = session
     request.user = session?.user ?? null
 
-    // @RequireApiKey(): reject non-API-key auth
     if (requireApiKey && session?.actorType !== 'api_key') {
       throw new UnauthorizedException({
         message: 'API key required',
@@ -118,20 +88,49 @@ export class AuthGuard implements CanActivate {
     if (!session && isOptional) return true
     if (!session) throw new UnauthorizedException()
 
-    // Soft-delete check — session auth only
+    await this.runPostAuthChecks(context, request, session)
+    return true
+  }
+
+  private async resolveSession(
+    request: AuthenticatedRequest,
+    bearerToken: string | null
+  ): Promise<AuthenticatedSession | null> {
+    if (bearerToken?.startsWith('sk_live_')) {
+      return this.buildApiKeySession(bearerToken)
+    }
+    const raw = await this.authService.getSession(request)
+    return isAuthenticatedSession(raw) ? raw : null
+  }
+
+  private async buildApiKeySession(token: string): Promise<AuthenticatedSession> {
+    const keyData = await this.apiKeyService.validateBearerToken(token)
+    const orgPermissions = await this.permissionService.getPermissions(
+      keyData.userId,
+      keyData.tenantId
+    )
+    const effectiveScopes = keyData.scopes.filter((s) => orgPermissions.includes(s))
+    this.apiKeyService.touchLastUsedAt(keyData.id)
+    return {
+      user: { id: keyData.userId, role: (keyData.role ?? 'user') as Role },
+      session: { id: keyData.id, activeOrganizationId: keyData.tenantId },
+      permissions: effectiveScopes,
+      actorType: 'api_key',
+      apiKeyId: keyData.id,
+    }
+  }
+
+  private async runPostAuthChecks(
+    context: ExecutionContext,
+    request: AuthenticatedRequest,
+    session: AuthenticatedSession
+  ): Promise<void> {
     if (session.actorType !== 'api_key') {
       await this.checkSoftDeleted(request, session)
-    }
-
-    // Roles — skip for API key auth
-    if (session.actorType !== 'api_key') {
       this.checkRoles(context, session)
     }
-
     this.checkOrgRequired(context, session)
     this.checkPermissions(context, session)
-
-    return true
   }
 
   private async checkSoftDeleted(request: AuthenticatedRequest, session: AuthenticatedSession) {
