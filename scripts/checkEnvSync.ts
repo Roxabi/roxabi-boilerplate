@@ -27,6 +27,7 @@ const ENV_EXAMPLE_PATH = join(ROOT, '.env.example')
  */
 const TOOLING_ALLOWLIST = new Set([
   'WEB_PORT',
+  'EMAIL_PORT',
   'CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS',
   'GITHUB_TOKEN',
   'OPENAI_API_KEY',

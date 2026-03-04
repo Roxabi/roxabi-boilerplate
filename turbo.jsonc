@@ -8,6 +8,7 @@
     "CORS_ORIGIN",
     "CRON_SECRET",
     "EMAIL_FROM",
+    "EMAIL_PORT",
     "LOG_LEVEL",
     "PORT",
     "RATE_LIMIT_ENABLED",
