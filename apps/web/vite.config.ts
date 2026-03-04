@@ -11,7 +11,7 @@ import { defineConfig, loadEnv, type Plugin, type PluginOption, type ResolvedCon
 import viteTsConfigPaths from 'vite-tsconfig-paths'
 import { z } from 'zod'
 
-const apiTarget = process.env.API_URL || `http://localhost:${process.env.API_PORT || 4000}`
+const apiTarget = process.env.API_URL || `http://localhost:${process.env.PORT || 4000}`
 
 // Enumerate all /docs/** prerender routes directly from the MDX source files.
 // TanStack Start renders client-side, so Nitro's link crawler finds nothing —
