@@ -138,6 +138,7 @@ function useMembersSearch() {
 
 function useMembersPageQueries(orgId: string | undefined, page: number, debouncedSearch: string) {
   return useQuery({
+    // TODO: migrate to adminMemberKeys factory (follow-up to #410)
     queryKey: ['admin-members', orgId, page, PAGE_LIMIT, debouncedSearch || undefined],
     queryFn: ({ signal }) => fetchMembers(page, debouncedSearch || undefined, signal),
     enabled: Boolean(orgId),
@@ -247,6 +248,7 @@ function useAdminMembersPage() {
 
   const membersQuery = useMembersPageQueries(orgId, search.page, search.debouncedSearch)
   const rolesQuery = useQuery({
+    // TODO: migrate to adminMemberKeys factory (follow-up to #410)
     queryKey: ['org-roles', orgId],
     queryFn: ({ signal }) => fetchRoles(signal),
     staleTime: 60_000,
@@ -315,6 +317,7 @@ function AdminMembersPage() {
         <InviteDialog
           roles={roles}
           onSuccess={() => {
+            // TODO: migrate to adminMemberKeys factory (follow-up to #410)
             queryClient.invalidateQueries({ queryKey: ['admin-members'] })
             queryClient.invalidateQueries({ queryKey: ['admin-invitations'] })
           }}
@@ -332,6 +335,7 @@ function AdminMembersPage() {
           orgId={activeOrg.id}
           currentUserId={currentUserId}
           onActionComplete={() => {
+            // TODO: migrate to adminMemberKeys factory (follow-up to #410)
             queryClient.invalidateQueries({ queryKey: ['admin-members'] })
           }}
           onPageChange={search.setPage}
