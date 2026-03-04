@@ -372,9 +372,20 @@ jobs:
           --health-interval=5s
           --health-timeout=5s
           --health-retries=5
+      mailpit:
+        image: axllent/mailpit:v1.29.2
+        ports:
+          - 1025:1025
+          - 8025:8025
+        options: >-
+          --health-cmd="wget -qO- http://localhost:8025/api/v1/messages?limit=1"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=5
     env:
       DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
       BETTER_AUTH_SECRET: test-secret-minimum-32-characters-long
+      SMTP_HOST: localhost
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -488,9 +499,20 @@ jobs:
           --health-interval=5s
           --health-timeout=5s
           --health-retries=5
+      mailpit:
+        image: axllent/mailpit:v1.29.2
+        ports:
+          - 1025:1025
+          - 8025:8025
+        options: >-
+          --health-cmd="wget -qO- http://localhost:8025/api/v1/messages?limit=1"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=5
     env:
       DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
       BETTER_AUTH_SECRET: test-secret-minimum-32-characters-long
+      SMTP_HOST: localhost
     strategy:
       fail-fast: false
       matrix:
