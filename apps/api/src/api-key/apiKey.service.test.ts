@@ -814,6 +814,61 @@ describe('ApiKeyService', () => {
         errorCode: ErrorCode.API_KEY_EXPIRED,
       })
     })
+
+    it('should return the correct candidate when multiple rows share the same lastFour (collision)', async () => {
+      // Arrange — two tokens with identical lastFour but different salts/hashes
+      const { token, lastFour, salt, hash } = buildValidToken()
+
+      // Candidate A: same lastFour, but salt/hash belong to a DIFFERENT token — HMAC mismatch
+      const differentToken = `sk_live_${'b'.repeat(32)}`
+      const saltA = randomBytes(16).toString('hex')
+      const hashA = hmacHashHelper(differentToken, saltA)
+      const candidateA = {
+        id: 'key-collision-wrong',
+        userId: 'user-collision-a',
+        tenantId: 'tenant-collision-a',
+        scopes: ['api:read'],
+        keyHash: hashA,
+        keySalt: saltA,
+        revokedAt: null,
+        expiresAt: null,
+        role: 'user',
+      }
+
+      // Candidate B: same lastFour, correct salt/hash for the actual token — HMAC match
+      const candidateB = {
+        id: 'key-collision-correct',
+        userId: 'user-collision-b',
+        tenantId: 'tenant-collision-b',
+        scopes: ['api:read', 'api:write'],
+        keyHash: hash,
+        keySalt: salt,
+        revokedAt: null,
+        expiresAt: null,
+        role: 'admin',
+      }
+
+      // Verify both candidates have the same lastFour (collision precondition)
+      expect(candidateA.id).not.toBe(candidateB.id)
+      expect(lastFour).toHaveLength(4)
+
+      const { db, _limitFn } = createMockDbWithJoin()
+      // DB returns both candidates — only candidateB should match the HMAC
+      _limitFn.mockResolvedValue([candidateA, candidateB])
+      const service = createService(db as never)
+
+      // Act
+      const result = await service.validateBearerToken(token)
+
+      // Assert — must resolve to candidateB, not candidateA
+      expect(result).toMatchObject({
+        id: 'key-collision-correct',
+        userId: 'user-collision-b',
+        tenantId: 'tenant-collision-b',
+        scopes: ['api:read', 'api:write'],
+        role: 'admin',
+      })
+    })
   })
 
   // -----------------------------------------------------------------------

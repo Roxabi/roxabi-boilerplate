@@ -1,4 +1,4 @@
-import { createHmac, randomBytes } from 'node:crypto'
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
 import { BadRequestException, Inject, Injectable, Logger } from '@nestjs/common'
 import { and, eq, isNull } from 'drizzle-orm'
 import { ClsService } from 'nestjs-cls'
@@ -216,7 +216,11 @@ export class ApiKeyService {
       .where(eq(apiKeys.lastFour, lastFour))
       .limit(10)
 
-    const match = (candidates ?? []).find((c) => hmacHash(token, c.keySalt) === c.keyHash)
+    const match = (candidates ?? []).find((c) => {
+      const computed = Buffer.from(hmacHash(token, c.keySalt), 'hex')
+      const stored = Buffer.from(c.keyHash, 'hex')
+      return computed.length === stored.length && timingSafeEqual(computed, stored)
+    })
 
     if (!match) {
       throw new ApiKeyInvalidException()

@@ -139,7 +139,7 @@ export class AuthGuard implements CanActivate {
       // fire-and-forget — never block auth on a last-used update failure
     }
     return {
-      user: { id: keyData.userId, role: (keyData.role ?? 'user') as Role },
+      user: { id: keyData.userId, role: keyData.role as Role },
       session: { id: keyData.id, activeOrganizationId: keyData.tenantId },
       permissions: effectiveScopes,
       actorType: 'api_key',
