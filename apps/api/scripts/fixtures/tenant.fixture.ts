@@ -1,6 +1,9 @@
 import * as schema from '../../src/database/schema/index.js'
 import type { FixtureContext, Preset, SeedResult, Tx } from './types.js'
 
+const slug = process.env.APP_SLUG ?? process.env.POSTGRES_DB ?? 'app'
+const orgName = slug.charAt(0).toUpperCase() + slug.slice(1)
+
 export type OrgDef = {
   name: string
   slug: string
@@ -20,7 +23,7 @@ export type InvitationDef = {
 }
 
 export const MINIMAL_ORGS: OrgDef[] = [
-  { name: 'Roxabi Dev', slug: 'roxabi-dev' },
+  { name: orgName, slug },
   { name: 'Acme Corp', slug: 'acme-corp' },
 ]
 
@@ -31,12 +34,12 @@ export const FULL_EXTRA_ORGS: OrgDef[] = [
 
 /**
  * Minimal members mapping:
- *   user 0 (dev)        -> org 0 (Roxabi Dev) as owner
+ *   user 0 (dev)        -> org 0 (${APP_SLUG}) as owner
  *   user 0 (dev)        -> org 1 (Acme Corp)  as admin   (cross-org)
- *   user 1 (admin)      -> org 0 (Roxabi Dev) as admin
- *   user 2 (viewer)     -> org 0 (Roxabi Dev) as viewer
+ *   user 1 (admin)      -> org 0 (${APP_SLUG}) as admin
+ *   user 2 (viewer)     -> org 0 (${APP_SLUG}) as viewer
  *   user 2 (viewer)     -> org 1 (Acme Corp)  as member
- *   user 3 (superadmin) -> org 0 (Roxabi Dev) as owner
+ *   user 3 (superadmin) -> org 0 (${APP_SLUG}) as owner
  */
 export const MINIMAL_MEMBERS: MemberDef[] = [
   { userIndex: 0, orgIndex: 0, role: 'owner' },
@@ -74,15 +77,15 @@ export const FULL_EXTRA_MEMBERS: MemberDef[] = [
   { userIndex: 4, orgIndex: 3, role: 'member' }, // manager -> Agency member (cross-org)
   { userIndex: 6, orgIndex: 3, role: 'viewer' }, // analyst -> Agency viewer (cross-org)
 
-  // Additional cross-org for Roxabi Dev
-  { userIndex: 7, orgIndex: 0, role: 'member' }, // support -> Roxabi member (cross-org)
+  // Additional cross-org for ${APP_SLUG}
+  { userIndex: 7, orgIndex: 0, role: 'member' }, // support -> ${APP_SLUG} member (cross-org)
 ]
 
 /** Full preset pending invitations. */
 export const FULL_INVITATIONS: InvitationDef[] = [
-  // Roxabi Dev (2 pending)
-  { orgIndex: 0, inviterUserIndex: 0, email: 'invite1@roxabi.local', role: 'member' },
-  { orgIndex: 0, inviterUserIndex: 0, email: 'invite2@roxabi.local', role: 'viewer' },
+  // ${APP_SLUG} (2 pending)
+  { orgIndex: 0, inviterUserIndex: 0, email: `invite1@${slug}.local`, role: 'member' },
+  { orgIndex: 0, inviterUserIndex: 0, email: `invite2@${slug}.local`, role: 'viewer' },
 
   // Acme Corp (3 pending)
   { orgIndex: 1, inviterUserIndex: 4, email: 'invite3@acme.local', role: 'member' },
