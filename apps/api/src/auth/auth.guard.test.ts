@@ -1,7 +1,27 @@
 import { ForbiddenException, UnauthorizedException } from '@nestjs/common'
 import { describe, expect, it, vi } from 'vitest'
+import { ApiKeyRevokedException } from '../api-key/exceptions/apiKeyRevoked.exception.js'
 import { ErrorCode } from '../common/errorCodes.js'
 import { AuthGuard } from './auth.guard.js'
+
+// ---------------------------------------------------------------------------
+// Mock factories for API key path (#319)
+// ---------------------------------------------------------------------------
+
+function createMockApiKeyService(result: Record<string, unknown> | null = null, throws?: Error) {
+  return {
+    validateBearerToken: throws
+      ? vi.fn().mockRejectedValue(throws)
+      : vi.fn().mockResolvedValue(result),
+    touchLastUsedAt: vi.fn(),
+  }
+}
+
+function createMockPermissionService(permissions: string[] = []) {
+  return {
+    getPermissions: vi.fn().mockResolvedValue(permissions),
+  }
+}
 
 function createMockAuthService(session: Record<string, unknown> | null = null) {
   return {
@@ -41,13 +61,29 @@ function createMockUserService(
 function createGuard(
   session: Record<string, unknown> | null = null,
   metadata: Record<string, unknown> = {},
-  userService: Record<string, unknown> = createMockUserService()
+  userService: Record<string, unknown> = createMockUserService(),
+  apiKeyService?: Record<string, unknown>,
+  permissionService?: Record<string, unknown>
 ) {
   const authService = createMockAuthService(session)
   const reflector = createMockReflector(metadata)
-  const guard = new AuthGuard(authService as never, reflector as never, userService as never)
+  const resolvedApiKeyService = apiKeyService ?? createMockApiKeyService()
+  const resolvedPermissionService = permissionService ?? createMockPermissionService()
+  const guard = new AuthGuard(
+    authService as never,
+    reflector as never,
+    userService as never,
+    resolvedApiKeyService as never,
+    resolvedPermissionService as never
+  )
 
-  return { guard, authService, reflector }
+  return {
+    guard,
+    authService,
+    reflector,
+    apiKeyService: resolvedApiKeyService,
+    permissionService: resolvedPermissionService,
+  }
 }
 
 describe('AuthGuard', () => {
@@ -373,6 +409,258 @@ describe('AuthGuard', () => {
       const { context } = createMockContext({
         method: 'POST',
         url: '/api/users/me/reactivate?token=abc',
+      })
+
+      // Act
+      const result = await guard.canActivate(context as never)
+
+      // Assert
+      expect(result).toBe(true)
+    })
+  })
+
+  // -----------------------------------------------------------------------
+  // API key auth — RED phase tests (#319)
+  // -----------------------------------------------------------------------
+  describe('API key auth', () => {
+    const VALID_API_KEY_TOKEN = 'sk_live_testkey'
+
+    const validKeyData = {
+      id: 'key-uuid-1',
+      userId: 'user-uuid-1',
+      tenantId: 'tenant-uuid-1',
+      scopes: ['api:read'],
+      role: 'user',
+      revokedAt: null,
+      expiresAt: null,
+    }
+
+    it('should call apiKeyService.validateBearerToken with the token and attach a synthetic session with actorType api_key', async () => {
+      // Arrange
+      const apiKeyService = createMockApiKeyService(validKeyData)
+      const orgPermissions = ['api:read']
+      const permissionService = createMockPermissionService(orgPermissions)
+      const { guard, context } = (() => {
+        const { guard } = createGuard(
+          null,
+          {},
+          createMockUserService(),
+          apiKeyService,
+          permissionService
+        )
+        const { context } = createMockContext({
+          headers: { authorization: `Bearer ${VALID_API_KEY_TOKEN}` },
+        })
+        return { guard, context }
+      })()
+
+      // Act
+      const result = await guard.canActivate(context as never)
+
+      // Assert
+      expect(result).toBe(true)
+      expect(apiKeyService.validateBearerToken).toHaveBeenCalledWith(VALID_API_KEY_TOKEN)
+      const req = context.switchToHttp().getRequest() as Record<string, unknown>
+      expect((req.session as Record<string, unknown>).actorType).toBe('api_key')
+      expect((req.session as Record<string, unknown>).apiKeyId).toBe(validKeyData.id)
+      // Permissions must equal the intersection of key scopes and org permissions
+      const expectedPermissions = validKeyData.scopes.filter((s) => orgPermissions.includes(s))
+      expect((req.session as Record<string, unknown>).permissions).toEqual(expectedPermissions)
+    })
+
+    it('should set session.permissions to intersection of key scopes and org permissions', async () => {
+      // Arrange — key has more scopes than the org currently grants
+      const keyData = { ...validKeyData, scopes: ['api:read', 'admin:write'] }
+      const orgPermissions = ['api:read']
+      const apiKeyService = createMockApiKeyService(keyData)
+      const permissionService = createMockPermissionService(orgPermissions)
+      const { guard } = createGuard(
+        null,
+        {},
+        createMockUserService(),
+        apiKeyService,
+        permissionService
+      )
+      const { context } = createMockContext({
+        headers: { authorization: `Bearer ${VALID_API_KEY_TOKEN}` },
+      })
+
+      // Act
+      await guard.canActivate(context as never)
+
+      // Assert — only the intersection survives
+      const req = context.switchToHttp().getRequest() as Record<string, unknown>
+      expect((req.session as Record<string, unknown>).permissions).toEqual(['api:read'])
+    })
+
+    it('should call touchLastUsedAt with the key id after successful validation', async () => {
+      // Arrange
+      const apiKeyService = createMockApiKeyService(validKeyData)
+      const permissionService = createMockPermissionService(['api:read'])
+      const { guard } = createGuard(
+        null,
+        {},
+        createMockUserService(),
+        apiKeyService,
+        permissionService
+      )
+      const { context } = createMockContext({
+        headers: { authorization: `Bearer ${VALID_API_KEY_TOKEN}` },
+      })
+
+      // Act
+      await guard.canActivate(context as never)
+
+      // Assert
+      expect(apiKeyService.touchLastUsedAt).toHaveBeenCalledWith(validKeyData.id)
+    })
+
+    it('should NOT call checkSoftDeleted (userService.getSoftDeleteStatus) for API key auth', async () => {
+      // Arrange
+      const apiKeyService = createMockApiKeyService(validKeyData)
+      const permissionService = createMockPermissionService(['api:read'])
+      const userService = createMockUserService()
+      const { guard } = createGuard(null, {}, userService, apiKeyService, permissionService)
+      const { context } = createMockContext({
+        headers: { authorization: `Bearer ${VALID_API_KEY_TOKEN}` },
+      })
+
+      // Act
+      await guard.canActivate(context as never)
+
+      // Assert
+      expect(userService.getSoftDeleteStatus).not.toHaveBeenCalled()
+    })
+
+    it('should NOT throw ForbiddenException for api_key actorType even when route requires @Roles(admin)', async () => {
+      // Arrange — route metadata says ROLES: ['admin'], but API key auth should skip the roles check
+      const apiKeyService = createMockApiKeyService(validKeyData)
+      const permissionService = createMockPermissionService(['api:read'])
+      const { guard } = createGuard(
+        null,
+        { ROLES: ['admin'] },
+        createMockUserService(),
+        apiKeyService,
+        permissionService
+      )
+      const { context } = createMockContext({
+        headers: { authorization: `Bearer ${VALID_API_KEY_TOKEN}` },
+      })
+
+      // Act & Assert — should NOT throw ForbiddenException because roles check is skipped for API key auth
+      await expect(guard.canActivate(context as never)).resolves.toBe(true)
+    })
+
+    it('should throw ForbiddenException with API_KEY_SCOPE_DENIED when superadmin API key lacks required scope', async () => {
+      // Arrange — superadmin user, but API key has no scopes → bypass suppressed → scope check fails
+      const superadminKeyData = { ...validKeyData, role: 'superadmin', scopes: [] }
+      const apiKeyService = createMockApiKeyService(superadminKeyData)
+      const permissionService = createMockPermissionService([]) // no org permissions either
+      const { guard } = createGuard(
+        null,
+        { PERMISSIONS: ['api:write'] },
+        createMockUserService(),
+        apiKeyService,
+        permissionService
+      )
+      const { context } = createMockContext({
+        headers: { authorization: `Bearer ${VALID_API_KEY_TOKEN}` },
+      })
+
+      // Act & Assert
+      await expect(guard.canActivate(context as never)).rejects.toMatchObject({
+        response: { errorCode: ErrorCode.API_KEY_SCOPE_DENIED },
+      })
+    })
+
+    it('should throw UnauthorizedException with API_KEY_REQUIRED when @RequireApiKey() is set but auth is via session', async () => {
+      // Arrange — session auth (no Bearer header), but route requires API key
+      const sessionData = {
+        user: { id: 'user-1', role: 'user' },
+        session: { id: 'sess-1', activeOrganizationId: 'org-1' },
+        permissions: [],
+      }
+      const { guard } = createGuard(sessionData, { REQUIRE_API_KEY: true })
+      const { context } = createMockContext() // no Authorization header
+
+      // Act & Assert
+      await expect(guard.canActivate(context as never)).rejects.toMatchObject({
+        response: { errorCode: ErrorCode.API_KEY_REQUIRED },
+      })
+    })
+
+    it('should throw UnauthorizedException with API_KEY_REQUIRED even when @AllowAnonymous() (PUBLIC) is also set', async () => {
+      // Arrange — @AllowAnonymous() sets PUBLIC=true, but @RequireApiKey() must take precedence
+      const { guard } = createGuard(null, { REQUIRE_API_KEY: true, PUBLIC: true })
+      const { context } = createMockContext() // no Authorization header
+
+      // Act & Assert
+      await expect(guard.canActivate(context as never)).rejects.toMatchObject({
+        response: { errorCode: ErrorCode.API_KEY_REQUIRED },
+      })
+    })
+
+    it('should fall through to session auth path when Bearer token does NOT start with sk_live_', async () => {
+      // Arrange — non-api-key Bearer (e.g., a JWT) should skip validateBearerToken and use session auth
+      const sessionData = {
+        user: { id: 'user-1', role: 'user' },
+        session: { id: 'sess-1', activeOrganizationId: null },
+        permissions: [],
+      }
+      const apiKeyService = createMockApiKeyService(validKeyData)
+      const permissionService = createMockPermissionService([])
+      const { guard } = createGuard(
+        sessionData,
+        {},
+        createMockUserService(),
+        apiKeyService,
+        permissionService
+      )
+      const { context } = createMockContext({
+        headers: { authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.some.jwt' },
+      })
+
+      // Act
+      const result = await guard.canActivate(context as never)
+
+      // Assert — resolved via session path, NOT API key path
+      expect(result).toBe(true)
+      expect(apiKeyService.validateBearerToken).not.toHaveBeenCalled()
+    })
+
+    it('should rethrow as UnauthorizedException with API_KEY_REVOKED when validateBearerToken throws ApiKeyRevokedException', async () => {
+      // Arrange
+      const revokedError = new ApiKeyRevokedException()
+      const apiKeyService = createMockApiKeyService(null, revokedError)
+      const { guard } = createGuard(null, {}, createMockUserService(), apiKeyService)
+      const { context } = createMockContext({
+        headers: { authorization: `Bearer ${VALID_API_KEY_TOKEN}` },
+      })
+
+      // Act & Assert
+      await expect(guard.canActivate(context as never)).rejects.toBeInstanceOf(
+        UnauthorizedException
+      )
+      await expect(guard.canActivate(context as never)).rejects.toMatchObject({
+        response: { errorCode: ErrorCode.API_KEY_REVOKED },
+      })
+    })
+
+    it('should return true even if touchLastUsedAt throws', async () => {
+      // Arrange
+      const throwingApiKeyService = createMockApiKeyService(validKeyData)
+      throwingApiKeyService.touchLastUsedAt = vi.fn().mockImplementation(() => {
+        throw new Error('DB error')
+      })
+      const { guard } = createGuard(
+        null,
+        {},
+        createMockUserService(),
+        throwingApiKeyService,
+        createMockPermissionService(['api:read'])
+      )
+      const { context } = createMockContext({
+        headers: { authorization: `Bearer ${VALID_API_KEY_TOKEN}` },
       })
 
       // Act

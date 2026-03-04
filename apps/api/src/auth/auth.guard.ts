@@ -10,7 +10,12 @@ import {
 import { Reflector } from '@nestjs/core'
 import type { Role } from '@repo/types'
 import type { FastifyRequest } from 'fastify'
+import { ApiKeyService } from '../api-key/apiKey.service.js'
+import { ApiKeyExpiredException } from '../api-key/exceptions/apiKeyExpired.exception.js'
+import { ApiKeyInvalidException } from '../api-key/exceptions/apiKeyInvalid.exception.js'
+import { ApiKeyRevokedException } from '../api-key/exceptions/apiKeyRevoked.exception.js'
 import { ErrorCode } from '../common/errorCodes.js'
+import { PermissionService } from '../rbac/permission.service.js'
 import { UserService } from '../user/user.service.js'
 import { AuthService } from './auth.service.js'
 import type { AuthenticatedSession } from './types.js'
@@ -48,22 +53,36 @@ export class AuthGuard implements CanActivate {
     private readonly authService: AuthService,
     private readonly reflector: Reflector,
     @Inject(forwardRef(() => UserService))
-    private readonly userService: UserService
+    private readonly userService: UserService,
+    private readonly apiKeyService: ApiKeyService,
+    private readonly permissionService: PermissionService
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    const requireApiKey = this.reflector.getAllAndOverride<boolean>('REQUIRE_API_KEY', [
+      context.getHandler(),
+      context.getClass(),
+    ])
     const isPublic = this.reflector.getAllAndOverride<boolean>('PUBLIC', [
       context.getHandler(),
       context.getClass(),
     ])
-    if (isPublic) return true
+    if (isPublic && !requireApiKey) return true
 
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>()
-    const raw = await this.authService.getSession(request)
-    const session = isAuthenticatedSession(raw) ? raw : null
+    const authHeader = request.headers?.['authorization'] as string | undefined
+    const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null
 
+    const session = await this.resolveSession(request, bearerToken)
     request.session = session
     request.user = session?.user ?? null
+
+    if (requireApiKey && session?.actorType !== 'api_key') {
+      throw new UnauthorizedException({
+        message: 'API key required',
+        errorCode: ErrorCode.API_KEY_REQUIRED,
+      })
+    }
 
     const isOptional = this.reflector.getAllAndOverride<boolean>('OPTIONAL_AUTH', [
       context.getHandler(),
@@ -72,14 +91,73 @@ export class AuthGuard implements CanActivate {
     if (!session && isOptional) return true
     if (!session) throw new UnauthorizedException()
 
-    // Check if user's account is scheduled for deletion
-    await this.checkSoftDeleted(request, session)
+    await this.runPostAuthChecks(context, request, session)
+    return true
+  }
 
+  private async resolveSession(
+    request: AuthenticatedRequest,
+    bearerToken: string | null
+  ): Promise<AuthenticatedSession | null> {
+    if (bearerToken?.startsWith('sk_live_')) {
+      try {
+        return await this.buildApiKeySession(bearerToken)
+      } catch (err) {
+        if (err instanceof ApiKeyInvalidException)
+          throw new UnauthorizedException({
+            message: 'Invalid API key',
+            errorCode: ErrorCode.API_KEY_INVALID,
+          })
+        if (err instanceof ApiKeyRevokedException)
+          throw new UnauthorizedException({
+            message: 'API key has been revoked',
+            errorCode: ErrorCode.API_KEY_REVOKED,
+          })
+        if (err instanceof ApiKeyExpiredException)
+          throw new UnauthorizedException({
+            message: 'API key has expired',
+            errorCode: ErrorCode.API_KEY_EXPIRED,
+          })
+        throw err
+      }
+    }
+    const raw = await this.authService.getSession(request)
+    return isAuthenticatedSession(raw) ? raw : null
+  }
+
+  private async buildApiKeySession(token: string): Promise<AuthenticatedSession> {
+    const keyData = await this.apiKeyService.validateBearerToken(token)
+    const orgPermissions = await this.permissionService.getPermissions(
+      keyData.userId,
+      keyData.tenantId
+    )
+    // Intersect key scopes with org's current permissions to prevent stale elevated access
+    const effectiveScopes = keyData.scopes.filter((s) => orgPermissions.includes(s))
+    try {
+      this.apiKeyService.touchLastUsedAt(keyData.id)
+    } catch {
+      // fire-and-forget — never block auth on a last-used update failure
+    }
+    return {
+      user: { id: keyData.userId, role: keyData.role as Role },
+      session: { id: keyData.id, activeOrganizationId: keyData.tenantId },
+      permissions: effectiveScopes,
+      actorType: 'api_key',
+      apiKeyId: keyData.id,
+    }
+  }
+
+  private async runPostAuthChecks(
+    context: ExecutionContext,
+    request: AuthenticatedRequest,
+    session: AuthenticatedSession
+  ): Promise<void> {
+    if (session.actorType !== 'api_key') {
+      await this.checkSoftDeleted(request, session)
+    }
     this.checkRoles(context, session)
     this.checkOrgRequired(context, session)
     this.checkPermissions(context, session)
-
-    return true
   }
 
   private async checkSoftDeleted(request: AuthenticatedRequest, session: AuthenticatedSession) {
@@ -104,6 +182,8 @@ export class AuthGuard implements CanActivate {
   }
 
   private checkRoles(context: ExecutionContext, session: AuthenticatedSession) {
+    // API key auth does not apply role checks — only permission/scope checks apply
+    if (session.actorType === 'api_key') return
     const requiredRoles = this.reflector.getAllAndOverride<Role[]>('ROLES', [
       context.getHandler(),
       context.getClass(),
@@ -136,11 +216,18 @@ export class AuthGuard implements CanActivate {
       throw new ForbiddenException('No active organization')
     }
 
-    if (session.user.role === 'superadmin') return
+    // Superadmin bypass is suppressed for API key auth — scope checks always apply
+    if (session.user.role === 'superadmin' && session.actorType !== 'api_key') return
 
     // Permissions are already resolved by AuthService.getSession() and attached to the session
     const hasAll = requiredPermissions.every((p) => session.permissions.includes(p))
     if (!hasAll) {
+      if (session.actorType === 'api_key') {
+        throw new ForbiddenException({
+          message: 'API key does not have required scope',
+          errorCode: ErrorCode.API_KEY_SCOPE_DENIED,
+        })
+      }
       throw new ForbiddenException('Insufficient permissions')
     }
   }
