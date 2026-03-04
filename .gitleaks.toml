@@ -13,6 +13,11 @@ title = 'Gitleaks — Roxabi Boilerplate'
   paths = [
     # Contains placeholder values only — not real secrets
     '.env.example',
+    # Spec and docs files use example/placeholder API key values
+    'artifacts/specs/',
+    'artifacts/analyses/',
+    'artifacts/plans/',
+    'docs/',
   ]
 
   regexes = [
