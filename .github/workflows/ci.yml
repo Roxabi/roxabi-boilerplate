@@ -386,6 +386,7 @@ jobs:
       DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
       BETTER_AUTH_SECRET: test-secret-minimum-32-characters-long
       SMTP_HOST: localhost
+      RATE_LIMIT_ENABLED: "false"
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -513,6 +514,7 @@ jobs:
       DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
       BETTER_AUTH_SECRET: test-secret-minimum-32-characters-long
       SMTP_HOST: localhost
+      RATE_LIMIT_ENABLED: "false"
     strategy:
       fail-fast: false
       matrix:
