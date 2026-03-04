@@ -10,7 +10,8 @@ import { buildDatabaseUrl as buildDatabaseUrlUtil, redactUrl } from './dbBranch.
 
 export const POSTGRES_USER = process.env.POSTGRES_USER ?? 'roxabi'
 export const POSTGRES_PASSWORD = process.env.POSTGRES_PASSWORD ?? 'roxabi'
-export const CONTAINER_NAME = 'roxabi-postgres'
+export const CONTAINER_NAME = process.env.POSTGRES_CONTAINER ?? 'roxabi-postgres'
+export const DB_BRANCH_PREFIX = process.env.DB_BRANCH_PREFIX ?? process.env.POSTGRES_DB ?? 'roxabi'
 
 // Validate credentials to prevent shell injection in docker exec commands
 const SAFE_CREDENTIAL_PATTERN = /^[a-zA-Z0-9_-]+$/
@@ -23,6 +24,12 @@ if (!SAFE_CREDENTIAL_PATTERN.test(POSTGRES_USER)) {
 if (!SAFE_CREDENTIAL_PATTERN.test(POSTGRES_PASSWORD)) {
   console.error(
     '[db-branch] ERROR: POSTGRES_PASSWORD contains invalid characters (allowed: a-zA-Z0-9_-)'
+  )
+  process.exit(1)
+}
+if (!SAFE_CREDENTIAL_PATTERN.test(DB_BRANCH_PREFIX)) {
+  console.error(
+    '[db-branch] ERROR: DB_BRANCH_PREFIX contains invalid characters (allowed: a-zA-Z0-9_-)'
   )
   process.exit(1)
 }

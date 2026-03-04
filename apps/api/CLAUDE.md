@@ -70,6 +70,6 @@ Vercel — `main` = prod, `staging` = preview.
 ## Gotchas
 
 - `useImportType: off` in Biome for this package — NestJS DI needs runtime imports, not `import type`.
-- DB branches: each worktree gets its own schema via `db:branch:create --force XXX`. Run from `apps/api/`.
+- DB branches: each worktree gets its own schema via `db:branch:create --force XXX`. Run from `apps/api/`. Container name read from `POSTGRES_CONTAINER` (default `roxabi-postgres`); branch DB prefix from `DB_BRANCH_PREFIX` (default `POSTGRES_DB` value).
 - Global validation pipe: `whitelist + forbidNonWhitelisted + transform`. Unknown properties are stripped.
 - Correlation IDs tracked via `nestjs-cls`.

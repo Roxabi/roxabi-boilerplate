@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: roxabi-postgres
+    container_name: ${POSTGRES_CONTAINER:-roxabi-postgres}
     restart: unless-stopped
     ports:
       - "5432:5432"
@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-roxabi}
       POSTGRES_DB: ${POSTGRES_DB:-roxabi}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ${POSTGRES_VOLUME:-postgres_data}:/var/lib/postgresql/data
       - ./docker/init-app-user.sh:/docker-entrypoint-initdb.d/10-init-app-user.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-roxabi}"]
@@ -20,7 +20,7 @@ services:
 
   mailpit:
     image: axllent/mailpit:v1.29.2
-    container_name: roxabi-mailpit
+    container_name: ${MAILPIT_CONTAINER:-roxabi-mailpit}
     restart: unless-stopped
     ports:
       - "127.0.0.1:1025:1025"
@@ -32,4 +32,4 @@ services:
       retries: 5
 
 volumes:
-  postgres_data:
+  ${POSTGRES_VOLUME:-postgres_data}:

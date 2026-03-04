@@ -64,7 +64,7 @@ bun run db:seed
 
 **Seed credentials:** `dev@roxabi.local` / `password123` (1 user, 1 organization, RBAC roles seeded).
 
-All scripts run from `apps/api/` and use `docker exec` against the `roxabi-postgres` container. No local `psql` installation is required.
+All scripts run from `apps/api/` and use `docker exec` against the container named by `POSTGRES_CONTAINER` (default: `roxabi-postgres`). No local `psql` installation is required.
 
 ### Database Scripts (Root-Level)
 
@@ -98,6 +98,19 @@ bun db:reset && bun db:seed
 | `APP_URL` | Frontend URL | `http://localhost:3000` |
 | `API_URL` | Backend URL | `http://localhost:4000` |
 | `GITHUB_TOKEN` | GitHub API access | - |
+
+### Docker Overrides (local dev — multi-project)
+
+Override these when running multiple projects on the same machine to avoid container name and volume conflicts:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `POSTGRES_CONTAINER` | Docker container name for Postgres | `roxabi-postgres` |
+| `MAILPIT_CONTAINER` | Docker container name for Mailpit | `roxabi-mailpit` |
+| `POSTGRES_VOLUME` | Named Docker volume for Postgres data | `postgres_data` |
+| `DB_BRANCH_PREFIX` | Prefix for per-worktree branch databases | `POSTGRES_DB` value (`roxabi`) |
+
+Set these in `.env` before running `bun db:up`. The branch database scripts (`db:branch:*`) pick up `POSTGRES_CONTAINER` and `DB_BRANCH_PREFIX` automatically.
 
 ### Public Variables (exposed to client)
 
@@ -190,6 +203,15 @@ Agent definitions are in `.claude/agents/*.md`. See the [Agent Teams Guide](./gu
 | Variable | App | Required | Default | Scope | Description |
 |----------|-----|----------|---------|-------|-------------|
 | `VITE_GITHUB_REPO_URL` | Web | No | — | Client | GitHub URL in header |
+
+### Docker (local dev)
+
+| Variable | App | Required | Default | Scope | Description |
+|----------|-----|----------|---------|-------|-------------|
+| `POSTGRES_CONTAINER` | — | No | `roxabi-postgres` | Local | Postgres Docker container name |
+| `MAILPIT_CONTAINER` | — | No | `roxabi-mailpit` | Local | Mailpit Docker container name |
+| `POSTGRES_VOLUME` | — | No | `postgres_data` | Local | Named Docker volume for Postgres data |
+| `DB_BRANCH_PREFIX` | — | No | `POSTGRES_DB` | Local | Prefix for worktree branch databases |
 
 ### Tooling
 
