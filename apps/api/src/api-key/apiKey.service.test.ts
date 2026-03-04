@@ -1,6 +1,50 @@
+import { createHmac, randomBytes } from 'node:crypto'
+import { UnauthorizedException } from '@nestjs/common'
 import { describe, expect, it, vi } from 'vitest'
 import type { AuthenticatedSession } from '../auth/types.js'
+import { ErrorCode } from '../common/errorCodes.js'
 import { ApiKeyService } from './apiKey.service.js'
+
+// ---------------------------------------------------------------------------
+// Helpers for validateBearerToken / touchLastUsedAt tests
+// ---------------------------------------------------------------------------
+
+function hmacHashHelper(key: string, salt: string): string {
+  return createHmac('sha256', salt).update(key).digest('hex')
+}
+
+function buildValidToken(): { token: string; lastFour: string; salt: string; hash: string } {
+  const token = `sk_live_${'a'.repeat(32)}`
+  const lastFour = token.slice(-4)
+  const salt = randomBytes(16).toString('hex')
+  const hash = hmacHashHelper(token, salt)
+  return { token, lastFour, salt, hash }
+}
+
+function createMockDbWithJoin() {
+  // Supports the innerJoin chain used by validateBearerToken:
+  //   db.select().from().innerJoin().where().limit()
+  // Supports the update chain used by touchLastUsedAt:
+  //   db.update().set().where().catch()
+  const limitFn = vi.fn()
+  const catchFn = vi.fn().mockReturnThis()
+  const updateWhereFn = vi.fn().mockReturnValue({ catch: catchFn })
+  const updateSetFn = vi.fn().mockReturnValue({ where: updateWhereFn })
+  const updateFn = vi.fn().mockReturnValue({ set: updateSetFn })
+
+  const innerJoinWhereFn = vi.fn().mockReturnValue({ limit: limitFn })
+  const innerJoinFn = vi.fn().mockReturnValue({ where: innerJoinWhereFn })
+  const fromFn = vi.fn().mockReturnValue({ innerJoin: innerJoinFn })
+  const selectFn = vi.fn().mockReturnValue({ from: fromFn })
+
+  return {
+    db: { select: selectFn, update: updateFn },
+    _limitFn: limitFn,
+    _updateSetFn: updateSetFn,
+    _updateWhereFn: updateWhereFn,
+  }
+}
+
 import { ApiKeyExpiryInPastException } from './exceptions/apiKeyExpiryInPast.exception.js'
 import { ApiKeyNotFoundException } from './exceptions/apiKeyNotFound.exception.js'
 import { ApiKeyScopesExceededException } from './exceptions/apiKeyScopesExceeded.exception.js'
@@ -634,6 +678,171 @@ describe('ApiKeyService', () => {
 
       // Act & Assert
       await expect(service.revokeAllForOrg('org-no-keys')).resolves.toBeUndefined()
+    })
+  })
+
+  // -----------------------------------------------------------------------
+  // validateBearerToken() — RED phase tests (#319)
+  // -----------------------------------------------------------------------
+  describe('validateBearerToken()', () => {
+    it('should return row data (id, userId, tenantId, scopes, role) when token is valid', async () => {
+      // Arrange
+      const { token, salt, hash } = buildValidToken()
+      const keyId = 'key-uuid-valid'
+      const userId = 'user-uuid-1'
+      const tenantId = 'tenant-uuid-1'
+      const scopes = ['api:read', 'api:write']
+      const role = 'user'
+
+      const candidate = {
+        id: keyId,
+        userId,
+        tenantId,
+        scopes,
+        keyHash: hash,
+        keySalt: salt,
+        revokedAt: null,
+        expiresAt: null,
+        role,
+      }
+
+      const { db, _limitFn } = createMockDbWithJoin()
+      _limitFn.mockResolvedValueOnce([candidate])
+      const service = createService(db as never)
+
+      // Act
+      const result = await service.validateBearerToken(token)
+
+      // Assert
+      expect(result).toMatchObject({ id: keyId, userId, tenantId, scopes, role })
+    })
+
+    it('should throw UnauthorizedException with API_KEY_INVALID when no candidates match lastFour', async () => {
+      // Arrange
+      const { token } = buildValidToken()
+      const { db, _limitFn } = createMockDbWithJoin()
+      _limitFn.mockResolvedValueOnce([]) // empty candidates
+
+      const service = createService(db as never)
+
+      // Act & Assert
+      await expect(service.validateBearerToken(token)).rejects.toThrow(UnauthorizedException)
+      await expect(service.validateBearerToken(token)).rejects.toMatchObject({
+        response: { errorCode: ErrorCode.API_KEY_INVALID },
+      })
+    })
+
+    it('should throw UnauthorizedException with API_KEY_INVALID when HMAC does not match any candidate', async () => {
+      // Arrange
+      const { token } = buildValidToken()
+      const wrongSalt = randomBytes(16).toString('hex')
+      const wrongHash = hmacHashHelper('sk_live_completely_different_token', wrongSalt)
+
+      const candidate = {
+        id: 'key-wrong',
+        userId: 'user-2',
+        tenantId: 'tenant-2',
+        scopes: [],
+        keyHash: wrongHash, // hash of a DIFFERENT token — HMAC mismatch
+        keySalt: wrongSalt,
+        revokedAt: null,
+        expiresAt: null,
+        role: 'user',
+      }
+
+      const { db, _limitFn } = createMockDbWithJoin()
+      _limitFn.mockResolvedValueOnce([candidate])
+      const service = createService(db as never)
+
+      // Act & Assert
+      await expect(service.validateBearerToken(token)).rejects.toMatchObject({
+        response: { errorCode: ErrorCode.API_KEY_INVALID },
+      })
+    })
+
+    it('should throw UnauthorizedException with API_KEY_REVOKED when key revokedAt is set', async () => {
+      // Arrange
+      const { token, salt, hash } = buildValidToken()
+      const candidate = {
+        id: 'key-revoked',
+        userId: 'user-3',
+        tenantId: 'tenant-3',
+        scopes: [],
+        keyHash: hash,
+        keySalt: salt,
+        revokedAt: new Date('2026-01-01T00:00:00.000Z'), // revoked
+        expiresAt: null,
+        role: 'user',
+      }
+
+      const { db, _limitFn } = createMockDbWithJoin()
+      _limitFn.mockResolvedValueOnce([candidate])
+      const service = createService(db as never)
+
+      // Act & Assert
+      await expect(service.validateBearerToken(token)).rejects.toMatchObject({
+        response: { errorCode: ErrorCode.API_KEY_REVOKED },
+      })
+    })
+
+    it('should throw UnauthorizedException with API_KEY_EXPIRED when expiresAt is in the past', async () => {
+      // Arrange
+      const { token, salt, hash } = buildValidToken()
+      const candidate = {
+        id: 'key-expired',
+        userId: 'user-4',
+        tenantId: 'tenant-4',
+        scopes: [],
+        keyHash: hash,
+        keySalt: salt,
+        revokedAt: null,
+        expiresAt: new Date('2020-01-01T00:00:00.000Z'), // expired
+        role: 'user',
+      }
+
+      const { db, _limitFn } = createMockDbWithJoin()
+      _limitFn.mockResolvedValueOnce([candidate])
+      const service = createService(db as never)
+
+      // Act & Assert
+      await expect(service.validateBearerToken(token)).rejects.toMatchObject({
+        response: { errorCode: ErrorCode.API_KEY_EXPIRED },
+      })
+    })
+  })
+
+  // -----------------------------------------------------------------------
+  // touchLastUsedAt() — RED phase tests (#319)
+  // -----------------------------------------------------------------------
+  describe('touchLastUsedAt()', () => {
+    it('should call db.update with the correct key id and not throw', () => {
+      // Arrange
+      const keyId = 'key-uuid-touch'
+      const { db, _updateSetFn, _updateWhereFn } = createMockDbWithJoin()
+      const service = createService(db as never)
+
+      // Act — fire-and-forget, returns void synchronously
+      expect(() => service.touchLastUsedAt(keyId)).not.toThrow()
+
+      // Assert
+      expect(db.update).toHaveBeenCalled()
+      expect(_updateSetFn).toHaveBeenCalledWith(
+        expect.objectContaining({ lastUsedAt: expect.any(Date) })
+      )
+      expect(_updateWhereFn).toHaveBeenCalled()
+    })
+
+    it('should return undefined synchronously (fire-and-forget — callers must not await)', () => {
+      // Arrange
+      const keyId = 'key-uuid-ff'
+      const { db } = createMockDbWithJoin()
+      const service = createService(db as never)
+
+      // Act
+      const returnValue = service.touchLastUsedAt(keyId)
+
+      // Assert
+      expect(returnValue).toBeUndefined()
     })
   })
 })

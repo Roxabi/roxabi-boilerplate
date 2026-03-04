@@ -1,11 +1,19 @@
 import { createHmac, randomBytes } from 'node:crypto'
-import { BadRequestException, Inject, Injectable, Logger } from '@nestjs/common'
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  Logger,
+  UnauthorizedException,
+} from '@nestjs/common'
 import { and, eq, isNull } from 'drizzle-orm'
 import { ClsService } from 'nestjs-cls'
 import { AuditService } from '../audit/audit.service.js'
 import type { AuthenticatedSession } from '../auth/types.js'
+import { ErrorCode } from '../common/errorCodes.js'
 import { DRIZZLE, type DrizzleDB } from '../database/drizzle.provider.js'
 import { apiKeys } from '../database/schema/apiKey.schema.js'
+import { users } from '../database/schema/auth.schema.js'
 import { ApiKeyExpiryInPastException } from './exceptions/apiKeyExpiryInPast.exception.js'
 import { ApiKeyNotFoundException } from './exceptions/apiKeyNotFound.exception.js'
 import { ApiKeyScopesExceededException } from './exceptions/apiKeyScopesExceeded.exception.js'
@@ -184,6 +192,76 @@ export class ApiKeyService {
     this.logAudit(userId, orgId, 'api_key.revoked', id)
 
     return { id, revokedAt: now.toISOString() }
+  }
+
+  async validateBearerToken(token: string): Promise<{
+    id: string
+    userId: string
+    tenantId: string
+    scopes: string[]
+    role: string
+    revokedAt: Date | null
+    expiresAt: Date | null
+  }> {
+    const lastFour = token.slice(-4)
+
+    const candidates = await this.db
+      .select({
+        id: apiKeys.id,
+        userId: apiKeys.userId,
+        tenantId: apiKeys.tenantId,
+        scopes: apiKeys.scopes,
+        keyHash: apiKeys.keyHash,
+        keySalt: apiKeys.keySalt,
+        revokedAt: apiKeys.revokedAt,
+        expiresAt: apiKeys.expiresAt,
+        role: users.role,
+      })
+      .from(apiKeys)
+      .innerJoin(users, eq(apiKeys.userId, users.id))
+      .where(eq(apiKeys.lastFour, lastFour))
+      .limit(10)
+
+    const match = (candidates ?? []).find((c) => hmacHash(token, c.keySalt) === c.keyHash)
+
+    if (!match) {
+      throw new UnauthorizedException({
+        message: 'Invalid API key',
+        errorCode: ErrorCode.API_KEY_INVALID,
+      })
+    }
+    if (match.revokedAt) {
+      throw new UnauthorizedException({
+        message: 'API key has been revoked',
+        errorCode: ErrorCode.API_KEY_REVOKED,
+      })
+    }
+    if (match.expiresAt && match.expiresAt < new Date()) {
+      throw new UnauthorizedException({
+        message: 'API key has expired',
+        errorCode: ErrorCode.API_KEY_EXPIRED,
+      })
+    }
+
+    return {
+      id: match.id,
+      userId: match.userId,
+      tenantId: match.tenantId,
+      scopes: match.scopes,
+      role: match.role ?? 'user',
+      revokedAt: match.revokedAt,
+      expiresAt: match.expiresAt,
+    }
+  }
+
+  touchLastUsedAt(id: string): void {
+    this.db
+      .update(apiKeys)
+      .set({ lastUsedAt: new Date() })
+      .where(eq(apiKeys.id, id))
+      .catch((err) => {
+        this.logger.error(`[touchLastUsedAt] Failed to update lastUsedAt for key ${id}`, err)
+      })
   }
 
   async revokeAllForUser(userId: string) {
