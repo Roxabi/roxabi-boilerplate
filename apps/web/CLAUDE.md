@@ -1,6 +1,6 @@
 # apps/web
 
-TanStack Start + React + Tailwind v4 + Paraglide i18n. Port 3000.
+TanStack Start + React + Tailwind v4 + Paraglide i18n. Port 3000 (`APP_PORT`).
 
 ## Entry Points
 

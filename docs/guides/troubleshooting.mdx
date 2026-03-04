@@ -55,7 +55,7 @@ lsof -ti:4000 | xargs -r kill
 lsof -ti:3001 | xargs -r kill
 ```
 
-Alternatively, set the `PORT` environment variable to use a different port.
+Alternatively, set `APP_PORT`, `API_PORT`, `NITRO_PORT`, or `EMAIL_PORT` in `.env` to use different ports.
 
 ## Dependency Install Failures After Updates
 

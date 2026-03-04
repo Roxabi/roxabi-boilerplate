@@ -12,7 +12,7 @@ export const DEFAULT_LOG_LEVEL = 'warn' as const
 
 export const envSchema = z.object({
   NODE_ENV: Environment.default('development'),
-  PORT: z.coerce.number().default(4000),
+  API_PORT: z.coerce.number().default(4000),
   VERCEL_ENV: z.enum(['production', 'preview', 'development']).optional(),
   DATABASE_URL: z.string().optional(),
   DATABASE_APP_URL: z.string().optional(),

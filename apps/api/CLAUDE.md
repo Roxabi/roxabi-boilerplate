@@ -1,6 +1,6 @@
 # apps/api
 
-NestJS + Fastify + Drizzle ORM. Port 4000.
+NestJS + Fastify + Drizzle ORM. Port 4000 (`API_PORT`). On Vercel, platform-injected `PORT` takes precedence.
 
 ## Entry Points
 
