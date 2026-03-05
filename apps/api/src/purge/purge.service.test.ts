@@ -41,7 +41,7 @@ describe('PurgeService', () => {
   describe('runPurge', () => {
     it('should anonymize users whose deleteScheduledFor has passed', async () => {
       const { db } = createMockDb()
-      const userService = createMockUserPurgeService()
+      const userPurgeService = createMockUserPurgeService()
       const expiredUser = { id: 'user-1', email: 'john@example.com' }
 
       // First select: expired users; Second select: expired orgs
@@ -52,17 +52,17 @@ describe('PurgeService', () => {
         return cb(tx)
       })
 
-      const service = new PurgeService(db as never, userService as never)
+      const service = new PurgeService(db as never, userPurgeService as never)
       const result = await service.runPurge()
 
       expect(result.usersAnonymized).toBe(1)
       expect(db.transaction).toHaveBeenCalledTimes(1)
-      expect(userService.anonymizeUserRecords).toHaveBeenCalledTimes(1)
+      expect(userPurgeService.anonymizeUserRecords).toHaveBeenCalledTimes(1)
     })
 
     it('should anonymize organizations whose deleteScheduledFor has passed', async () => {
       const { db } = createMockDb()
-      const userService = createMockUserPurgeService()
+      const userPurgeService = createMockUserPurgeService()
       const expiredOrg = { id: 'org-1', name: 'Test Org', slug: 'test-org' }
 
       // First select: no expired users; Second select: expired orgs
@@ -82,7 +82,7 @@ describe('PurgeService', () => {
         return cb(tx)
       })
 
-      const service = new PurgeService(db as never, userService as never)
+      const service = new PurgeService(db as never, userPurgeService as never)
       const result = await service.runPurge()
 
       expect(result.orgsAnonymized).toBe(1)
@@ -91,7 +91,7 @@ describe('PurgeService', () => {
 
     it('should process users before organizations', async () => {
       const { db } = createMockDb()
-      const userService = createMockUserPurgeService()
+      const userPurgeService = createMockUserPurgeService()
       const expiredUser = { id: 'user-1', email: 'john@example.com' }
       const expiredOrg = { id: 'org-1', name: 'Org', slug: 'org' }
 
@@ -111,7 +111,7 @@ describe('PurgeService', () => {
         return cb(tx)
       })
 
-      const service = new PurgeService(db as never, userService as never)
+      const service = new PurgeService(db as never, userPurgeService as never)
       const result = await service.runPurge()
 
       // Users should be processed first (select call order: index 0 = users, index 1 = orgs)
@@ -122,7 +122,7 @@ describe('PurgeService', () => {
 
     it('should delegate user anonymization to UserService', async () => {
       const { db } = createMockDb()
-      const userService = createMockUserPurgeService()
+      const userPurgeService = createMockUserPurgeService()
       const expiredUser = { id: 'user-1', email: 'john@example.com' }
 
       setupSelectChain(db, [[expiredUser], []])
@@ -132,10 +132,10 @@ describe('PurgeService', () => {
         return cb(capturedTx)
       })
 
-      const service = new PurgeService(db as never, userService as never)
+      const service = new PurgeService(db as never, userPurgeService as never)
       await service.runPurge()
 
-      expect(userService.anonymizeUserRecords).toHaveBeenCalledWith(
+      expect(userPurgeService.anonymizeUserRecords).toHaveBeenCalledWith(
         capturedTx,
         'user-1',
         'john@example.com',
@@ -145,7 +145,7 @@ describe('PurgeService', () => {
 
     it('should delete members, invitations, and custom roles for purged orgs', async () => {
       const { db } = createMockDb()
-      const userService = createMockUserPurgeService()
+      const userPurgeService = createMockUserPurgeService()
       const expiredOrg = { id: 'org-1', name: 'Org', slug: 'org' }
 
       setupSelectChain(db, [[], [expiredOrg]])
@@ -168,7 +168,7 @@ describe('PurgeService', () => {
         return cb(tx)
       })
 
-      const service = new PurgeService(db as never, userService as never)
+      const service = new PurgeService(db as never, userPurgeService as never)
       await service.runPurge()
 
       // Should have delete calls for: members, invitations, roles
@@ -177,7 +177,7 @@ describe('PurgeService', () => {
 
     it('should be idempotent (re-running on anonymized records is a no-op)', async () => {
       const { db } = createMockDb()
-      const userService = createMockUserPurgeService()
+      const userPurgeService = createMockUserPurgeService()
       // Already-anonymized user (email ends with @anonymized.local)
       const anonymizedUser = { id: 'user-1', email: 'deleted-abc@anonymized.local' }
       // Already-anonymized org (slug starts with 'deleted-')
@@ -185,7 +185,7 @@ describe('PurgeService', () => {
 
       setupSelectChain(db, [[anonymizedUser], [anonymizedOrg]])
 
-      const service = new PurgeService(db as never, userService as never)
+      const service = new PurgeService(db as never, userPurgeService as never)
       const result = await service.runPurge()
 
       expect(result.usersAnonymized).toBe(0)
@@ -195,11 +195,11 @@ describe('PurgeService', () => {
 
     it('should process up to 100 records per invocation', async () => {
       const { db } = createMockDb()
-      const userService = createMockUserPurgeService()
+      const userPurgeService = createMockUserPurgeService()
       // The select query uses .limit(100)
       setupSelectChain(db, [[], []])
 
-      const service = new PurgeService(db as never, userService as never)
+      const service = new PurgeService(db as never, userPurgeService as never)
       await service.runPurge()
 
       // Verify select was called (the .limit(100) is baked into the implementation)
@@ -208,10 +208,10 @@ describe('PurgeService', () => {
 
     it('should return zero counts when no records are expired', async () => {
       const { db } = createMockDb()
-      const userService = createMockUserPurgeService()
+      const userPurgeService = createMockUserPurgeService()
       setupSelectChain(db, [[], []])
 
-      const service = new PurgeService(db as never, userService as never)
+      const service = new PurgeService(db as never, userPurgeService as never)
       const result = await service.runPurge()
 
       expect(result).toEqual({ usersAnonymized: 0, orgsAnonymized: 0 })

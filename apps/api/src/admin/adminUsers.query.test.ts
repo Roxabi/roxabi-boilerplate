@@ -9,10 +9,6 @@ import { AdminUsersQueryService } from './adminUsers.query.js'
 function createMockDb() {
   return {
     select: vi.fn(),
-    insert: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
-    transaction: vi.fn(),
   }
 }
 

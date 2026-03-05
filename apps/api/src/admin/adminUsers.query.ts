@@ -19,7 +19,7 @@ import { members, organizations, users } from '../database/schema/auth.schema.js
 import { escapeIlikePattern } from './utils/escapeIlikePattern.js'
 
 /**
- * AdminUsersQueryService -- read-only query operations for admin user management.
+ * AdminUsersQueryService — read-only query operations for admin user management.
  *
  * Handles: listUsers (cursor-paginated user listing with filter support).
  *
