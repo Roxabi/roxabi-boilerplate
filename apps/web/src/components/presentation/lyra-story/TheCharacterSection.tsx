@@ -1,6 +1,7 @@
-import { AnimatedSection, Card, CardContent, cn, useInView, useReducedMotion } from '@repo/ui'
+import { AnimatedSection, Card, CardContent, cn } from '@repo/ui'
 import { Brain, Film, Layers, Mic2, Sparkles } from 'lucide-react'
 import { m } from '@/paraglide/messages'
+import { useSlideReveal } from './useSlideReveal'
 
 const avatarVariants = [
   { icon: <Film className="h-5 w-5" />, color: 'blue' },
@@ -10,9 +11,7 @@ const avatarVariants = [
 ]
 
 export function TheCharacterSection() {
-  const reducedMotion = useReducedMotion()
-  const { ref, inView } = useInView({ threshold: 0.2, triggerOnce: true })
-  const visible = inView || reducedMotion
+  const { ref, visible } = useSlideReveal({ threshold: 0.2 })
 
   const avatarLabels = [
     m.talk_ls_character_avatar1(),

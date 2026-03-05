@@ -1,11 +1,10 @@
-import { AnimatedSection, cn, useInView, useReducedMotion } from '@repo/ui'
+import { AnimatedSection, cn } from '@repo/ui'
 import { m } from '@/paraglide/messages'
 import { QuantumOrbital } from './QuantumOrbital'
+import { useSlideReveal } from './useSlideReveal'
 
 export function TheLessonSection() {
-  const reducedMotion = useReducedMotion()
-  const { ref, inView } = useInView({ threshold: 0.3, triggerOnce: true })
-  const visible = inView || reducedMotion
+  const { ref, visible } = useSlideReveal()
 
   return (
     <div className="relative mx-auto flex w-full max-w-5xl flex-col items-center justify-center text-center">

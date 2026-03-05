@@ -1,5 +1,6 @@
-import { AnimatedSection, cn, useInView, useReducedMotion } from '@repo/ui'
+import { AnimatedSection, cn } from '@repo/ui'
 import { m } from '@/paraglide/messages'
+import { useSlideReveal } from './useSlideReveal'
 
 type RepoNode = { id: string; name: string; desc: string; x: number; y: number; isMain?: boolean }
 
@@ -131,9 +132,7 @@ function RepoList({ repos, visible }: { repos: RepoNode[]; visible: boolean }) {
 }
 
 export function TheEcosystemSection() {
-  const reducedMotion = useReducedMotion()
-  const { ref, inView } = useInView({ threshold: 0.15, triggerOnce: true })
-  const visible = inView || reducedMotion
+  const { ref, visible } = useSlideReveal({ threshold: 0.15 })
 
   const repos: RepoNode[] = [
     {
@@ -179,7 +178,13 @@ export function TheEcosystemSection() {
       y: 60,
       isMain: true,
     },
-    { id: 'config', name: 'roxabi-claude-config', desc: 'Feb 28 — aliases + config', x: 80, y: 30 },
+    {
+      id: 'config',
+      name: m.talk_ls_ecosystem_repo7(),
+      desc: m.talk_ls_ecosystem_repo7_desc(),
+      x: 80,
+      y: 30,
+    },
   ]
 
   return (

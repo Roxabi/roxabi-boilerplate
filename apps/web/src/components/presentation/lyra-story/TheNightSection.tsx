@@ -1,5 +1,6 @@
-import { AnimatedSection, Badge, cn, useInView, useReducedMotion } from '@repo/ui'
+import { AnimatedSection, Badge, cn } from '@repo/ui'
 import { m } from '@/paraglide/messages'
+import { useSlideReveal } from './useSlideReveal'
 
 type TimelineEntry = {
   time: string
@@ -92,9 +93,7 @@ function ProbabilityDots() {
 }
 
 export function TheNightSection() {
-  const reducedMotion = useReducedMotion()
-  const { ref, inView } = useInView({ threshold: 0.15, triggerOnce: true })
-  const visible = inView || reducedMotion
+  const { ref, visible } = useSlideReveal({ threshold: 0.15 })
 
   const timeline: TimelineEntry[] = [
     { time: m.talk_ls_night_t1(), event: m.talk_ls_night_e1(), isKey: false },
@@ -132,7 +131,8 @@ export function TheNightSection() {
         {/* Timeline */}
         <div ref={ref} className="mt-12">
           {timeline.map((entry, index) => (
-            <TimelineRow key={entry.time} {...entry} visible={visible} delay={index * 120} />
+            // biome-ignore lint/suspicious/noArrayIndexKey: static ordered timeline, never reordered
+            <TimelineRow key={index} {...entry} visible={visible} delay={index * 120} />
           ))}
         </div>
 

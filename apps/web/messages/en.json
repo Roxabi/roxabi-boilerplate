@@ -1439,6 +1439,8 @@
   "talk_ls_breaking_mcp_desc": "Rigid protocol. Opaque errors. Zero flexibility.",
   "talk_ls_breaking_day5_label": "Day 5",
   "talk_ls_breaking_day5_desc": "Total reset. Migration to Python direct.",
+  "talk_ls_breaking_timeline_before": "Days 1 → 5",
+  "talk_ls_breaking_timeline_after": "Day 5 → reset",
   "talk_ls_breaking_lesson": "Things that don't work teach you what does.",
   "talk_ls_breaking_xp": "+1,000 XP Discernment",
   "talk_ls_breaking_skill": "Unlocked: Know When to Scrap Your Build",
@@ -1469,6 +1471,12 @@
   "talk_ls_brain_stat4_value": "9",
   "talk_ls_brain_stat4_label": "YouTube",
 
+  "talk_ls_messenger_cmd1": "/agenda-recap",
+  "talk_ls_messenger_reply1": "📅 Today: 3 meetings, 12 tasks...",
+  "talk_ls_messenger_cmd2": "/email-summary",
+  "talk_ls_messenger_reply2": "✉️ 7 unread, 2 priority...",
+  "talk_ls_messenger_cmd3": "/knowledge save twitter.com/...",
+  "talk_ls_messenger_reply3": "✓ Saved to knowledge base",
   "talk_ls_messenger_title": "The Messenger",
   "talk_ls_messenger_subtitle": "Accessible from anywhere, anytime",
   "talk_ls_messenger_day1_label": "First day",
@@ -1554,6 +1562,8 @@
   "talk_ls_ecosystem_repo5_desc": "Feb 28 — TTS + STT CLI",
   "talk_ls_ecosystem_repo6": "Lyra",
   "talk_ls_ecosystem_repo6_desc": "Mar 1 — hub asyncio multi-channel",
+  "talk_ls_ecosystem_repo7": "roxabi-claude-config",
+  "talk_ls_ecosystem_repo7_desc": "Feb 28 — aliases + config",
   "talk_ls_ecosystem_tagline": "Each repo is a secondary character strengthening the main one.",
 
   "talk_ls_numbers_title": "The Numbers",
@@ -1597,5 +1607,6 @@
   "talk_ls_closing_subtitle": "Built in 52 days. Still running.",
   "talk_ls_closing_built_with": "Built with Claude Code",
   "talk_ls_closing_ecosystem": "The Roxabi Ecosystem",
-  "talk_ls_closing_back": "Back to Talks"
+  "talk_ls_closing_back": "Back to Talks",
+  "talk_ls_closing_products": "2ndBrain · voiceCLI · Lyra · roxabi-plugins"
 }

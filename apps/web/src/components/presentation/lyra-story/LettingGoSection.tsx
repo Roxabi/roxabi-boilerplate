@@ -1,19 +1,10 @@
-import {
-  AnimatedSection,
-  Badge,
-  Card,
-  CardContent,
-  cn,
-  useInView,
-  useReducedMotion,
-} from '@repo/ui'
+import { AnimatedSection, Badge, Card, CardContent, cn } from '@repo/ui'
 import { GitCommit, RefreshCw, Trash2 } from 'lucide-react'
 import { m } from '@/paraglide/messages'
+import { useSlideReveal } from './useSlideReveal'
 
 export function LettingGoSection() {
-  const reducedMotion = useReducedMotion()
-  const { ref, inView } = useInView({ threshold: 0.3, triggerOnce: true })
-  const visible = inView || reducedMotion
+  const { ref, visible } = useSlideReveal()
 
   const refactorTexts = [
     m.talk_ls_letting_go_refactor1(),

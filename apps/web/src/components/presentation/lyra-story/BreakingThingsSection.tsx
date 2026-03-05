@@ -1,19 +1,10 @@
-import {
-  AnimatedSection,
-  Badge,
-  Card,
-  CardContent,
-  cn,
-  useInView,
-  useReducedMotion,
-} from '@repo/ui'
+import { AnimatedSection, Badge, Card, CardContent, cn } from '@repo/ui'
 import { AlertTriangle, ArrowRight, Zap } from 'lucide-react'
 import { m } from '@/paraglide/messages'
+import { useSlideReveal } from './useSlideReveal'
 
 export function BreakingThingsSection() {
-  const reducedMotion = useReducedMotion()
-  const { ref, inView } = useInView({ threshold: 0.3, triggerOnce: true })
-  const visible = inView || reducedMotion
+  const { ref, visible } = useSlideReveal()
 
   return (
     <div className="relative mx-auto max-w-5xl w-full">
@@ -52,7 +43,9 @@ export function BreakingThingsSection() {
                   </span>
                 </div>
                 <p className="text-muted-foreground">{m.talk_ls_breaking_mcp_desc()}</p>
-                <div className="text-xs font-mono text-red-400/70">Days 1 → 5</div>
+                <div className="text-xs font-mono text-red-400/70">
+                  {m.talk_ls_breaking_timeline_before()}
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -87,7 +80,9 @@ export function BreakingThingsSection() {
                   </span>
                 </div>
                 <p className="text-muted-foreground">{m.talk_ls_breaking_day5_desc()}</p>
-                <div className="text-xs font-mono text-blue-400/70">Day 5 → reset</div>
+                <div className="text-xs font-mono text-blue-400/70">
+                  {m.talk_ls_breaking_timeline_after()}
+                </div>
               </CardContent>
             </Card>
           </div>

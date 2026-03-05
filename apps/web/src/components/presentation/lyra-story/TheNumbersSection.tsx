@@ -1,5 +1,6 @@
-import { AnimatedSection, cn, StatCounter, useInView, useReducedMotion } from '@repo/ui'
+import { AnimatedSection, cn, StatCounter } from '@repo/ui'
 import { m } from '@/paraglide/messages'
+import { useSlideReveal } from './useSlideReveal'
 
 type Stat = {
   value: number
@@ -9,9 +10,7 @@ type Stat = {
 }
 
 export function TheNumbersSection() {
-  const reducedMotion = useReducedMotion()
-  const { ref, inView } = useInView({ threshold: 0.2, triggerOnce: true })
-  const visible = inView || reducedMotion
+  const { ref, visible } = useSlideReveal({ threshold: 0.2 })
 
   const stats: Stat[] = [
     { value: 52, label: m.talk_ls_numbers_days_label(), color: 'blue' },

@@ -1,7 +1,8 @@
-import { AnimatedSection, Card, CardContent, cn, useInView, useReducedMotion } from '@repo/ui'
+import { AnimatedSection, Card, CardContent, cn } from '@repo/ui'
 import { Brain, Github, Twitter, Youtube } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { m } from '@/paraglide/messages'
+import { useSlideReveal } from './useSlideReveal'
 
 type StatItem = { icon: ReactNode; value: string; label: string; color: string }
 
@@ -162,9 +163,7 @@ function StatCard({ stat, visible, delay }: { stat: StatItem; visible: boolean; 
 }
 
 export function TheBrainSection() {
-  const reducedMotion = useReducedMotion()
-  const { ref, inView } = useInView({ threshold: 0.2, triggerOnce: true })
-  const visible = inView || reducedMotion
+  const { ref, visible } = useSlideReveal({ threshold: 0.2 })
 
   const stats: StatItem[] = [
     {

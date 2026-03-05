@@ -1,16 +1,9 @@
-import {
-  AnimatedSection,
-  Badge,
-  Card,
-  CardContent,
-  cn,
-  useInView,
-  useReducedMotion,
-} from '@repo/ui'
-import { GitMerge, Terminal } from 'lucide-react'
+import { AnimatedSection, Badge, Card, CardContent, cn } from '@repo/ui'
+import { GitBranch, GitMerge, type LucideIcon, Repeat, Terminal } from 'lucide-react'
 import { m } from '@/paraglide/messages'
+import { useSlideReveal } from './useSlideReveal'
 
-type SkillItem = { name: string; desc: string; color: string }
+type SkillItem = { name: string; desc: string; color: string; icon: LucideIcon }
 
 function SkillNode({
   skill,
@@ -45,7 +38,7 @@ function SkillNode({
               skill.color === 'blue' ? 'bg-blue-500/10' : 'bg-purple-500/10'
             )}
           >
-            <Terminal
+            <skill.icon
               className={cn(
                 'h-5 w-5',
                 skill.color === 'blue' ? 'text-blue-400' : 'text-purple-400'
@@ -70,14 +63,27 @@ function SkillNode({
 }
 
 export function BuildingHabitsSection() {
-  const reducedMotion = useReducedMotion()
-  const { ref, inView } = useInView({ threshold: 0.3, triggerOnce: true })
-  const visible = inView || reducedMotion
+  const { ref, visible } = useSlideReveal()
 
   const skillData: SkillItem[] = [
-    { name: m.talk_ls_habits_skill1_name(), desc: m.talk_ls_habits_skill1_desc(), color: 'blue' },
-    { name: m.talk_ls_habits_skill2_name(), desc: m.talk_ls_habits_skill2_desc(), color: 'purple' },
-    { name: m.talk_ls_habits_skill3_name(), desc: m.talk_ls_habits_skill3_desc(), color: 'blue' },
+    {
+      name: m.talk_ls_habits_skill1_name(),
+      desc: m.talk_ls_habits_skill1_desc(),
+      color: 'blue',
+      icon: Terminal,
+    },
+    {
+      name: m.talk_ls_habits_skill2_name(),
+      desc: m.talk_ls_habits_skill2_desc(),
+      color: 'purple',
+      icon: GitBranch,
+    },
+    {
+      name: m.talk_ls_habits_skill3_name(),
+      desc: m.talk_ls_habits_skill3_desc(),
+      color: 'blue',
+      icon: Repeat,
+    },
   ]
 
   return (

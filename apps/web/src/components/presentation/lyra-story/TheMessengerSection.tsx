@@ -15,12 +15,12 @@ export function TheMessengerSection() {
         {/* Left — chat bubbles mockup */}
         <div className="hidden lg:block space-y-3 max-w-xs">
           {[
-            { text: '/agenda-recap', sent: true, delay: '0ms' },
-            { text: '📅 Today: 3 meetings, 12 tasks...', sent: false, delay: '150ms' },
-            { text: '/email-summary', sent: true, delay: '300ms' },
-            { text: '✉️ 7 unread, 2 priority...', sent: false, delay: '450ms' },
-            { text: '/knowledge save twitter.com/...', sent: true, delay: '600ms' },
-            { text: '✓ Saved to knowledge base', sent: false, delay: '750ms' },
+            { text: m.talk_ls_messenger_cmd1(), sent: true, delay: '0ms' },
+            { text: m.talk_ls_messenger_reply1(), sent: false, delay: '150ms' },
+            { text: m.talk_ls_messenger_cmd2(), sent: true, delay: '300ms' },
+            { text: m.talk_ls_messenger_reply2(), sent: false, delay: '450ms' },
+            { text: m.talk_ls_messenger_cmd3(), sent: true, delay: '600ms' },
+            { text: m.talk_ls_messenger_reply3(), sent: false, delay: '750ms' },
           ].map((bubble) => (
             <div
               key={bubble.delay}

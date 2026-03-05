@@ -35,7 +35,7 @@ export function ClosingSection() {
               {m.talk_ls_closing_ecosystem()}
             </Badge>
             <Badge variant="secondary" className="text-sm px-4 py-1.5">
-              2ndBrain · voiceCLI · Lyra · roxabi-plugins
+              {m.talk_ls_closing_products()}
             </Badge>
           </div>
         </AnimatedSection>
