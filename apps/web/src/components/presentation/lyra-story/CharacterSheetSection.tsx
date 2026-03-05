@@ -1,7 +1,8 @@
-import { AnimatedSection, cn, useInView, useReducedMotion } from '@repo/ui'
+import { AnimatedSection, cn } from '@repo/ui'
 import { CheckCircle, Circle } from 'lucide-react'
 import { m } from '@/paraglide/messages'
 import { QuantumOrbital } from './QuantumOrbital'
+import { useSlideReveal } from './useSlideReveal'
 
 type SkillBar = { name: string; level: number; max: number }
 
@@ -115,9 +116,7 @@ function InfoColumn({ traits, quests }: { traits: string[]; quests: string[] }) 
 }
 
 export function CharacterSheetSection() {
-  const reducedMotion = useReducedMotion()
-  const { ref, inView } = useInView({ threshold: 0.15, triggerOnce: true })
-  const visible = inView || reducedMotion
+  const { ref, visible } = useSlideReveal({ threshold: 0.15 })
 
   const skills: SkillBar[] = [
     { name: m.talk_ls_sheet_skill1(), level: 12, max: 12 },

@@ -2,15 +2,7 @@ import { AnimatedSection, cn } from '@repo/ui'
 import { m } from '@/paraglide/messages'
 import { useSlideReveal } from './useSlideReveal'
 
-type RepoNode = {
-  id: string
-  name: string
-  desc: string
-  x: number
-  y: number
-  isMain?: boolean
-  isInfo?: boolean
-}
+type RepoNode = { id: string; name: string; desc: string; x: number; y: number; isMain?: boolean }
 
 const connections: [string, string][] = [
   ['devkit', '2ndbrain'],
@@ -25,72 +17,12 @@ const connections: [string, string][] = [
   ['voice', '2ndbrain'],
   ['voice', 'lyra'],
   ['config', 'lyra'],
-  ['imagecli', 'lyra'],
-  ['imagecli', 'voice'],
 ]
-
-function GraphNode({ repo, visible, index }: { repo: RepoNode; visible: boolean; index: number }) {
-  return (
-    <g
-      className={cn('transition-all duration-700', visible ? 'opacity-100' : 'opacity-0')}
-      style={{ transitionDelay: visible ? `${index * 100}ms` : '0ms' }}
-    >
-      <circle
-        cx={repo.x}
-        cy={repo.y}
-        r={repo.isMain ? 7 : repo.isInfo ? 2.5 : 4}
-        className={cn(
-          repo.isMain
-            ? 'fill-blue-400/80 dark:fill-blue-300/90'
-            : repo.isInfo
-              ? 'fill-muted-foreground/25 dark:fill-muted-foreground/30'
-              : 'fill-muted-foreground/50 dark:fill-muted-foreground/60'
-        )}
-      />
-      {repo.isMain && (
-        <>
-          <circle
-            cx={repo.x}
-            cy={repo.y}
-            r={11}
-            fill="none"
-            className="stroke-blue-400/30 dark:stroke-blue-300/40"
-            strokeWidth="0.6"
-          />
-          <circle
-            cx={repo.x}
-            cy={repo.y}
-            r={16}
-            fill="none"
-            className="stroke-blue-400/15 dark:stroke-blue-300/20"
-            strokeWidth="0.4"
-          />
-        </>
-      )}
-      <text
-        x={repo.x}
-        y={repo.y - (repo.isMain ? 14 : repo.isInfo ? 5 : 8)}
-        textAnchor="middle"
-        className={cn(
-          repo.isMain
-            ? 'fill-foreground/90 dark:fill-foreground'
-            : repo.isInfo
-              ? 'fill-muted-foreground/40 dark:fill-muted-foreground/45'
-              : 'fill-foreground/80 dark:fill-foreground/90'
-        )}
-        fontSize={repo.isMain ? 4 : repo.isInfo ? 2.5 : 3.5}
-        fontWeight={repo.isMain ? 'bold' : 'normal'}
-      >
-        {repo.name}
-      </text>
-    </g>
-  )
-}
 
 function EcosystemGraph({ repos, visible }: { repos: RepoNode[]; visible: boolean }) {
   const findNode = (id: string) => repos.find((r) => r.id === id)
   return (
-    <div className="hidden md:block relative h-[500px]">
+    <div className="hidden lg:block relative h-80">
       <svg viewBox="0 0 100 100" className="w-full h-full" aria-hidden="true">
         {connections.map(([from, to]) => {
           const fromNode = findNode(from)
@@ -111,13 +43,48 @@ function EcosystemGraph({ repos, visible }: { repos: RepoNode[]; visible: boolea
                   ? 'stroke-blue-400/40 dark:stroke-blue-400/50'
                   : 'stroke-border/50 dark:stroke-border/40'
               )}
-              strokeWidth={isToLyra ? '0.8' : '0.4'}
+              strokeWidth={isToLyra ? '0.6' : '0.3'}
               style={{ transitionDelay: visible ? '300ms' : '0ms' }}
             />
           )
         })}
         {repos.map((repo, index) => (
-          <GraphNode key={repo.id} repo={repo} visible={visible} index={index} />
+          <g
+            key={repo.id}
+            className={cn('transition-all duration-700', visible ? 'opacity-100' : 'opacity-0')}
+            style={{ transitionDelay: visible ? `${index * 100}ms` : '0ms' }}
+          >
+            <circle
+              cx={repo.x}
+              cy={repo.y}
+              r={repo.isMain ? 5 : 3}
+              className={
+                repo.isMain
+                  ? 'fill-blue-400/80 dark:fill-blue-300/90'
+                  : 'fill-muted-foreground/50 dark:fill-muted-foreground/60'
+              }
+            />
+            {repo.isMain && (
+              <circle
+                cx={repo.x}
+                cy={repo.y}
+                r={7}
+                fill="none"
+                className="stroke-blue-400/30 dark:stroke-blue-300/40"
+                strokeWidth="0.5"
+              />
+            )}
+            <text
+              x={repo.x}
+              y={repo.y - (repo.isMain ? 7 : 5)}
+              textAnchor="middle"
+              className="fill-foreground/80 dark:fill-foreground/90"
+              fontSize="2.8"
+              fontWeight={repo.isMain ? 'bold' : 'normal'}
+            >
+              {repo.name}
+            </text>
+          </g>
         ))}
       </svg>
     </div>
@@ -128,7 +95,7 @@ function RepoList({ repos, visible }: { repos: RepoNode[]; visible: boolean }) {
   return (
     <div className="space-y-3">
       {repos
-        .filter((r) => !r.isInfo)
+        .filter((r) => r.id !== 'config')
         .map((repo, index) => (
           <div
             key={repo.id}
@@ -172,60 +139,51 @@ export function TheEcosystemSection() {
       id: 'devkit',
       name: m.talk_ls_ecosystem_repo1(),
       desc: m.talk_ls_ecosystem_repo1_desc(),
-      x: 18,
-      y: 22,
-      isInfo: true,
+      x: 50,
+      y: 20,
     },
     {
       id: '2ndbrain',
       name: m.talk_ls_ecosystem_repo2(),
       desc: m.talk_ls_ecosystem_repo2_desc(),
       x: 50,
-      y: 18,
+      y: 45,
     },
     {
       id: 'boilerplate',
       name: m.talk_ls_ecosystem_repo3(),
       desc: m.talk_ls_ecosystem_repo3_desc(),
       x: 15,
-      y: 55,
+      y: 70,
     },
     {
       id: 'plugins',
       name: m.talk_ls_ecosystem_repo4(),
       desc: m.talk_ls_ecosystem_repo4_desc(),
-      x: 40,
-      y: 78,
+      x: 38,
+      y: 80,
     },
     {
       id: 'voice',
       name: m.talk_ls_ecosystem_repo5(),
       desc: m.talk_ls_ecosystem_repo5_desc(),
-      x: 72,
-      y: 22,
+      x: 62,
+      y: 80,
     },
     {
       id: 'lyra',
       name: m.talk_ls_ecosystem_repo6(),
       desc: m.talk_ls_ecosystem_repo6_desc(),
-      x: 50,
-      y: 50,
+      x: 82,
+      y: 60,
       isMain: true,
     },
     {
       id: 'config',
       name: m.talk_ls_ecosystem_repo7(),
       desc: m.talk_ls_ecosystem_repo7_desc(),
-      x: 82,
-      y: 78,
-      isInfo: true,
-    },
-    {
-      id: 'imagecli',
-      name: m.talk_ls_ecosystem_repo8(),
-      desc: m.talk_ls_ecosystem_repo8_desc(),
-      x: 82,
-      y: 50,
+      x: 80,
+      y: 30,
     },
   ]
 
@@ -244,7 +202,7 @@ export function TheEcosystemSection() {
           <p className="text-lg text-muted-foreground">{m.talk_ls_ecosystem_subtitle()}</p>
         </AnimatedSection>
 
-        <div ref={ref} className="mt-10 grid gap-8 md:grid-cols-2 md:items-center">
+        <div ref={ref} className="mt-10 grid gap-8 lg:grid-cols-2 lg:items-center">
           <EcosystemGraph repos={repos} visible={visible} />
           <RepoList repos={repos} visible={visible} />
         </div>

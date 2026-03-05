@@ -1,12 +1,11 @@
-import { AnimatedSection, Card, CardContent, cn, useInView, useReducedMotion } from '@repo/ui'
+import { AnimatedSection, Card, CardContent, cn } from '@repo/ui'
 import { Atom, X } from 'lucide-react'
 import { m } from '@/paraglide/messages'
 import { QuantumOrbital } from './QuantumOrbital'
+import { useSlideReveal } from './useSlideReveal'
 
 export function FindingTheNameSection() {
-  const reducedMotion = useReducedMotion()
-  const { ref, inView } = useInView({ threshold: 0.3, triggerOnce: true })
-  const visible = inView || reducedMotion
+  const { ref, visible } = useSlideReveal()
 
   return (
     <div className="relative mx-auto max-w-5xl w-full">
