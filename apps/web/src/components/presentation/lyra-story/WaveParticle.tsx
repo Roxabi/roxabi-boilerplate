@@ -1,5 +1,4 @@
 import { useReducedMotion } from '@repo/ui'
-import { useId } from 'react'
 
 type WaveParticleProps = {
   className?: string
@@ -13,7 +12,6 @@ type WaveParticleProps = {
  * aria-hidden="true" — purely decorative.
  */
 export function WaveParticle({ className, animate = true }: WaveParticleProps) {
-  const uid = useId()
   const reducedMotion = useReducedMotion()
   const shouldAnimate = animate && !reducedMotion
 
@@ -30,38 +28,38 @@ export function WaveParticle({ className, animate = true }: WaveParticleProps) {
       overflow="hidden"
     >
       <defs>
-        <radialGradient id={`wv-bg${uid}`} cx="50%" cy="50%" r="60%">
+        <radialGradient id="wv-bg" cx="50%" cy="50%" r="60%">
           <stop offset="0%" stopColor="#060612" />
           <stop offset="100%" stopColor="#0D0D0D" />
         </radialGradient>
-        <radialGradient id={`wv-particle${uid}`} cx="35%" cy="30%" r="60%">
+        <radialGradient id="wv-particle" cx="35%" cy="30%" r="60%">
           <stop offset="0%" stopColor="#ffffff" />
           <stop offset="50%" stopColor="#2D7FF9" />
           <stop offset="100%" stopColor="transparent" />
         </radialGradient>
-        <filter id={`wv-glow${uid}`} x="-150%" y="-150%" width="400%" height="400%">
+        <filter id="wv-glow" x="-150%" y="-150%" width="400%" height="400%">
           <feGaussianBlur stdDeviation="4" result="blur" />
           <feMerge>
             <feMergeNode in="blur" />
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
-        <filter id={`wv-softglow${uid}`} x="-200%" y="-200%" width="500%" height="500%">
+        <filter id="wv-softglow" x="-200%" y="-200%" width="500%" height="500%">
           <feGaussianBlur stdDeviation="10" result="blur" />
           <feMerge>
             <feMergeNode in="blur" />
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
-        <clipPath id={`wv-clip${uid}`}>
+        <clipPath id="wv-clip">
           <rect x="0" y="0" width="960" height="200" />
         </clipPath>
       </defs>
 
       {/* No background rect — transparent so it composites with the page background */}
 
-      <g clipPath={`url(#wv-clip${uid})`}>
-        <g className={shouldAnimate ? 'v4-wave-amplitude' : undefined}>
+      <g clipPath="url(#wv-clip)">
+        <g className="v4-wave-amplitude">
           {/* BG interference faint — wide wave repeating at 240px intervals, scaled to 960 width */}
           <g className={shouldAnimate ? 'v4-wave-bg' : undefined} opacity="0.08">
             <path
@@ -104,7 +102,7 @@ export function WaveParticle({ className, animate = true }: WaveParticleProps) {
           {/* Wave 2 — medium purple */}
           <g
             className={shouldAnimate ? 'v4-wave2' : undefined}
-            filter={`url(#wv-glow${uid})`}
+            filter="url(#wv-glow)"
             opacity="0.55"
           >
             <path
@@ -122,7 +120,7 @@ export function WaveParticle({ className, animate = true }: WaveParticleProps) {
           {/* Wave 1 — primary blue */}
           <g
             className={shouldAnimate ? 'v4-wave1' : undefined}
-            filter={`url(#wv-glow${uid})`}
+            filter="url(#wv-glow)"
             opacity="0.9"
           >
             <path
@@ -175,22 +173,16 @@ export function WaveParticle({ className, animate = true }: WaveParticleProps) {
         r="22"
         fill="#2D7FF9"
         opacity="0.15"
-        filter={`url(#wv-softglow${uid})`}
+        filter="url(#wv-softglow)"
       />
-      <circle
-        cx="480"
-        cy="100"
-        r="16"
-        fill={`url(#wv-particle${uid})`}
-        filter={`url(#wv-softglow${uid})`}
-      />
+      <circle cx="480" cy="100" r="16" fill="url(#wv-particle)" filter="url(#wv-softglow)" />
       <circle
         className={shouldAnimate ? 'v4-particle' : undefined}
         cx="480"
         cy="100"
         r="7"
         fill="#ffffff"
-        filter={`url(#wv-glow${uid})`}
+        filter="url(#wv-glow)"
       />
       <circle cx="480" cy="100" r="3.5" fill="#8B5CF6" />
 

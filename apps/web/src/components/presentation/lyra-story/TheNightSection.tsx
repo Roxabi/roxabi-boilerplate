@@ -1,6 +1,5 @@
-import { AnimatedSection, Badge, cn } from '@repo/ui'
+import { AnimatedSection, Badge, cn, useInView, useReducedMotion } from '@repo/ui'
 import { m } from '@/paraglide/messages'
-import { useSlideReveal } from './useSlideReveal'
 
 type TimelineEntry = {
   time: string
@@ -28,7 +27,7 @@ function TimelineRow({
         <span
           className={cn(
             'font-mono text-sm tabular-nums',
-            isKey ? 'text-blue-300 font-bold' : 'text-gray-500'
+            isKey ? 'text-blue-600 dark:text-blue-300 font-bold' : 'text-muted-foreground/60'
           )}
         >
           {time}
@@ -41,17 +40,11 @@ function TimelineRow({
           className={cn(
             'h-3 w-3 rounded-full border-2 flex-shrink-0',
             isKey
-              ? 'border-blue-400 bg-blue-400/30 shadow-[0_0_12px_3px_rgba(96,165,250,0.4)] animate-pulse'
-              : 'border-gray-600 bg-gray-800'
-          )}
-          style={isKey ? { animationDuration: '2.5s' } : undefined}
-        />
-        <div
-          className={cn(
-            'flex-1 w-px mt-1',
-            isKey ? 'bg-gradient-to-b from-blue-400/30 to-gray-700/40' : 'bg-gray-700/40'
+              ? 'border-blue-400 bg-blue-400/30 shadow-[0_0_8px_2px_rgba(96,165,250,0.3)]'
+              : 'border-border bg-background'
           )}
         />
+        <div className="flex-1 w-px bg-border/40 mt-1" />
       </div>
 
       {/* Event */}
@@ -59,7 +52,7 @@ function TimelineRow({
         <p
           className={cn(
             'text-sm leading-relaxed',
-            isKey ? 'text-gray-100 font-medium' : 'text-gray-400'
+            isKey ? 'text-foreground font-medium' : 'text-muted-foreground'
           )}
         >
           {event}
@@ -85,9 +78,10 @@ function ProbabilityDots() {
   ]
   return (
     <>
-      {dots.map((dot) => (
+      {dots.map((dot, i) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: static decorative dots, order never changes
         <div
-          key={`${dot.x}-${dot.y}`}
+          key={i}
           className={cn('absolute rounded-full', dot.size, dot.color)}
           style={{ left: dot.x, top: dot.y }}
           aria-hidden="true"
@@ -98,7 +92,9 @@ function ProbabilityDots() {
 }
 
 export function TheNightSection() {
-  const { ref, visible } = useSlideReveal({ threshold: 0.15 })
+  const reducedMotion = useReducedMotion()
+  const { ref, inView } = useInView({ threshold: 0.15, triggerOnce: true })
+  const visible = inView || reducedMotion
 
   const timeline: TimelineEntry[] = [
     { time: m.talk_ls_night_t1(), event: m.talk_ls_night_e1(), isKey: false },
@@ -111,10 +107,16 @@ export function TheNightSection() {
 
   return (
     <div className="relative mx-auto max-w-5xl w-full">
+      {/* Dark night-to-day atmospheric gradient — upgraded from the previous version */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-3xl">
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0D0D0D]/60 via-blue-950/25 to-purple-950/20 dark:from-[#0D0D0D]/80 dark:via-blue-950/40 dark:to-purple-950/30" />
+        <div className="absolute left-1/3 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/6 blur-[150px] dark:bg-blue-500/15" />
+        <div className="absolute right-0 bottom-0 h-[300px] w-[300px] translate-x-1/4 translate-y-1/4 rounded-full bg-purple-500/7 blur-[100px] dark:bg-purple-500/18" />
+        {/* Probability dots floating in the night */}
+        <ProbabilityDots />
+      </div>
+
       <div className="relative">
-        <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <ProbabilityDots />
-        </div>
         <AnimatedSection>
           <div className="flex flex-wrap items-start justify-between gap-4 mb-2">
             <h2 className="text-4xl font-bold tracking-tight lg:text-5xl">
@@ -124,20 +126,21 @@ export function TheNightSection() {
               {m.talk_ls_night_date()}
             </Badge>
           </div>
-          <p className="text-gray-400 font-mono text-sm">{m.talk_ls_night_stats()}</p>
+          <p className="text-muted-foreground font-mono text-sm">{m.talk_ls_night_stats()}</p>
         </AnimatedSection>
 
         {/* Timeline */}
         <div ref={ref} className="mt-12">
           {timeline.map((entry, index) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: static ordered timeline, never reordered
-            <TimelineRow key={index} {...entry} visible={visible} delay={index * 120} />
+            <TimelineRow key={entry.time} {...entry} visible={visible} delay={index * 120} />
           ))}
         </div>
 
         <AnimatedSection className="mt-4">
           <div className="rounded-xl border border-blue-500/30 bg-gradient-to-r from-blue-500/10 to-purple-500/10 px-6 py-5">
-            <p className="text-center italic text-gray-300 lg:text-lg">{m.talk_ls_night_peak()}</p>
+            <p className="text-center italic text-muted-foreground lg:text-lg">
+              {m.talk_ls_night_peak()}
+            </p>
           </div>
         </AnimatedSection>
       </div>

@@ -1,36 +1,25 @@
-import { AnimatedSection, Badge } from '@repo/ui'
+import { AnimatedSection, Badge, useInView, useReducedMotion } from '@repo/ui'
 import { m } from '@/paraglide/messages'
 import { QuantumOrbital } from './QuantumOrbital'
-import { useSlideReveal } from './useSlideReveal'
 
 export function TitleSection() {
-  const { ref, visible, reducedMotion } = useSlideReveal()
+  const reducedMotion = useReducedMotion()
+  const { ref, inView } = useInView({ threshold: 0.3, triggerOnce: true })
+  const visible = inView || reducedMotion
 
   return (
     <div className="relative mx-auto flex w-full max-w-5xl flex-col items-center justify-center text-center">
       {/* Quantum orbital hero background */}
-      <div
-        className="pointer-events-none absolute inset-[-20%] flex items-center justify-center"
-        style={{
-          mask: 'radial-gradient(ellipse at center, black 30%, transparent 70%)',
-          WebkitMask: 'radial-gradient(ellipse at center, black 30%, transparent 70%)',
-        }}
-      >
-        <div className="opacity-20 sm:opacity-25">
-          <QuantumOrbital size={560} />
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden">
+        <div className="opacity-25 sm:opacity-30">
+          <QuantumOrbital size={420} />
         </div>
       </div>
 
       {/* Outer atmospheric radial glow */}
-      <div
-        className="pointer-events-none absolute inset-0 overflow-hidden"
-        style={{
-          mask: 'radial-gradient(ellipse at center, black 40%, transparent 75%)',
-          WebkitMask: 'radial-gradient(ellipse at center, black 40%, transparent 75%)',
-        }}
-      >
-        <div className="absolute left-1/2 top-1/2 h-[700px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/8 blur-[180px] dark:bg-blue-500/14" />
-        <div className="absolute left-1/3 top-1/3 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-purple-500/6 blur-[140px] dark:bg-purple-500/10" />
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/10 blur-[140px] dark:bg-blue-500/18" />
+        <div className="absolute left-1/3 top-1/3 h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-purple-500/8 blur-[100px] dark:bg-purple-500/14" />
 
         {/* Floating probability dots */}
         {visible && !reducedMotion && (

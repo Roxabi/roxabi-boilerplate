@@ -1,5 +1,4 @@
 import { useReducedMotion } from '@repo/ui'
-import { useId } from 'react'
 
 type QuantumOrbitalProps = {
   size?: number
@@ -17,7 +16,7 @@ export function QuantumOrbital({ size = 240, className, animate = true }: Quantu
   const shouldAnimate = animate && !reducedMotion
 
   // Unique ID suffix to avoid collisions when multiple instances are rendered
-  const uid = useId()
+  const uid = size.toString()
 
   return (
     <svg
@@ -76,7 +75,7 @@ export function QuantumOrbital({ size = 240, className, animate = true }: Quantu
         style={{ transformOrigin: '120px 120px' }}
       >
         <ellipse
-          className={shouldAnimate ? 'v2-ring1-path' : undefined}
+          className="v2-ring1-path"
           cx="120"
           cy="120"
           rx="88"
@@ -95,7 +94,7 @@ export function QuantumOrbital({ size = 240, className, animate = true }: Quantu
         style={{ transformOrigin: '120px 120px' }}
       >
         <ellipse
-          className={shouldAnimate ? 'v2-ring2-path' : undefined}
+          className="v2-ring2-path"
           cx="120"
           cy="120"
           rx="88"

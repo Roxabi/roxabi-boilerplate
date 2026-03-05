@@ -134,7 +134,14 @@ html.dark .shiki span {
    ══════════════════════════════════════════════════════ */
 
 [data-presentation] {
-  /* intentionally empty — colour tokens removed (dead code, SVG components use raw hex) */
+  /* Lyra colour tokens */
+  --lyra-black: #0D0D0D;
+  --lyra-deep-purple: #0a0416;
+  --lyra-deep-blue: #060612;
+  --lyra-blue: #2D7FF9;
+  --lyra-purple: #8B5CF6;
+  --lyra-purple-light: #a78bfa;
+  --lyra-blue-light: #60a5fa;
 }
 
 /* ── Orbital ring rotations ── */
@@ -207,40 +214,6 @@ html.dark .shiki span {
   50%       { opacity: 0.7; }
 }
 
-/* ── Entrance animation (shared) ── */
-@keyframes fade-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-[data-presentation] .animate-fade-in {
-  animation: fade-in 0.4s ease-out both;
-}
-
-/* ── Quantum Orbital animation rules ── */
-[data-presentation] .v2-ring1      { animation: v2-spin1 8s linear infinite; }
-[data-presentation] .v2-ring2      { animation: v2-spin2 10s linear infinite; }
-[data-presentation] .v2-ring3      { animation: v2-spin3 12s linear infinite; }
-[data-presentation] .v2-ring-inner1 { animation: v2-spin1 6s linear infinite; }
-[data-presentation] .v2-ring-inner2 { animation: v2-spin2 7s linear infinite; }
-[data-presentation] .v2-e1         { animation: v2-orbit1 4s linear infinite; }
-[data-presentation] .v2-e2         { animation: v2-orbit2 5s linear infinite; }
-[data-presentation] .v2-e3         { animation: v2-orbit1 3.5s linear infinite; }
-[data-presentation] .v2-e4         { animation: v2-orbit2 4.5s linear infinite; }
-[data-presentation] .v2-e5         { animation: v2-orbit3 6s linear infinite; }
-[data-presentation] .v2-core-outer { animation: v2-core-pulse 4s ease-in-out infinite; }
-[data-presentation] .v2-core-mid   { animation: v2-core-mid 4s ease-in-out infinite; }
-[data-presentation] .v2-aura       { animation: v2-aura-idle 6s ease-in-out infinite; }
-
-/* ── Wave-Particle animation rules ── */
-[data-presentation] .v4-wave1        { animation: v4-scroll1 6s linear infinite; }
-[data-presentation] .v4-wave2        { animation: v4-scroll2 8s linear infinite; }
-[data-presentation] .v4-wave3        { animation: v4-scroll3 4s linear infinite; }
-[data-presentation] .v4-wave-bg      { animation: v4-scroll1 12s linear infinite; }
-[data-presentation] .v4-particle     { animation: v4-particle-idle 3s ease-in-out infinite; }
-[data-presentation] .v4-particle-glow { animation: v4-part-glow 3s ease-in-out infinite; }
-[data-presentation] .v4-pdot         { animation: v4-pdot-idle 4s ease-in-out infinite; }
-
 /* ── Reduced motion: disable all Lyra animations ── */
 @media (prefers-reduced-motion: reduce) {
   [data-presentation] .v2-ring1,
@@ -262,8 +235,7 @@ html.dark .shiki span {
   [data-presentation] .v4-wave-bg,
   [data-presentation] .v4-particle,
   [data-presentation] .v4-particle-glow,
-  [data-presentation] .v4-pdot,
-  [data-presentation] .animate-fade-in {
+  [data-presentation] .v4-pdot {
     animation: none !important;
   }
 }
