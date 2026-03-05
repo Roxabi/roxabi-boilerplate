@@ -41,11 +41,17 @@ function TimelineRow({
           className={cn(
             'h-3 w-3 rounded-full border-2 flex-shrink-0',
             isKey
-              ? 'border-blue-400 bg-blue-400/30 shadow-[0_0_8px_2px_rgba(96,165,250,0.3)]'
+              ? 'border-blue-400 bg-blue-400/30 shadow-[0_0_12px_3px_rgba(96,165,250,0.4)] animate-pulse'
               : 'border-border bg-background'
           )}
+          style={isKey ? { animationDuration: '2.5s' } : undefined}
         />
-        <div className="flex-1 w-px bg-border/40 mt-1" />
+        <div
+          className={cn(
+            'flex-1 w-px mt-1',
+            isKey ? 'bg-gradient-to-b from-blue-400/30 to-border/40' : 'bg-border/40'
+          )}
+        />
       </div>
 
       {/* Event */}
@@ -79,10 +85,9 @@ function ProbabilityDots() {
   ]
   return (
     <>
-      {dots.map((dot, i) => (
-        // biome-ignore lint/suspicious/noArrayIndexKey: static decorative dots, order never changes
+      {dots.map((dot) => (
         <div
-          key={i}
+          key={`${dot.x}-${dot.y}`}
           className={cn('absolute rounded-full', dot.size, dot.color)}
           style={{ left: dot.x, top: dot.y }}
           aria-hidden="true"
@@ -106,9 +111,15 @@ export function TheNightSection() {
 
   return (
     <div className="relative mx-auto max-w-5xl w-full">
-      {/* Dark night-to-day atmospheric gradient — upgraded from the previous version */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-3xl">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0D0D0D]/60 via-blue-950/25 to-purple-950/20 dark:from-[#0D0D0D]/80 dark:via-blue-950/40 dark:to-purple-950/30" />
+      {/* Dark night-to-day atmospheric gradient */}
+      <div
+        className="pointer-events-none absolute inset-0 overflow-hidden"
+        style={{
+          mask: 'linear-gradient(to bottom, transparent, black 12%, black 88%, transparent)',
+          WebkitMask: 'linear-gradient(to bottom, transparent, black 12%, black 88%, transparent)',
+        }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0D0D0D]/40 via-blue-950/20 to-purple-950/15 dark:from-[#0D0D0D]/65 dark:via-blue-950/35 dark:to-purple-950/25" />
         <div className="absolute left-1/3 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/6 blur-[150px] dark:bg-blue-500/15" />
         <div className="absolute right-0 bottom-0 h-[300px] w-[300px] translate-x-1/4 translate-y-1/4 rounded-full bg-purple-500/7 blur-[100px] dark:bg-purple-500/18" />
         {/* Probability dots floating in the night */}

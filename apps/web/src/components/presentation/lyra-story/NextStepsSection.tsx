@@ -98,22 +98,17 @@ function GuildNetwork() {
   return (
     <div className="relative mx-auto h-24 w-24" aria-hidden="true">
       <svg viewBox="0 0 100 100" className="w-full h-full" aria-hidden="true">
-        {guildEdges.map((edge) => {
-          const nodeA = guildNodes[edge.a]
-          const nodeB = guildNodes[edge.b]
-          if (!(nodeA && nodeB)) return null
-          return (
-            <line
-              key={edge.id}
-              x1={nodeA.x}
-              y1={nodeA.y}
-              x2={nodeB.x}
-              y2={nodeB.y}
-              className="stroke-purple-400/35 dark:stroke-purple-300/30"
-              strokeWidth="0.5"
-            />
-          )
-        })}
+        {guildEdges.map((edge) => (
+          <line
+            key={edge.id}
+            x1={guildNodes[edge.a].x}
+            y1={guildNodes[edge.a].y}
+            x2={guildNodes[edge.b].x}
+            y2={guildNodes[edge.b].y}
+            className="stroke-purple-400/35 dark:stroke-purple-300/30"
+            strokeWidth="0.5"
+          />
+        ))}
         {guildNodes.map((node) => (
           <g key={node.id}>
             {node.main && (

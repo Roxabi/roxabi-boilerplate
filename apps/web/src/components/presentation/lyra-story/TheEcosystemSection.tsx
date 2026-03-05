@@ -19,10 +19,50 @@ const connections: [string, string][] = [
   ['config', 'lyra'],
 ]
 
+function GraphNode({ repo, visible, index }: { repo: RepoNode; visible: boolean; index: number }) {
+  return (
+    <g
+      className={cn('transition-all duration-700', visible ? 'opacity-100' : 'opacity-0')}
+      style={{ transitionDelay: visible ? `${index * 100}ms` : '0ms' }}
+    >
+      <circle
+        cx={repo.x}
+        cy={repo.y}
+        r={repo.isMain ? 6 : 4}
+        className={
+          repo.isMain
+            ? 'fill-blue-400/80 dark:fill-blue-300/90'
+            : 'fill-muted-foreground/50 dark:fill-muted-foreground/60'
+        }
+      />
+      {repo.isMain && (
+        <circle
+          cx={repo.x}
+          cy={repo.y}
+          r={9}
+          fill="none"
+          className="stroke-blue-400/30 dark:stroke-blue-300/40"
+          strokeWidth="0.6"
+        />
+      )}
+      <text
+        x={repo.x}
+        y={repo.y - (repo.isMain ? 10 : 6)}
+        textAnchor="middle"
+        className="fill-foreground/80 dark:fill-foreground/90"
+        fontSize="3.5"
+        fontWeight={repo.isMain ? 'bold' : 'normal'}
+      >
+        {repo.name}
+      </text>
+    </g>
+  )
+}
+
 function EcosystemGraph({ repos, visible }: { repos: RepoNode[]; visible: boolean }) {
   const findNode = (id: string) => repos.find((r) => r.id === id)
   return (
-    <div className="hidden lg:block relative h-80">
+    <div className="hidden md:block relative h-[500px]">
       <svg viewBox="0 0 100 100" className="w-full h-full" aria-hidden="true">
         {connections.map(([from, to]) => {
           const fromNode = findNode(from)
@@ -43,48 +83,13 @@ function EcosystemGraph({ repos, visible }: { repos: RepoNode[]; visible: boolea
                   ? 'stroke-blue-400/40 dark:stroke-blue-400/50'
                   : 'stroke-border/50 dark:stroke-border/40'
               )}
-              strokeWidth={isToLyra ? '0.6' : '0.3'}
+              strokeWidth={isToLyra ? '0.8' : '0.4'}
               style={{ transitionDelay: visible ? '300ms' : '0ms' }}
             />
           )
         })}
         {repos.map((repo, index) => (
-          <g
-            key={repo.id}
-            className={cn('transition-all duration-700', visible ? 'opacity-100' : 'opacity-0')}
-            style={{ transitionDelay: visible ? `${index * 100}ms` : '0ms' }}
-          >
-            <circle
-              cx={repo.x}
-              cy={repo.y}
-              r={repo.isMain ? 5 : 3}
-              className={
-                repo.isMain
-                  ? 'fill-blue-400/80 dark:fill-blue-300/90'
-                  : 'fill-muted-foreground/50 dark:fill-muted-foreground/60'
-              }
-            />
-            {repo.isMain && (
-              <circle
-                cx={repo.x}
-                cy={repo.y}
-                r={7}
-                fill="none"
-                className="stroke-blue-400/30 dark:stroke-blue-300/40"
-                strokeWidth="0.5"
-              />
-            )}
-            <text
-              x={repo.x}
-              y={repo.y - (repo.isMain ? 7 : 5)}
-              textAnchor="middle"
-              className="fill-foreground/80 dark:fill-foreground/90"
-              fontSize="2.8"
-              fontWeight={repo.isMain ? 'bold' : 'normal'}
-            >
-              {repo.name}
-            </text>
-          </g>
+          <GraphNode key={repo.id} repo={repo} visible={visible} index={index} />
         ))}
       </svg>
     </div>
@@ -202,7 +207,7 @@ export function TheEcosystemSection() {
           <p className="text-lg text-muted-foreground">{m.talk_ls_ecosystem_subtitle()}</p>
         </AnimatedSection>
 
-        <div ref={ref} className="mt-10 grid gap-8 lg:grid-cols-2 lg:items-center">
+        <div ref={ref} className="mt-10 grid gap-8 md:grid-cols-2 md:items-center">
           <EcosystemGraph repos={repos} visible={visible} />
           <RepoList repos={repos} visible={visible} />
         </div>

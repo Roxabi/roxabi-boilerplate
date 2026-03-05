@@ -42,8 +42,19 @@ export function TheVoiceSection() {
         </AnimatedSection>
 
         {/* Wave-Particle visual — the voice IS the wave */}
-        <AnimatedSection className="mt-10 rounded-2xl overflow-hidden border border-blue-500/15 bg-black/40 dark:bg-black/60">
-          <WaveParticle />
+        <AnimatedSection className="mt-10">
+          <div
+            className="overflow-hidden"
+            style={{
+              mask: 'linear-gradient(to right, transparent, black 12%, black 88%, transparent), linear-gradient(to bottom, transparent, black 8%, black 92%, transparent)',
+              WebkitMask:
+                'linear-gradient(to right, transparent, black 12%, black 88%, transparent), linear-gradient(to bottom, transparent, black 8%, black 92%, transparent)',
+              maskComposite: 'intersect',
+              WebkitMaskComposite: 'destination-in',
+            }}
+          >
+            <WaveParticle />
+          </div>
         </AnimatedSection>
 
         <AnimatedSection className="mt-10 grid gap-4 md:grid-cols-3">

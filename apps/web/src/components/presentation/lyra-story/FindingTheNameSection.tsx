@@ -4,12 +4,157 @@ import { m } from '@/paraglide/messages'
 import { QuantumOrbital } from './QuantumOrbital'
 import { useSlideReveal } from './useSlideReveal'
 
+function SoleneCard({ visible }: { visible: boolean }) {
+  return (
+    <div
+      className={cn(
+        'transition-all duration-700',
+        visible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8'
+      )}
+      style={{ transform: visible ? 'rotate(-2deg)' : 'translateX(-2rem) rotate(-2deg)' }}
+    >
+      <Card
+        variant="subtle"
+        className="border border-border/30 bg-muted/20 relative overflow-hidden grayscale opacity-60"
+      >
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <X className="h-24 w-24 text-red-400/20 dark:text-red-400/25" />
+        </div>
+        <CardContent className="pt-6 pb-6 relative">
+          <p className="text-4xl font-bold text-muted-foreground/35 line-through decoration-red-400/50 mb-3">
+            {m.talk_ls_name_solene_label()}
+          </p>
+          <p className="text-sm text-muted-foreground/50">{m.talk_ls_name_solene_desc()}</p>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+function TransformArrow({ visible }: { visible: boolean }) {
+  return (
+    <div
+      className={cn(
+        'hidden md:flex items-center justify-center flex-shrink-0 transition-all duration-700',
+        visible ? 'opacity-100 scale-100' : 'opacity-0 scale-75'
+      )}
+      style={{ transitionDelay: visible ? '150ms' : '0ms' }}
+      aria-hidden="true"
+    >
+      <div className="flex flex-col items-center gap-1">
+        <div className="h-px w-8 bg-gradient-to-r from-border/40 to-blue-400/60" />
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 16 16"
+          fill="none"
+          className="text-blue-400/70"
+          aria-hidden="true"
+        >
+          <path
+            d="M3 8h10M9 4l4 4-4 4"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </div>
+    </div>
+  )
+}
+
+function LyraCard({ visible }: { visible: boolean }) {
+  return (
+    <div
+      className={cn(
+        'transition-all duration-700 relative',
+        visible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8'
+      )}
+      style={{ transitionDelay: visible ? '200ms' : '0ms' }}
+    >
+      <div
+        className="absolute -inset-[1px] rounded-[calc(var(--radius)+1px)] animate-pulse"
+        style={{
+          background:
+            'linear-gradient(135deg, rgba(96,165,250,0.5), rgba(167,139,250,0.5), rgba(96,165,250,0.5))',
+          animationDuration: '3s',
+        }}
+        aria-hidden="true"
+      />
+      <div className="pointer-events-none absolute -right-6 -top-6 opacity-50" aria-hidden="true">
+        <QuantumOrbital size={160} />
+      </div>
+      <Card
+        variant="subtle"
+        className="border-0 bg-gradient-to-br from-blue-500/12 to-purple-500/12 relative overflow-hidden"
+      >
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-400/6 to-purple-400/6" />
+        <CardContent className="pt-6 pb-6 relative">
+          <div className="flex items-center gap-3 mb-3">
+            <Atom className="h-5 w-5 text-blue-400" />
+            <p
+              className="text-4xl font-bold tracking-[0.25em] uppercase"
+              style={{
+                background: 'linear-gradient(135deg, #60a5fa 0%, #ffffff 50%, #a78bfa 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                filter:
+                  'drop-shadow(0 0 20px rgba(45,127,249,0.6)) drop-shadow(0 0 40px rgba(139,92,246,0.4))',
+              }}
+            >
+              {m.talk_ls_name_glow()}
+            </p>
+          </div>
+          <p className="text-sm text-muted-foreground">{m.talk_ls_name_lyra_desc()}</p>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+function AliasBlock() {
+  return (
+    <AnimatedSection className="mt-8">
+      <div className="rounded-xl border border-purple-500/20 bg-gradient-to-r from-blue-500/5 to-purple-500/5 px-6 py-5">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+          {m.talk_ls_name_alias_label()}
+        </p>
+        <div className="rounded-lg bg-black/40 dark:bg-black/70 overflow-hidden border border-white/5">
+          <div className="flex items-center gap-1.5 px-3 py-2 border-b border-white/5 bg-white/3">
+            <div className="h-2.5 w-2.5 rounded-full bg-red-500/60" />
+            <div className="h-2.5 w-2.5 rounded-full bg-yellow-500/60" />
+            <div className="h-2.5 w-2.5 rounded-full bg-green-500/60" />
+            <span className="ml-2 text-[10px] text-white/20 font-mono tracking-widest">
+              ~/.aliases
+            </span>
+          </div>
+          <pre className="font-mono text-sm text-blue-400 dark:text-blue-300 px-4 py-3 overflow-x-auto">
+            <code>
+              <span className="text-white/30 select-none">$ </span>
+              {m.talk_ls_name_alias_code()}
+              <span
+                className="inline-block w-[2px] h-[1em] bg-blue-400/70 dark:bg-blue-300/70 ml-0.5 align-middle animate-pulse"
+                style={{ animationDuration: '1.1s' }}
+                aria-hidden="true"
+              />
+            </code>
+          </pre>
+        </div>
+        <p className="mt-3 text-sm text-muted-foreground/70 italic">
+          {m.talk_ls_name_alias_note()}
+        </p>
+      </div>
+    </AnimatedSection>
+  )
+}
+
 export function FindingTheNameSection() {
   const { ref, visible } = useSlideReveal()
 
   return (
     <div className="relative mx-auto max-w-5xl w-full">
-      {/* Background glow — Lyra's palette */}
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute left-1/2 top-1/3 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/3 rounded-full bg-blue-500/6 blur-[130px] dark:bg-blue-500/18" />
         <div className="absolute right-1/4 bottom-1/4 h-[300px] w-[300px] rounded-full bg-purple-500/5 blur-[90px] dark:bg-purple-500/14" />
@@ -22,92 +167,13 @@ export function FindingTheNameSection() {
           </h2>
         </AnimatedSection>
 
-        {/* Name evolution */}
-        <div ref={ref} className="grid gap-6 md:grid-cols-2">
-          {/* Solene — crossed out */}
-          <div
-            className={cn(
-              'transition-all duration-700',
-              visible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8'
-            )}
-          >
-            <Card
-              variant="subtle"
-              className="border border-border/50 bg-muted/30 relative overflow-hidden"
-            >
-              {/* Diagonal cross-out */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <X className="h-24 w-24 text-red-400/15 dark:text-red-400/20" />
-              </div>
-              <CardContent className="pt-6 pb-6 relative">
-                <p className="text-4xl font-bold text-muted-foreground/40 line-through decoration-red-400/40 mb-3">
-                  {m.talk_ls_name_solene_label()}
-                </p>
-                <p className="text-sm text-muted-foreground/60">{m.talk_ls_name_solene_desc()}</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Lyra — glowing with orbital background */}
-          <div
-            className={cn(
-              'transition-all duration-700 relative',
-              visible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8'
-            )}
-            style={{ transitionDelay: visible ? '200ms' : '0ms' }}
-          >
-            {/* Tiny orbital orbiting behind the LYRA card */}
-            <div
-              className="pointer-events-none absolute -right-6 -top-6 opacity-40"
-              aria-hidden="true"
-            >
-              <QuantumOrbital size={120} />
-            </div>
-
-            <Card
-              variant="subtle"
-              className="border border-blue-500/30 bg-gradient-to-br from-blue-500/10 to-purple-500/10 relative overflow-hidden"
-            >
-              {/* Glow effect */}
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-400/5 to-purple-400/5" />
-              <CardContent className="pt-6 pb-6 relative">
-                <div className="flex items-center gap-3 mb-3">
-                  <Atom className="h-5 w-5 text-blue-400" />
-                  {/* LYRA — large name with orbital glow styling */}
-                  <p
-                    className="text-4xl font-bold tracking-[0.25em] uppercase"
-                    style={{
-                      background: 'linear-gradient(135deg, #60a5fa 0%, #ffffff 50%, #a78bfa 100%)',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                      backgroundClip: 'text',
-                      filter:
-                        'drop-shadow(0 0 16px rgba(45,127,249,0.5)) drop-shadow(0 0 32px rgba(139,92,246,0.3))',
-                    }}
-                  >
-                    {m.talk_ls_name_glow()}
-                  </p>
-                </div>
-                <p className="text-sm text-muted-foreground">{m.talk_ls_name_lyra_desc()}</p>
-              </CardContent>
-            </Card>
-          </div>
+        <div ref={ref} className="grid gap-6 md:grid-cols-[1fr_auto_1fr] md:items-center">
+          <SoleneCard visible={visible} />
+          <TransformArrow visible={visible} />
+          <LyraCard visible={visible} />
         </div>
 
-        {/* The alias */}
-        <AnimatedSection className="mt-8">
-          <div className="rounded-xl border border-purple-500/20 bg-gradient-to-r from-blue-500/5 to-purple-500/5 px-6 py-5">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-              {m.talk_ls_name_alias_label()}
-            </p>
-            <pre className="font-mono text-sm text-blue-600 dark:text-blue-300 bg-black/20 rounded-lg px-4 py-3 overflow-x-auto">
-              <code>{m.talk_ls_name_alias_code()}</code>
-            </pre>
-            <p className="mt-3 text-sm text-muted-foreground/70 italic">
-              {m.talk_ls_name_alias_note()}
-            </p>
-          </div>
-        </AnimatedSection>
+        <AliasBlock />
       </div>
     </div>
   )
