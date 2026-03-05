@@ -48,7 +48,7 @@ export function TheCharacterSection() {
               <div className="relative h-32 w-32">
                 <div className="absolute inset-0 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 blur-xl" />
                 <div className="absolute inset-0 rounded-full border-2 border-blue-400/40 dark:border-blue-400/60 flex items-center justify-center">
-                  <span className="text-4xl font-bold bg-gradient-to-br from-blue-300 to-purple-300 bg-clip-text text-transparent">
+                  <span className="text-4xl font-bold bg-gradient-to-br from-blue-600 to-purple-600 dark:from-blue-300 dark:to-purple-300 bg-clip-text text-transparent">
                     L
                   </span>
                 </div>

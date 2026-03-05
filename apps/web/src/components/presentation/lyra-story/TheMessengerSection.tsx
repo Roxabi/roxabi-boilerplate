@@ -91,7 +91,7 @@ export function TheMessengerSection() {
           </AnimatedSection>
 
           <AnimatedSection className="mt-6 flex flex-wrap gap-3">
-            <Badge className="bg-blue-500/15 text-blue-300 border-blue-500/30">
+            <Badge className="bg-blue-500/15 text-blue-600 dark:text-blue-300 border-blue-500/30">
               {m.talk_ls_messenger_xp()}
             </Badge>
             <Badge variant="secondary" className="text-muted-foreground">

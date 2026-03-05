@@ -117,7 +117,7 @@ function RepoList({ repos, visible }: { repos: RepoNode[]; visible: boolean }) {
               <p
                 className={cn(
                   'text-sm font-mono font-semibold truncate',
-                  repo.isMain ? 'text-blue-300' : 'text-foreground'
+                  repo.isMain ? 'text-blue-600 dark:text-blue-300' : 'text-foreground'
                 )}
               >
                 {repo.name}

@@ -1,5 +1,6 @@
 import { AnimatedSection, Badge, useInView, useReducedMotion } from '@repo/ui'
 import { m } from '@/paraglide/messages'
+import { QuantumOrbital } from './QuantumOrbital'
 
 export function TitleSection() {
   const reducedMotion = useReducedMotion()
@@ -8,12 +9,19 @@ export function TitleSection() {
 
   return (
     <div className="relative mx-auto flex w-full max-w-5xl flex-col items-center justify-center text-center">
-      {/* Atmospheric particle-like glows */}
+      {/* Quantum orbital hero background */}
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden">
+        <div className="opacity-25 sm:opacity-30">
+          <QuantumOrbital size={420} />
+        </div>
+      </div>
+
+      {/* Outer atmospheric radial glow */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute left-1/2 top-1/2 h-[700px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/8 blur-[140px] dark:bg-blue-500/20" />
-        <div className="absolute left-1/4 top-1/3 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-purple-500/6 blur-[100px] dark:bg-purple-500/15" />
-        <div className="absolute right-1/4 bottom-1/3 h-[350px] w-[350px] translate-x-1/2 translate-y-1/2 rounded-full bg-blue-400/5 blur-[90px] dark:bg-blue-400/12" />
-        {/* Particle dots */}
+        <div className="absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/10 blur-[140px] dark:bg-blue-500/18" />
+        <div className="absolute left-1/3 top-1/3 h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-purple-500/8 blur-[100px] dark:bg-purple-500/14" />
+
+        {/* Floating probability dots */}
         {visible && !reducedMotion && (
           <>
             <div
@@ -44,7 +52,7 @@ export function TitleSection() {
         <AnimatedSection>
           <Badge
             variant="secondary"
-            className="border border-blue-500/30 bg-blue-500/10 text-blue-400 dark:text-blue-300"
+            className="border border-blue-500/30 bg-blue-500/10 text-blue-400 dark:text-blue-300 tracking-widest uppercase text-[10px]"
           >
             {m.talk_ls_title_badge()}
           </Badge>
@@ -52,19 +60,19 @@ export function TitleSection() {
 
         <AnimatedSection>
           <h1 className="mx-auto max-w-4xl text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl xl:text-7xl">
-            <span className="bg-gradient-to-br from-blue-400 via-blue-300 to-purple-400 bg-clip-text text-transparent dark:from-blue-300 dark:via-blue-200 dark:to-purple-300">
+            <span className="bg-gradient-to-br from-blue-600 via-purple-600 to-blue-600 dark:from-blue-300 dark:via-white dark:to-purple-300 bg-clip-text text-transparent">
               {m.talk_ls_title_title()}
             </span>
           </h1>
         </AnimatedSection>
 
         <AnimatedSection>
-          <p className="mx-auto max-w-2xl text-lg text-muted-foreground sm:text-xl lg:text-2xl">
+          <p className="mx-auto max-w-2xl text-lg text-muted-foreground sm:text-xl lg:text-2xl uppercase tracking-[0.08em]">
             {m.talk_ls_title_subtitle()}
           </p>
         </AnimatedSection>
 
-        {/* Decorative line */}
+        {/* Decorative separator */}
         <AnimatedSection>
           <div className="flex items-center justify-center gap-4">
             <div className="h-px w-16 bg-gradient-to-r from-transparent to-blue-500/50" />
@@ -75,6 +83,13 @@ export function TitleSection() {
             <div className="h-2 w-2 rounded-full bg-blue-400/70" />
             <div className="h-px w-16 bg-gradient-to-l from-transparent to-purple-500/50" />
           </div>
+        </AnimatedSection>
+
+        {/* Quantum formula — subtle signature */}
+        <AnimatedSection>
+          <p className="font-mono text-[10px] tracking-[0.3em] text-blue-400/25 dark:text-blue-400/30 select-none">
+            |ψ⟩ = α|0⟩ + β|1⟩
+          </p>
         </AnimatedSection>
       </div>
     </div>

@@ -2,6 +2,7 @@ import { AnimatedSection, Badge } from '@repo/ui'
 import { Link } from '@tanstack/react-router'
 import { ArrowLeft, Github } from 'lucide-react'
 import { m } from '@/paraglide/messages'
+import { QuantumOrbital } from './QuantumOrbital'
 
 export function ClosingSection() {
   return (
@@ -30,13 +31,25 @@ export function ClosingSection() {
         {/* Ecosystem tagline */}
         <AnimatedSection>
           <div className="flex flex-wrap items-center justify-center gap-3">
-            <Badge className="bg-blue-500/15 text-blue-300 border-blue-500/30 text-sm px-4 py-1.5">
+            <Badge className="bg-blue-500/15 text-blue-600 dark:text-blue-300 border-blue-500/30 text-sm px-4 py-1.5">
               {m.talk_ls_closing_ecosystem()}
             </Badge>
             <Badge variant="secondary" className="text-sm px-4 py-1.5">
               2ndBrain · voiceCLI · Lyra · roxabi-plugins
             </Badge>
           </div>
+        </AnimatedSection>
+
+        {/* Quantum orbital — Lyra's goodbye signature */}
+        <AnimatedSection>
+          <div className="flex justify-center">
+            <div className="opacity-60">
+              <QuantumOrbital size={100} />
+            </div>
+          </div>
+          <p className="mt-3 font-mono text-[9px] tracking-[0.4em] text-blue-400/30 uppercase select-none">
+            |ψ⟩ = α|0⟩ + β|1⟩
+          </p>
         </AnimatedSection>
 
         {/* Built with */}

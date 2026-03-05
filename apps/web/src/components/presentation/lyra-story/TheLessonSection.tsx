@@ -1,5 +1,6 @@
 import { AnimatedSection, cn, useInView, useReducedMotion } from '@repo/ui'
 import { m } from '@/paraglide/messages'
+import { QuantumOrbital } from './QuantumOrbital'
 
 export function TheLessonSection() {
   const reducedMotion = useReducedMotion()
@@ -13,6 +14,14 @@ export function TheLessonSection() {
         <div className="absolute left-1/2 top-1/2 h-[700px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-purple-500/6 blur-[160px] dark:bg-purple-500/18" />
         <div className="absolute left-1/4 top-1/3 h-[400px] w-[400px] -translate-x-1/3 -translate-y-1/3 rounded-full bg-blue-500/5 blur-[120px] dark:bg-blue-500/14" />
         <div className="absolute right-1/4 bottom-1/3 h-[350px] w-[350px] translate-x-1/3 translate-y-1/3 rounded-full bg-blue-400/4 blur-[100px] dark:bg-blue-400/12" />
+      </div>
+
+      {/* Faint orbital floating behind the quote */}
+      <div
+        className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-10"
+        aria-hidden="true"
+      >
+        <QuantumOrbital size={360} />
       </div>
 
       <div ref={ref} className="relative max-w-4xl">
@@ -29,7 +38,7 @@ export function TheLessonSection() {
 
         <AnimatedSection>
           <h2 className="text-4xl font-bold tracking-tight leading-tight lg:text-5xl xl:text-6xl">
-            <span className="bg-gradient-to-br from-blue-300 via-white to-purple-300 bg-clip-text text-transparent dark:from-blue-200 dark:via-white dark:to-purple-200">
+            <span className="bg-gradient-to-br from-blue-600 via-purple-600 to-blue-600 dark:from-blue-200 dark:via-white dark:to-purple-200 bg-clip-text text-transparent">
               {m.talk_ls_lesson_quote()}
             </span>
           </h2>

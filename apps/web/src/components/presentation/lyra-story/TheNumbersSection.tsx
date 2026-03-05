@@ -62,7 +62,9 @@ export function TheNumbersSection() {
                     <span
                       className={cn(
                         'absolute -right-3 top-0 text-2xl font-bold',
-                        stat.color === 'blue' ? 'text-blue-300' : 'text-purple-300'
+                        stat.color === 'blue'
+                          ? 'text-blue-600 dark:text-blue-300'
+                          : 'text-purple-600 dark:text-purple-300'
                       )}
                     >
                       {stat.suffix}

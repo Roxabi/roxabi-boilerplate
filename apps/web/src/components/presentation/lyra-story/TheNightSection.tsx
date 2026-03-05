@@ -27,7 +27,7 @@ function TimelineRow({
         <span
           className={cn(
             'font-mono text-sm tabular-nums',
-            isKey ? 'text-blue-300 font-bold' : 'text-muted-foreground/60'
+            isKey ? 'text-blue-600 dark:text-blue-300 font-bold' : 'text-muted-foreground/60'
           )}
         >
           {time}
@@ -62,6 +62,35 @@ function TimelineRow({
   )
 }
 
+/** Static probability dots — no JS animation, positioned with CSS */
+function ProbabilityDots() {
+  const dots = [
+    { x: '8%', y: '15%', size: 'h-1 w-1', color: 'bg-blue-400/20' },
+    { x: '92%', y: '25%', size: 'h-1.5 w-1.5', color: 'bg-purple-400/15' },
+    { x: '5%', y: '60%', size: 'h-1 w-1', color: 'bg-blue-400/15' },
+    { x: '95%', y: '70%', size: 'h-1 w-1', color: 'bg-purple-400/20' },
+    { x: '20%', y: '85%', size: 'h-1 w-1', color: 'bg-blue-300/15' },
+    { x: '80%', y: '10%', size: 'h-1 w-1', color: 'bg-purple-300/20' },
+    { x: '50%', y: '5%', size: 'h-1.5 w-1.5', color: 'bg-blue-400/12' },
+    { x: '35%', y: '90%', size: 'h-1 w-1', color: 'bg-purple-400/12' },
+    { x: '65%', y: '80%', size: 'h-1 w-1', color: 'bg-blue-300/18' },
+    { x: '12%', y: '40%', size: 'h-1 w-1', color: 'bg-purple-300/12' },
+  ]
+  return (
+    <>
+      {dots.map((dot, i) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: static decorative dots, order never changes
+        <div
+          key={i}
+          className={cn('absolute rounded-full', dot.size, dot.color)}
+          style={{ left: dot.x, top: dot.y }}
+          aria-hidden="true"
+        />
+      ))}
+    </>
+  )
+}
+
 export function TheNightSection() {
   const reducedMotion = useReducedMotion()
   const { ref, inView } = useInView({ threshold: 0.15, triggerOnce: true })
@@ -78,11 +107,13 @@ export function TheNightSection() {
 
   return (
     <div className="relative mx-auto max-w-5xl w-full">
-      {/* Dark atmospheric background — night to day gradient */}
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-0 bg-gradient-to-b from-blue-950/20 via-transparent to-purple-950/10 dark:from-blue-950/40 dark:to-purple-950/20 rounded-3xl" />
-        <div className="absolute left-1/3 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/5 blur-[150px] dark:bg-blue-500/15" />
-        <div className="absolute right-0 bottom-0 h-[300px] w-[300px] translate-x-1/4 translate-y-1/4 rounded-full bg-purple-500/6 blur-[100px] dark:bg-purple-500/15" />
+      {/* Dark night-to-day atmospheric gradient — upgraded from the previous version */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-3xl">
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0D0D0D]/60 via-blue-950/25 to-purple-950/20 dark:from-[#0D0D0D]/80 dark:via-blue-950/40 dark:to-purple-950/30" />
+        <div className="absolute left-1/3 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/6 blur-[150px] dark:bg-blue-500/15" />
+        <div className="absolute right-0 bottom-0 h-[300px] w-[300px] translate-x-1/4 translate-y-1/4 rounded-full bg-purple-500/7 blur-[100px] dark:bg-purple-500/18" />
+        {/* Probability dots floating in the night */}
+        <ProbabilityDots />
       </div>
 
       <div className="relative">
@@ -91,7 +122,7 @@ export function TheNightSection() {
             <h2 className="text-4xl font-bold tracking-tight lg:text-5xl">
               {m.talk_ls_night_title()}
             </h2>
-            <Badge className="bg-blue-500/15 text-blue-300 border-blue-500/30 self-start">
+            <Badge className="bg-blue-500/15 text-blue-600 dark:text-blue-300 border-blue-500/30 self-start">
               {m.talk_ls_night_date()}
             </Badge>
           </div>

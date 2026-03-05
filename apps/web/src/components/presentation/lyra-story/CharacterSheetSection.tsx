@@ -1,6 +1,7 @@
 import { AnimatedSection, cn, useInView, useReducedMotion } from '@repo/ui'
 import { CheckCircle, Circle } from 'lucide-react'
 import { m } from '@/paraglide/messages'
+import { QuantumOrbital } from './QuantumOrbital'
 
 type SkillBar = { name: string; level: number; max: number }
 
@@ -35,7 +36,7 @@ function SkillsColumn({ skills, visible }: { skills: SkillBar[]; visible: boolea
                 <span
                   className={cn(
                     'text-xs font-mono font-bold',
-                    isMax ? 'text-blue-300' : 'text-muted-foreground'
+                    isMax ? 'text-blue-600 dark:text-blue-300' : 'text-muted-foreground'
                   )}
                 >
                   {isMax ? 'MAX' : `${skill.level}/${skill.max}`}
@@ -131,9 +132,18 @@ export function CharacterSheetSection() {
 
   return (
     <div className="relative mx-auto max-w-4xl w-full">
+      {/* Orbital background glow */}
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/6 blur-[140px] dark:bg-blue-500/15" />
         <div className="absolute right-0 bottom-0 h-[300px] w-[300px] translate-x-1/4 translate-y-1/4 rounded-full bg-purple-500/5 blur-[90px] dark:bg-purple-500/12" />
+      </div>
+
+      {/* Quantum orbital behind the card */}
+      <div
+        className="pointer-events-none absolute inset-0 flex items-center justify-end pr-8 opacity-15"
+        aria-hidden="true"
+      >
+        <QuantumOrbital size={180} />
       </div>
 
       <div className="relative">
@@ -151,11 +161,11 @@ export function CharacterSheetSection() {
             'border-blue-500/30 dark:border-blue-500/40',
             'bg-gradient-to-br from-background via-blue-950/10 to-purple-950/10',
             'dark:from-gray-950 dark:via-blue-950/20 dark:to-purple-950/15',
-            'shadow-[0_0_60px_-10px_rgba(45,127,249,0.15)]'
+            'shadow-[0_0_60px_-10px_rgba(45,127,249,0.15),0_0_120px_-20px_rgba(139,92,246,0.1)]'
           )}
         >
           <div className="border-b border-blue-500/20 bg-gradient-to-r from-blue-500/10 to-purple-500/10 px-6 py-5 text-center">
-            <p className="text-2xl font-bold tracking-[0.3em] bg-gradient-to-r from-blue-300 to-purple-300 bg-clip-text text-transparent">
+            <p className="text-2xl font-bold tracking-[0.3em] bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-300 dark:to-purple-300 bg-clip-text text-transparent uppercase">
               {m.talk_ls_sheet_name()}
             </p>
             <p className="text-sm text-muted-foreground mt-1 italic">
