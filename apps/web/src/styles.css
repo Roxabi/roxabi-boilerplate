@@ -297,9 +297,10 @@ html.dark .shiki span {
   --rpg-deep-purple: #2D1B69;
 }
 
-/* Pixel font for RPG headings */
+/* Pixel font for RPG headings + utility class */
 [data-presentation][data-mode="mmorpg"] h1,
-[data-presentation][data-mode="mmorpg"] h2 {
+[data-presentation][data-mode="mmorpg"] h2,
+[data-presentation][data-mode="mmorpg"] .rpg-pixel {
   font-family: 'Press Start 2P', monospace;
 }
 

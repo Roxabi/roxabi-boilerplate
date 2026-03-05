@@ -23,11 +23,11 @@ export function RpgSectionChrome({ sectionId }: RpgSectionChromeProps) {
 
   return (
     <div className="absolute top-4 left-4 z-10 hidden md:flex items-center gap-3">
-      <span className={cn("font-['Press_Start_2P'] text-[8px] tracking-wider", colorClass)}>
+      <span className={cn('rpg-pixel text-[8px] tracking-wider', colorClass)}>
         {m.talk_ls_rpg_hud_zone()} {zone.zone}
       </span>
       {zone.xp > 0 && (
-        <span className="font-['Press_Start_2P'] text-[7px] text-[var(--rpg-gold)]/60">
+        <span className="rpg-pixel text-[7px] text-[var(--rpg-gold)]/60">
           +{zone.xp.toLocaleString()} XP
         </span>
       )}

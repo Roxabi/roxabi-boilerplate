@@ -181,17 +181,15 @@ function TheEcosystemSectionRpg() {
   return (
     <div className="relative mx-auto max-w-5xl w-full">
       <AnimatedSection className="text-center mb-10">
-        <h2 className="font-['Press_Start_2P'] text-xl lg:text-2xl text-[#FFD700] drop-shadow-[0_0_10px_rgba(255,215,0,0.5)] mb-3">
+        <h2 className="rpg-pixel text-xl lg:text-2xl text-[#FFD700] drop-shadow-[0_0_10px_rgba(255,215,0,0.5)] mb-3">
           {m.talk_ls_rpg_ecosystem_roster()}
         </h2>
         <div className="inline-flex items-center gap-3">
-          <span className="text-gray-400 font-['Press_Start_2P'] text-[9px]">
+          <span className="text-gray-400 rpg-pixel text-[9px]">
             {m.talk_ls_rpg_ecosystem_rank()}:
           </span>
-          <span className="font-['Press_Start_2P'] text-[9px] text-[#50C878]">
-            {m.talk_ls_ecosystem_repo6()}
-          </span>
-          <span className="rounded-full border border-[#FFD700]/40 bg-[#FFD700]/10 px-2 py-0.5 font-['Press_Start_2P'] text-[7px] text-[#FFD700]">
+          <span className="rpg-pixel text-[9px] text-[#50C878]">{m.talk_ls_ecosystem_repo6()}</span>
+          <span className="rounded-full border border-[#FFD700]/40 bg-[#FFD700]/10 px-2 py-0.5 rpg-pixel text-[7px] text-[#FFD700]">
             {m.talk_ls_rpg_ecosystem_members()}
           </span>
         </div>
@@ -205,7 +203,7 @@ function TheEcosystemSectionRpg() {
         >
           <Star className="h-5 w-5 text-[#FFD700] flex-shrink-0 fill-[#FFD700]/60" />
           <div className="min-w-0">
-            <p className="font-['Press_Start_2P'] text-[8px] text-[#FFD700]/60 uppercase tracking-widest mb-0.5">
+            <p className="rpg-pixel text-[8px] text-[#FFD700]/60 uppercase tracking-widest mb-0.5">
               GUILD MASTER
             </p>
             <p className="font-mono font-bold text-sm text-[#FFD700] truncate">

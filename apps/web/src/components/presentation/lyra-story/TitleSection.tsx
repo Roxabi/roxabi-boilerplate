@@ -47,13 +47,13 @@ function TitleSectionRpg() {
 
       <div className="relative space-y-8 py-4">
         <AnimatedSection>
-          <Badge className="border border-yellow-400/60 bg-yellow-500/20 text-yellow-300 tracking-widest uppercase text-[10px] font-['Press_Start_2P']">
+          <Badge className="border border-yellow-400/60 bg-yellow-500/20 text-yellow-300 tracking-widest uppercase text-[10px] rpg-pixel">
             {m.talk_ls_rpg_title_badge()}
           </Badge>
         </AnimatedSection>
 
         <AnimatedSection>
-          <h1 className="mx-auto max-w-4xl text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl font-['Press_Start_2P'] leading-tight">
+          <h1 className="mx-auto max-w-4xl text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl rpg-pixel leading-tight">
             <span className="bg-gradient-to-br from-yellow-300 via-amber-400 to-yellow-500 bg-clip-text text-transparent drop-shadow-[0_0_20px_rgba(255,215,0,0.5)]">
               {m.talk_ls_rpg_title_title()}
             </span>
@@ -80,7 +80,7 @@ function TitleSectionRpg() {
         </AnimatedSection>
 
         <AnimatedSection>
-          <p className="rpg-blink font-['Press_Start_2P'] text-[12px] tracking-[0.2em] text-[#FFD700] drop-shadow-[0_0_8px_rgba(255,215,0,0.5)] select-none">
+          <p className="rpg-blink rpg-pixel text-[12px] tracking-[0.2em] text-[#FFD700] drop-shadow-[0_0_8px_rgba(255,215,0,0.5)] select-none">
             {m.talk_ls_rpg_title_prompt()}
           </p>
         </AnimatedSection>

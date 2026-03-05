@@ -30,7 +30,7 @@ function TheNumbersSectionRpg() {
   return (
     <div className="relative mx-auto max-w-5xl w-full">
       <AnimatedSection className="text-center mb-12">
-        <h2 className="font-['Press_Start_2P'] text-xl lg:text-2xl text-[#FFD700] drop-shadow-[0_0_10px_rgba(255,215,0,0.5)]">
+        <h2 className="rpg-pixel text-xl lg:text-2xl text-[#FFD700] drop-shadow-[0_0_10px_rgba(255,215,0,0.5)]">
           {m.talk_ls_rpg_numbers_zone()}
         </h2>
       </AnimatedSection>
@@ -63,12 +63,7 @@ function TheNumbersSectionRpg() {
                   )}
                 </div>
               </div>
-              <p
-                className={cn(
-                  "font-['Press_Start_2P'] text-[7px] uppercase tracking-wider mt-2",
-                  style.text
-                )}
-              >
+              <p className={cn('rpg-pixel text-[7px] uppercase tracking-wider mt-2', style.text)}>
                 {stat.label}
               </p>
             </div>
@@ -78,7 +73,7 @@ function TheNumbersSectionRpg() {
 
       <AnimatedSection className="text-center">
         <div className="inline-block rounded-xl border border-[#FFD700]/40 bg-[#FFD700]/10 px-8 py-4">
-          <p className="font-['Press_Start_2P'] text-sm text-[#FFD700] drop-shadow-[0_0_10px_rgba(255,215,0,0.5)]">
+          <p className="rpg-pixel text-sm text-[#FFD700] drop-shadow-[0_0_10px_rgba(255,215,0,0.5)]">
             {m.talk_ls_rpg_numbers_rating()}
           </p>
         </div>

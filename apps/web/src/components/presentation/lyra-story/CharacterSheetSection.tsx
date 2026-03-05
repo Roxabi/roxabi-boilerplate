@@ -18,15 +18,8 @@ function ProgressBar({ level, max, color }: { level: number; max: number; color:
   )
 }
 
-function SkillsColumn({
-  skills,
-  visible,
-  isRpg,
-}: {
-  skills: SkillBar[]
-  visible: boolean
-  isRpg: boolean
-}) {
+function SkillsColumn({ skills, visible }: { skills: SkillBar[]; visible: boolean }) {
+  const { isRpg } = useLyraMode()
   return (
     <div className="px-6 py-5">
       <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-5">
@@ -187,7 +180,7 @@ export function CharacterSheetSection() {
               className={cn(
                 'text-2xl font-bold tracking-[0.3em] uppercase',
                 isRpg
-                  ? "font-['Press_Start_2P'] text-lg text-[#FFD700] drop-shadow-[0_0_10px_rgba(255,215,0,0.4)]"
+                  ? 'rpg-pixel text-lg text-[#FFD700] drop-shadow-[0_0_10px_rgba(255,215,0,0.4)]'
                   : 'bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-300 dark:to-purple-300 bg-clip-text text-transparent'
               )}
             >
@@ -200,7 +193,7 @@ export function CharacterSheetSection() {
 
           <div className="grid gap-0 md:grid-cols-2">
             <InfoColumn traits={traits} quests={quests} />
-            <SkillsColumn skills={skills} visible={visible} isRpg={isRpg} />
+            <SkillsColumn skills={skills} visible={visible} />
           </div>
         </div>
       </div>

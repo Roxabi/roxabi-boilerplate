@@ -17,7 +17,7 @@ function TheCharacterSectionRpg() {
       {/* Achievement banner */}
       <AnimatedSection className="text-center mb-10">
         <div className="inline-block rounded-2xl border-2 border-[#FFD700]/60 bg-gradient-to-br from-[#FFD700]/10 to-amber-900/20 px-8 py-5 shadow-[0_0_40px_rgba(255,215,0,0.2)] rpg-achievement">
-          <p className="font-['Press_Start_2P'] text-lg lg:text-xl text-[#FFD700] drop-shadow-[0_0_12px_rgba(255,215,0,0.6)]">
+          <p className="rpg-pixel text-lg lg:text-xl text-[#FFD700] drop-shadow-[0_0_12px_rgba(255,215,0,0.6)]">
             {m.talk_ls_rpg_character_zone()}
           </p>
         </div>
@@ -46,7 +46,7 @@ function TheCharacterSectionRpg() {
             </span>
             {/* Achievement badge */}
             <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 rounded-full border border-[#FFD700]/60 bg-gray-950 px-3 py-1">
-              <span className="font-['Press_Start_2P'] text-[7px] text-[#FFD700]">
+              <span className="rpg-pixel text-[7px] text-[#FFD700]">
                 {m.talk_ls_rpg_character_achievement()}
               </span>
             </div>
@@ -57,7 +57,7 @@ function TheCharacterSectionRpg() {
         <div className="space-y-4">
           <AnimatedSection>
             <div className="rounded-xl border border-[#FFD700]/30 bg-gray-950/60 px-5 py-4">
-              <p className="font-['Press_Start_2P'] text-[8px] text-[#FFD700]/60 mb-2 tracking-wider uppercase">
+              <p className="rpg-pixel text-[8px] text-[#FFD700]/60 mb-2 tracking-wider uppercase">
                 {m.talk_ls_character_personality_label()}
               </p>
               <p className="text-gray-200">{m.talk_ls_rpg_character_stat_personality()}</p>
@@ -65,7 +65,7 @@ function TheCharacterSectionRpg() {
           </AnimatedSection>
           <AnimatedSection>
             <div className="rounded-xl border border-[#FFD700]/30 bg-gray-950/60 px-5 py-4">
-              <p className="font-['Press_Start_2P'] text-[8px] text-[#FFD700]/60 mb-2 tracking-wider uppercase">
+              <p className="rpg-pixel text-[8px] text-[#FFD700]/60 mb-2 tracking-wider uppercase">
                 {m.talk_ls_character_voice_label()}
               </p>
               <p className="text-gray-200">{m.talk_ls_rpg_character_stat_voice()}</p>

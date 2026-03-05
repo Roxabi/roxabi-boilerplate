@@ -1,6 +1,6 @@
 import { PresentationNav } from '@repo/ui'
 import { createLazyFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { LocaleSwitcher } from '@/components/LocaleSwitcher'
 import { AwakeningDivider } from '@/components/presentation/lyra-story/AwakeningDivider'
 import { BreakingThingsSection } from '@/components/presentation/lyra-story/BreakingThingsSection'
@@ -87,44 +87,47 @@ function LyraStoryContent() {
     return () => observer.disconnect()
   }, [])
 
-  const sections = [
-    { id: 'title', label: isRpg ? m.talk_ls_rpg_nav_title() : m.talk_ls_nav_title() },
-    {
-      id: 'simple-idea',
-      label: isRpg ? m.talk_ls_rpg_nav_simple_idea() : m.talk_ls_nav_simple_idea(),
-    },
-    {
-      id: 'breaking-things',
-      label: isRpg ? m.talk_ls_rpg_nav_breaking() : m.talk_ls_nav_breaking(),
-    },
-    { id: 'building-habits', label: isRpg ? m.talk_ls_rpg_nav_habits() : m.talk_ls_nav_habits() },
-    { id: 'the-brain', label: isRpg ? m.talk_ls_rpg_nav_brain() : m.talk_ls_nav_brain() },
-    {
-      id: 'the-messenger',
-      label: isRpg ? m.talk_ls_rpg_nav_messenger() : m.talk_ls_nav_messenger(),
-    },
-    {
-      id: 'letting-go',
-      label: isRpg ? m.talk_ls_rpg_nav_letting_go() : m.talk_ls_nav_letting_go(),
-    },
-    { id: 'the-voice', label: isRpg ? m.talk_ls_rpg_nav_voice() : m.talk_ls_nav_voice() },
-    { id: 'the-night', label: isRpg ? m.talk_ls_rpg_nav_night() : m.talk_ls_nav_night() },
-    { id: 'finding-name', label: isRpg ? m.talk_ls_rpg_nav_name() : m.talk_ls_nav_name() },
-    {
-      id: 'the-character',
-      label: isRpg ? m.talk_ls_rpg_nav_character() : m.talk_ls_nav_character(),
-    },
-    {
-      id: 'the-ecosystem',
-      label: isRpg ? m.talk_ls_rpg_nav_ecosystem() : m.talk_ls_nav_ecosystem(),
-    },
-    { id: 'the-numbers', label: isRpg ? m.talk_ls_rpg_nav_numbers() : m.talk_ls_nav_numbers() },
-    { id: 'character-sheet', label: isRpg ? m.talk_ls_rpg_nav_sheet() : m.talk_ls_nav_sheet() },
-    { id: 'awakening', label: m.talk_ls_nav_awakening() },
-    { id: 'the-lesson', label: isRpg ? m.talk_ls_rpg_nav_lesson() : m.talk_ls_nav_lesson() },
-    { id: 'next-steps', label: isRpg ? m.talk_ls_rpg_nav_next() : m.talk_ls_nav_next() },
-    { id: 'closing', label: isRpg ? m.talk_ls_rpg_nav_closing() : m.talk_ls_nav_closing() },
-  ]
+  const sections = useMemo(
+    () => [
+      { id: 'title', label: isRpg ? m.talk_ls_rpg_nav_title() : m.talk_ls_nav_title() },
+      {
+        id: 'simple-idea',
+        label: isRpg ? m.talk_ls_rpg_nav_simple_idea() : m.talk_ls_nav_simple_idea(),
+      },
+      {
+        id: 'breaking-things',
+        label: isRpg ? m.talk_ls_rpg_nav_breaking() : m.talk_ls_nav_breaking(),
+      },
+      { id: 'building-habits', label: isRpg ? m.talk_ls_rpg_nav_habits() : m.talk_ls_nav_habits() },
+      { id: 'the-brain', label: isRpg ? m.talk_ls_rpg_nav_brain() : m.talk_ls_nav_brain() },
+      {
+        id: 'the-messenger',
+        label: isRpg ? m.talk_ls_rpg_nav_messenger() : m.talk_ls_nav_messenger(),
+      },
+      {
+        id: 'letting-go',
+        label: isRpg ? m.talk_ls_rpg_nav_letting_go() : m.talk_ls_nav_letting_go(),
+      },
+      { id: 'the-voice', label: isRpg ? m.talk_ls_rpg_nav_voice() : m.talk_ls_nav_voice() },
+      { id: 'the-night', label: isRpg ? m.talk_ls_rpg_nav_night() : m.talk_ls_nav_night() },
+      { id: 'finding-name', label: isRpg ? m.talk_ls_rpg_nav_name() : m.talk_ls_nav_name() },
+      {
+        id: 'the-character',
+        label: isRpg ? m.talk_ls_rpg_nav_character() : m.talk_ls_nav_character(),
+      },
+      {
+        id: 'the-ecosystem',
+        label: isRpg ? m.talk_ls_rpg_nav_ecosystem() : m.talk_ls_nav_ecosystem(),
+      },
+      { id: 'the-numbers', label: isRpg ? m.talk_ls_rpg_nav_numbers() : m.talk_ls_nav_numbers() },
+      { id: 'character-sheet', label: isRpg ? m.talk_ls_rpg_nav_sheet() : m.talk_ls_nav_sheet() },
+      { id: 'awakening', label: m.talk_ls_nav_awakening() },
+      { id: 'the-lesson', label: isRpg ? m.talk_ls_rpg_nav_lesson() : m.talk_ls_nav_lesson() },
+      { id: 'next-steps', label: isRpg ? m.talk_ls_rpg_nav_next() : m.talk_ls_nav_next() },
+      { id: 'closing', label: isRpg ? m.talk_ls_rpg_nav_closing() : m.talk_ls_nav_closing() },
+    ],
+    [isRpg]
+  )
 
   return (
     <div data-presentation data-mode={mode} className="relative bg-background text-foreground">

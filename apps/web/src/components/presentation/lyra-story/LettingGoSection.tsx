@@ -9,10 +9,10 @@ function LettingGoSectionRpg() {
     <div className="relative mx-auto max-w-5xl w-full">
       <div className="relative">
         <AnimatedSection>
-          <div className="mb-2 text-sm font-mono text-red-400 tracking-widest uppercase font-['Press_Start_2P'] text-[10px]">
+          <div className="mb-2 text-sm font-mono text-red-400 tracking-widest uppercase rpg-pixel text-[10px]">
             {m.talk_ls_rpg_letting_go_zone()}
           </div>
-          <h2 className="text-4xl font-bold tracking-tight lg:text-5xl mb-2 font-['Press_Start_2P'] leading-tight text-red-300">
+          <h2 className="text-4xl font-bold tracking-tight lg:text-5xl mb-2 rpg-pixel leading-tight text-red-300">
             QUEST LOG
           </h2>
         </AnimatedSection>
@@ -37,7 +37,7 @@ function LettingGoSectionRpg() {
               className="pointer-events-none absolute inset-0 flex items-center justify-center"
               aria-hidden="true"
             >
-              <span className="font-['Press_Start_2P'] text-3xl font-bold text-red-500/30 rotate-[-12deg] tracking-widest select-none border-4 border-red-500/25 px-4 py-2 drop-shadow-lg">
+              <span className="rpg-pixel text-3xl font-bold text-red-500/30 rotate-[-12deg] tracking-widest select-none border-4 border-red-500/25 px-4 py-2 drop-shadow-lg">
                 {m.talk_ls_rpg_letting_go_stamp()}
               </span>
             </div>

@@ -9,16 +9,14 @@ function BreakingThingsSectionRpg() {
     <div className="relative mx-auto max-w-5xl w-full">
       <div className="relative">
         <AnimatedSection>
-          <div className="mb-2 text-sm font-mono text-red-400 tracking-widest uppercase font-['Press_Start_2P'] text-[10px] rpg-zone-enter">
+          <div className="mb-2 text-sm font-mono text-red-400 tracking-widest uppercase rpg-pixel text-[10px] rpg-zone-enter">
             {m.talk_ls_rpg_breaking_zone()}
           </div>
-          <h2 className="text-4xl font-bold tracking-tight lg:text-5xl mb-2 font-['Press_Start_2P'] leading-tight text-red-300">
+          <h2 className="text-4xl font-bold tracking-tight lg:text-5xl mb-2 rpg-pixel leading-tight text-red-300">
             {m.talk_ls_rpg_breaking_warning()}
           </h2>
           <div className="mt-3 inline-block rounded border border-red-500/60 bg-red-500/15 px-3 py-1">
-            <span className="font-['Press_Start_2P'] text-[8px] text-red-400 rpg-blink">
-              ⚠ ZONE FAILED
-            </span>
+            <span className="rpg-pixel text-[8px] text-red-400 rpg-blink">⚠ ZONE FAILED</span>
           </div>
         </AnimatedSection>
 
@@ -32,14 +30,14 @@ function BreakingThingsSectionRpg() {
             <CardContent className="pt-6 pb-6">
               <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center sm:gap-10">
                 <div className="text-center">
-                  <p className="font-['Press_Start_2P'] text-2xl text-red-400">
+                  <p className="rpg-pixel text-2xl text-red-400">
                     {m.talk_ls_rpg_breaking_penalty()}
                   </p>
                   <p className="mt-1 text-xs text-red-400/60 uppercase tracking-widest">XP LOST</p>
                 </div>
                 <ArrowRight className="h-8 w-8 text-yellow-400/60 rotate-90 sm:rotate-0" />
                 <div className="text-center">
-                  <p className="font-['Press_Start_2P'] text-2xl text-yellow-300">
+                  <p className="rpg-pixel text-2xl text-yellow-300">
                     {m.talk_ls_rpg_breaking_recovery()}
                   </p>
                   <p className="mt-1 text-xs text-yellow-400/60 uppercase tracking-widest">
@@ -61,7 +59,7 @@ function BreakingThingsSectionRpg() {
             <CardContent className="pt-5 pb-5 flex items-center gap-3">
               <Zap className="h-5 w-5 text-emerald-400 flex-shrink-0" />
               <div>
-                <p className="font-['Press_Start_2P'] text-[10px] text-emerald-300 uppercase tracking-widest">
+                <p className="rpg-pixel text-[10px] text-emerald-300 uppercase tracking-widest">
                   SKILL UNLOCKED
                 </p>
                 <p className="mt-1 text-sm text-emerald-200/80">{m.talk_ls_rpg_breaking_skill()}</p>

@@ -14,10 +14,10 @@ function TheMessengerSectionRpg() {
     <div className="relative mx-auto max-w-5xl w-full">
       <div className="relative">
         <AnimatedSection>
-          <div className="mb-2 text-sm font-mono text-emerald-400 tracking-widest uppercase font-['Press_Start_2P'] text-[10px]">
+          <div className="mb-2 text-sm font-mono text-emerald-400 tracking-widest uppercase rpg-pixel text-[10px]">
             {m.talk_ls_rpg_messenger_zone()}
           </div>
-          <h2 className="text-4xl font-bold tracking-tight lg:text-5xl mb-2 font-['Press_Start_2P'] leading-tight text-emerald-300">
+          <h2 className="text-4xl font-bold tracking-tight lg:text-5xl mb-2 rpg-pixel leading-tight text-emerald-300">
             SUMMON: MESSENGER
           </h2>
         </AnimatedSection>

@@ -15,10 +15,10 @@ function SimpleIdeaSectionRpg() {
     <div className="relative mx-auto max-w-4xl w-full">
       <div className="relative">
         <AnimatedSection>
-          <div className="mb-2 text-sm font-mono text-yellow-400 tracking-widest uppercase font-['Press_Start_2P'] text-[10px]">
+          <div className="mb-2 text-sm font-mono text-yellow-400 tracking-widest uppercase rpg-pixel text-[10px]">
             {m.talk_ls_rpg_simple_zone()}
           </div>
-          <h2 className="text-4xl font-bold tracking-tight lg:text-5xl mb-4 font-['Press_Start_2P'] leading-tight text-yellow-300">
+          <h2 className="text-4xl font-bold tracking-tight lg:text-5xl mb-4 rpg-pixel leading-tight text-yellow-300">
             {m.talk_ls_rpg_simple_title()}
           </h2>
         </AnimatedSection>
@@ -36,7 +36,7 @@ function SimpleIdeaSectionRpg() {
                     <div className="h-4 w-4 rounded-sm bg-yellow-400/60" />
                   </div>
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-yellow-400/80 font-['Press_Start_2P'] text-[9px]">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-yellow-400/80 rpg-pixel text-[9px]">
                       {field.label}
                     </p>
                     <p className="mt-0.5 font-mono text-sm text-yellow-100/90">{field.value}</p>

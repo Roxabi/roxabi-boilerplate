@@ -168,7 +168,7 @@ function TheBrainSectionRpg() {
     <div className="relative mx-auto max-w-4xl w-full">
       <div className="relative">
         <AnimatedSection>
-          <div className="mb-2 text-sm font-mono text-yellow-400 tracking-widest uppercase font-['Press_Start_2P'] text-[10px]">
+          <div className="mb-2 text-sm font-mono text-yellow-400 tracking-widest uppercase rpg-pixel text-[10px]">
             {m.talk_ls_rpg_brain_zone()}
           </div>
         </AnimatedSection>
@@ -207,7 +207,7 @@ function TheBrainSectionRpg() {
             >
               <CardContent className="pt-8 pb-8 text-center space-y-4">
                 {/* Legendary badge */}
-                <Badge className="border border-yellow-400/60 bg-yellow-500/20 text-yellow-300 font-['Press_Start_2P'] text-[9px] tracking-widest">
+                <Badge className="border border-yellow-400/60 bg-yellow-500/20 text-yellow-300 rpg-pixel text-[9px] tracking-widest">
                   {m.talk_ls_rpg_brain_rarity()}
                 </Badge>
 
@@ -221,7 +221,7 @@ function TheBrainSectionRpg() {
 
                 {/* Item name */}
                 <h2
-                  className="text-2xl font-bold font-['Press_Start_2P'] text-yellow-300 leading-tight"
+                  className="text-2xl font-bold rpg-pixel text-yellow-300 leading-tight"
                   style={{
                     textShadow: '0 0 12px rgba(255,215,0,0.6), 0 0 24px rgba(255,215,0,0.3)',
                   }}

@@ -84,10 +84,10 @@ function BuildingHabitsSectionRpg() {
     <div className="relative mx-auto max-w-5xl w-full">
       <div className="relative">
         <AnimatedSection>
-          <div className="mb-2 text-sm font-mono text-emerald-400 tracking-widest uppercase font-['Press_Start_2P'] text-[10px]">
+          <div className="mb-2 text-sm font-mono text-emerald-400 tracking-widest uppercase rpg-pixel text-[10px]">
             {m.talk_ls_rpg_habits_zone()}
           </div>
-          <h2 className="text-4xl font-bold tracking-tight lg:text-5xl mb-2 font-['Press_Start_2P'] leading-tight text-emerald-300">
+          <h2 className="text-4xl font-bold tracking-tight lg:text-5xl mb-2 rpg-pixel leading-tight text-emerald-300">
             FIRST SKILLS UNLOCKED
           </h2>
         </AnimatedSection>
@@ -117,7 +117,7 @@ function BuildingHabitsSectionRpg() {
                     <p className="font-mono text-xs font-bold text-emerald-200 text-center max-w-[100px]">
                       {node.name}
                     </p>
-                    <Badge className="border border-emerald-500/40 bg-emerald-500/15 text-emerald-300 text-[9px] font-['Press_Start_2P']">
+                    <Badge className="border border-emerald-500/40 bg-emerald-500/15 text-emerald-300 text-[9px] rpg-pixel">
                       {node.label}
                     </Badge>
                   </div>
@@ -151,7 +151,7 @@ function BuildingHabitsSectionRpg() {
                 <GitMerge className="h-5 w-5 text-emerald-400" />
               </div>
               <div>
-                <p className="font-['Press_Start_2P'] text-[10px] text-emerald-300 uppercase tracking-widest">
+                <p className="rpg-pixel text-[10px] text-emerald-300 uppercase tracking-widest">
                   PASSIVE SKILL
                 </p>
                 <p className="mt-1 text-muted-foreground text-sm">
@@ -163,7 +163,7 @@ function BuildingHabitsSectionRpg() {
         </AnimatedSection>
 
         <AnimatedSection className="mt-6">
-          <Badge className="bg-emerald-500/15 text-emerald-300 border-emerald-500/30 font-['Press_Start_2P'] text-[9px]">
+          <Badge className="bg-emerald-500/15 text-emerald-300 border-emerald-500/30 rpg-pixel text-[9px]">
             {m.talk_ls_rpg_habits_xp()}
           </Badge>
         </AnimatedSection>

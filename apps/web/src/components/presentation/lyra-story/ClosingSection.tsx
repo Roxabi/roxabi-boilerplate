@@ -23,7 +23,7 @@ function ClosingSectionRpg() {
             ref={ref}
             className="rounded-2xl border-2 border-[#FFD700]/50 bg-gray-950/90 mx-auto max-w-sm px-8 py-8 shadow-[0_0_40px_rgba(255,215,0,0.15)]"
           >
-            <p className="font-['Press_Start_2P'] text-[10px] text-gray-400 mb-6 tracking-wider">
+            <p className="rpg-pixel text-[10px] text-gray-400 mb-6 tracking-wider">
               {m.talk_ls_rpg_closing_slot()}
             </p>
 
@@ -40,20 +40,20 @@ function ClosingSectionRpg() {
             {/* Save text sequence */}
             <div className="space-y-2 mb-6">
               <p
-                className="font-['Press_Start_2P'] text-[9px] text-gray-400 transition-opacity duration-500"
+                className="rpg-pixel text-[9px] text-gray-400 transition-opacity duration-500"
                 style={{ opacity: visible ? 1 : 0 }}
               >
                 {m.talk_ls_rpg_closing_saving()}
               </p>
               <p
-                className="font-['Press_Start_2P'] text-[10px] text-[#50C878] drop-shadow-[0_0_8px_rgba(80,200,120,0.4)] transition-opacity duration-700 rpg-achievement"
+                className="rpg-pixel text-[10px] text-[#50C878] drop-shadow-[0_0_8px_rgba(80,200,120,0.4)] transition-opacity duration-700 rpg-achievement"
                 style={{ opacity: visible ? 1 : 0, transitionDelay: visible ? '2200ms' : '0ms' }}
               >
                 {m.talk_ls_rpg_closing_complete()}
               </p>
             </div>
 
-            <p className="font-['Press_Start_2P'] text-[9px] text-[#FFD700]/70 rpg-blink">
+            <p className="rpg-pixel text-[9px] text-[#FFD700]/70 rpg-blink">
               {m.talk_ls_rpg_closing_continue()}
             </p>
           </div>

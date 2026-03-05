@@ -163,7 +163,7 @@ function NextStepsSectionRpg() {
   return (
     <div className="relative mx-auto max-w-5xl w-full">
       <AnimatedSection className="mb-10">
-        <h2 className="font-['Press_Start_2P'] text-xl lg:text-2xl text-[#FFD700] drop-shadow-[0_0_10px_rgba(255,215,0,0.5)] mb-2 rpg-zone-enter">
+        <h2 className="rpg-pixel text-xl lg:text-2xl text-[#FFD700] drop-shadow-[0_0_10px_rgba(255,215,0,0.5)] mb-2 rpg-zone-enter">
           {m.talk_ls_rpg_next_zone()}
         </h2>
         <p className="text-lg text-muted-foreground">{m.talk_ls_next_subtitle()}</p>
@@ -185,11 +185,11 @@ function NextStepsSectionRpg() {
                 <div className="rounded-xl border border-[#FFD700]/30 bg-[#FFD700]/10 p-3">
                   {quest.icon}
                 </div>
-                <h3 className="font-['Press_Start_2P'] text-[9px] text-[#FFD700] leading-relaxed">
+                <h3 className="rpg-pixel text-[9px] text-[#FFD700] leading-relaxed">
                   {quest.title}
                 </h3>
               </div>
-              <span className="font-['Press_Start_2P'] text-[7px] text-[#50C878] border border-[#50C878]/40 rounded px-2 py-1 rpg-achievement">
+              <span className="rpg-pixel text-[7px] text-[#50C878] border border-[#50C878]/40 rounded px-2 py-1 rpg-achievement">
                 AVAILABLE
               </span>
             </div>

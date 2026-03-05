@@ -110,7 +110,7 @@ function TheNightSectionRpg() {
   return (
     <div className="relative mx-auto max-w-5xl w-full">
       <AnimatedSection>
-        <h2 className="font-['Press_Start_2P'] text-xl lg:text-2xl text-[#DC143C] mb-8 text-center drop-shadow-[0_0_10px_rgba(220,20,60,0.5)] rpg-zone-enter">
+        <h2 className="rpg-pixel text-xl lg:text-2xl text-[#DC143C] mb-8 text-center drop-shadow-[0_0_10px_rgba(220,20,60,0.5)] rpg-zone-enter">
           {m.talk_ls_rpg_night_zone()}
         </h2>
       </AnimatedSection>
@@ -119,10 +119,10 @@ function TheNightSectionRpg() {
       <AnimatedSection className="mb-10">
         <div className="rounded-xl border border-[#DC143C]/40 bg-gray-950/80 px-6 py-5">
           <div className="flex items-center justify-between mb-3">
-            <span className="font-['Press_Start_2P'] text-[10px] text-[#DC143C]">
+            <span className="rpg-pixel text-[10px] text-[#DC143C]">
               {m.talk_ls_rpg_night_boss_name()}
             </span>
-            <span className="font-['Press_Start_2P'] text-[9px] text-gray-400">
+            <span className="rpg-pixel text-[9px] text-gray-400">
               {m.talk_ls_rpg_night_boss_hp()}
             </span>
           </div>
@@ -150,7 +150,7 @@ function TheNightSectionRpg() {
             <span className="text-gray-200 font-semibold">{phase.label}</span>
             <div className="flex items-center gap-3 ml-4 flex-shrink-0">
               <span
-                className="font-['Press_Start_2P'] text-[9px] text-[#DC143C] transition-opacity duration-500"
+                className="rpg-pixel text-[9px] text-[#DC143C] transition-opacity duration-500"
                 style={{
                   opacity: visible ? 1 : 0,
                   transitionDelay: visible ? `${index * 150 + 400}ms` : '0ms',
@@ -158,9 +158,7 @@ function TheNightSectionRpg() {
               >
                 {phase.number}
               </span>
-              <span className="font-['Press_Start_2P'] text-[9px] text-[#DC143C]">
-                {phase.damage}
-              </span>
+              <span className="rpg-pixel text-[9px] text-[#DC143C]">{phase.damage}</span>
             </div>
           </div>
         ))}
@@ -168,12 +166,10 @@ function TheNightSectionRpg() {
 
       {/* Victory */}
       <AnimatedSection className="text-center space-y-3">
-        <p className="font-['Press_Start_2P'] text-lg text-[#FFD700] drop-shadow-[0_0_12px_rgba(255,215,0,0.6)] animate-pulse">
+        <p className="rpg-pixel text-lg text-[#FFD700] drop-shadow-[0_0_12px_rgba(255,215,0,0.6)] animate-pulse">
           {m.talk_ls_rpg_night_victory()}
         </p>
-        <p className="font-['Press_Start_2P'] text-[10px] text-[#50C878]">
-          {m.talk_ls_rpg_night_loot()}
-        </p>
+        <p className="rpg-pixel text-[10px] text-[#50C878]">{m.talk_ls_rpg_night_loot()}</p>
       </AnimatedSection>
     </div>
   )

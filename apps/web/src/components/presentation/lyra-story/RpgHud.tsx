@@ -18,17 +18,17 @@ export function RpgHud({ currentSectionIndex, totalSections }: RpgHudProps) {
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 pt-16 pb-2">
         {/* Character name + level */}
         <div className="flex items-center gap-3">
-          <span className="font-['Press_Start_2P'] text-[10px] text-[var(--rpg-gold)]">
+          <span className="rpg-pixel text-[10px] text-[var(--rpg-gold)]">
             {m.talk_ls_rpg_hud_name()}
           </span>
-          <span className="font-['Press_Start_2P'] text-[8px] text-[var(--rpg-gold)]/70">
+          <span className="rpg-pixel text-[8px] text-[var(--rpg-gold)]/70">
             {m.talk_ls_rpg_hud_level()} {currentSectionIndex + 1}
           </span>
         </div>
 
         {/* XP bar */}
         <div className="flex items-center gap-2">
-          <span className="font-['Press_Start_2P'] text-[8px] text-[var(--rpg-gold)]/70">
+          <span className="rpg-pixel text-[8px] text-[var(--rpg-gold)]/70">
             {m.talk_ls_rpg_hud_xp()}
           </span>
           <div className="h-2 w-32 rounded-full bg-white/10 overflow-hidden">
@@ -43,7 +43,7 @@ export function RpgHud({ currentSectionIndex, totalSections }: RpgHudProps) {
       {/* Bottom-left HP/Mana */}
       <div className="fixed bottom-6 left-6 z-40 hidden md:flex flex-col gap-1.5">
         <div className="flex items-center gap-2">
-          <span className="font-['Press_Start_2P'] text-[7px] text-[var(--rpg-crimson)] w-8">
+          <span className="rpg-pixel text-[7px] text-[var(--rpg-crimson)] w-8">
             {m.talk_ls_rpg_hud_hp()}
           </span>
           <div className="h-1.5 w-20 rounded-full bg-white/10 overflow-hidden">
@@ -51,9 +51,7 @@ export function RpgHud({ currentSectionIndex, totalSections }: RpgHudProps) {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="font-['Press_Start_2P'] text-[7px] text-blue-400 w-8">
-            {m.talk_ls_rpg_hud_mana()}
-          </span>
+          <span className="rpg-pixel text-[7px] text-blue-400 w-8">{m.talk_ls_rpg_hud_mana()}</span>
           <div className="h-1.5 w-20 rounded-full bg-white/10 overflow-hidden">
             <div
               className="h-full rounded-full bg-gradient-to-r from-blue-600 to-purple-500 transition-all duration-700"

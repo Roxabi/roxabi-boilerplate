@@ -9,7 +9,7 @@ function TheLessonSectionRpg() {
     <div className="relative mx-auto flex w-full max-w-5xl flex-col items-center justify-center text-center">
       <AnimatedSection>
         <div className="inline-block rounded-2xl border-2 border-[#FFD700]/60 bg-gray-950/80 px-10 py-8 shadow-[0_0_50px_rgba(255,215,0,0.2)] rpg-achievement max-w-lg w-full">
-          <p className="font-['Press_Start_2P'] text-[9px] text-gray-400 mb-5 tracking-wider">
+          <p className="rpg-pixel text-[9px] text-gray-400 mb-5 tracking-wider">
             {m.talk_ls_rpg_lesson_title()}
           </p>
 
@@ -19,7 +19,7 @@ function TheLessonSectionRpg() {
             </div>
           </div>
 
-          <p className="font-['Press_Start_2P'] text-sm text-[#FFD700] mb-4 drop-shadow-[0_0_10px_rgba(255,215,0,0.5)]">
+          <p className="rpg-pixel text-sm text-[#FFD700] mb-4 drop-shadow-[0_0_10px_rgba(255,215,0,0.5)]">
             {m.talk_ls_rpg_lesson_name()}
           </p>
 

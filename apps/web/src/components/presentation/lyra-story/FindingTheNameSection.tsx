@@ -160,21 +160,21 @@ function FindingTheNameSectionRpg() {
       className="relative mx-auto max-w-5xl w-full flex flex-col items-center justify-center"
     >
       <AnimatedSection className="text-center mb-10">
-        <h2 className="font-['Press_Start_2P'] text-xl lg:text-2xl text-[#FFD700] drop-shadow-[0_0_10px_rgba(255,215,0,0.5)]">
+        <h2 className="rpg-pixel text-xl lg:text-2xl text-[#FFD700] drop-shadow-[0_0_10px_rgba(255,215,0,0.5)]">
           {m.talk_ls_rpg_name_zone()}
         </h2>
       </AnimatedSection>
 
       <AnimatedSection>
         <div className="rounded-2xl border-2 border-[#FFD700]/50 bg-gray-950/90 px-10 py-10 text-center max-w-md w-full shadow-[0_0_40px_rgba(255,215,0,0.15)]">
-          <p className="font-['Press_Start_2P'] text-[10px] text-gray-400 mb-6 tracking-wider">
+          <p className="rpg-pixel text-[10px] text-gray-400 mb-6 tracking-wider">
             {m.talk_ls_rpg_name_prompt()}
           </p>
 
           {/* Mock input showing LYRA — letter-by-letter typewriter */}
           <div className="rounded-lg border border-[#FFD700]/40 bg-black/60 px-6 py-4 mb-6 flex items-center justify-center gap-2">
             <span
-              className="font-['Press_Start_2P'] text-xl text-[#FFD700] tracking-[0.3em] inline-block overflow-hidden whitespace-nowrap border-r-2 border-[#FFD700]"
+              className="rpg-pixel text-xl text-[#FFD700] tracking-[0.3em] inline-block overflow-hidden whitespace-nowrap border-r-2 border-[#FFD700]"
               style={{
                 textShadow: '0 0 20px rgba(255,215,0,0.6)',
                 width: visible ? '4ch' : '0',
@@ -189,12 +189,12 @@ function FindingTheNameSectionRpg() {
             />
           </div>
 
-          <p className="font-['Press_Start_2P'] text-[9px] text-gray-400 mb-6 rpg-blink">
+          <p className="rpg-pixel text-[9px] text-gray-400 mb-6 rpg-blink">
             {m.talk_ls_rpg_name_confirm()}
           </p>
 
           <p
-            className="font-['Press_Start_2P'] text-[10px] text-[#50C878] drop-shadow-[0_0_8px_rgba(80,200,120,0.5)] transition-opacity duration-700"
+            className="rpg-pixel text-[10px] text-[#50C878] drop-shadow-[0_0_8px_rgba(80,200,120,0.5)] transition-opacity duration-700"
             style={{ opacity: visible ? 1 : 0, transitionDelay: visible ? '2s' : '0ms' }}
           >
             {m.talk_ls_rpg_name_confirmed()}

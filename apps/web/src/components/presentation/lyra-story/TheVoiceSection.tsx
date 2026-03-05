@@ -15,10 +15,10 @@ function TheVoiceSectionRpg() {
     <div className="relative mx-auto max-w-5xl w-full">
       <div className="relative">
         <AnimatedSection>
-          <div className="mb-2 text-sm font-mono text-amber-400 tracking-widest uppercase font-['Press_Start_2P'] text-[10px] rpg-zone-enter">
+          <div className="mb-2 text-sm font-mono text-amber-400 tracking-widest uppercase rpg-pixel text-[10px] rpg-zone-enter">
             {m.talk_ls_rpg_voice_zone()}
           </div>
-          <h2 className="text-4xl font-bold tracking-tight lg:text-5xl mb-2 font-['Press_Start_2P'] leading-tight text-amber-300">
+          <h2 className="text-4xl font-bold tracking-tight lg:text-5xl mb-2 rpg-pixel leading-tight text-amber-300">
             CRAFTING BENCH
           </h2>
         </AnimatedSection>
@@ -59,10 +59,10 @@ function TheVoiceSectionRpg() {
               }}
             >
               <CardContent className="pt-6 pb-6 text-center space-y-3">
-                <Badge className="border border-yellow-400/50 bg-yellow-500/15 text-yellow-300 font-['Press_Start_2P'] text-[9px]">
+                <Badge className="border border-yellow-400/50 bg-yellow-500/15 text-yellow-300 rpg-pixel text-[9px]">
                   CRAFTED
                 </Badge>
-                <p className="font-['Press_Start_2P'] text-sm text-yellow-300 leading-tight">
+                <p className="rpg-pixel text-sm text-yellow-300 leading-tight">
                   {m.talk_ls_rpg_voice_result()}
                 </p>
                 <div
