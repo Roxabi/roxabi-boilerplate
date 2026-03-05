@@ -170,6 +170,7 @@ describe('UserPurgeService', () => {
           emailVerified: false,
           avatarSeed: null,
           avatarStyle: null,
+          avatarOptions: {},
           updatedAt: now,
         })
       )
