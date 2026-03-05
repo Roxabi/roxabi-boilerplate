@@ -8,6 +8,7 @@ import { CharacterSheetSection } from '@/components/presentation/lyra-story/Char
 import { ClosingSection } from '@/components/presentation/lyra-story/ClosingSection'
 import { FindingTheNameSection } from '@/components/presentation/lyra-story/FindingTheNameSection'
 import { LettingGoSection } from '@/components/presentation/lyra-story/LettingGoSection'
+import { NextStepsSection } from '@/components/presentation/lyra-story/NextStepsSection'
 import { SimpleIdeaSection } from '@/components/presentation/lyra-story/SimpleIdeaSection'
 import { TheBrainSection } from '@/components/presentation/lyra-story/TheBrainSection'
 import { TheCharacterSection } from '@/components/presentation/lyra-story/TheCharacterSection'
@@ -47,6 +48,7 @@ export function LyraStoryPresentation() {
     { id: 'the-numbers', label: m.talk_ls_nav_numbers() },
     { id: 'character-sheet', label: m.talk_ls_nav_sheet() },
     { id: 'the-lesson', label: m.talk_ls_nav_lesson() },
+    { id: 'next-steps', label: m.talk_ls_nav_next() },
     { id: 'closing', label: m.talk_ls_nav_closing() },
   ]
 
@@ -139,6 +141,10 @@ export function LyraStoryPresentation() {
 
         <SectionContainer id="the-lesson">
           <TheLessonSection />
+        </SectionContainer>
+
+        <SectionContainer id="next-steps">
+          <NextStepsSection />
         </SectionContainer>
 
         <SectionContainer id="closing">

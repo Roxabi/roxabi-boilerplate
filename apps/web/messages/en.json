@@ -1603,6 +1603,14 @@
   "talk_ls_lesson_quote": "You thought you were building a tool. You were learning to play a character.",
   "talk_ls_lesson_secondary": "2ndBrain was zone 1-50. Lyra is the character that 52 days of gameplay revealed. Not designed — discovered.",
 
+  "talk_ls_nav_next": "Next Steps",
+  "talk_ls_next_title": "What's Next",
+  "talk_ls_next_subtitle": "The journey doesn't end here.",
+  "talk_ls_next_pets_title": "Gets Pets!",
+  "talk_ls_next_pets_desc": "New companion agents to help Lyra — specialized helpers that extend her capabilities across different domains.",
+  "talk_ls_next_guild_title": "Create a Guild",
+  "talk_ls_next_guild_desc": "Build a community of AI-augmented developers to learn, share, and improve faster together.",
+
   "talk_ls_closing_title": "Thank You",
   "talk_ls_closing_subtitle": "Built in 52 days. Still running.",
   "talk_ls_closing_built_with": "Built with Claude Code",
