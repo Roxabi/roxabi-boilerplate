@@ -1,5 +1,10 @@
 # Roxabi Boilerplate
 
+![Bun](https://img.shields.io/badge/Bun-runtime-FBF0DF?logo=bun&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
+![TurboRepo](https://img.shields.io/badge/TurboRepo-monorepo-0ea5e9)
+![Biome](https://img.shields.io/badge/Biome-linter-60a5fa)
+
 SaaS boilerplate with AI team integration.
 
 <!-- TODO: Add demo GIF once seed data is ready — see scripts/record-demo.ts -->
@@ -68,4 +73,21 @@ GitHub Issue → Branch → Implement → PR → Review → Merge
 
 ## Documentation
 
-See [docs/index.mdx](docs/index.mdx) for full documentation.
+| Doc | Description |
+|-----|-------------|
+| [docs/index.mdx](docs/index.mdx) | Documentation home |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute |
+| [docs/getting-started.mdx](docs/getting-started.mdx) | Getting started guide |
+| [docs/configuration.mdx](docs/configuration.mdx) | Configuration reference |
+| [docs/contributing.mdx](docs/contributing.mdx) | Contributing guidelines (detailed) |
+| [docs/hooks.mdx](docs/hooks.mdx) | Git hooks & CI hooks |
+| [docs/architecture/](docs/architecture/) | Architecture decisions & diagrams |
+| [docs/standards/](docs/standards/) | Coding standards (FE, BE, testing, code review) |
+| [docs/guides/](docs/guides/) | Guides (auth, deployment, i18n, security, etc.) |
+| [docs/processes/](docs/processes/) | Dev process & issue management |
+| [docs/product/](docs/product/) | Product vision & strategy |
+| [docs/changelog/](docs/changelog/) | Release changelog |
+
+## License
+
+MIT
