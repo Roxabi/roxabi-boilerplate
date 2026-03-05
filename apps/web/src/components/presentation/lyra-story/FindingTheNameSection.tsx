@@ -21,7 +21,7 @@ function SoleneCard({ visible }: { visible: boolean }) {
           <X className="h-24 w-24 text-red-400/20 dark:text-red-400/25" />
         </div>
         <CardContent className="pt-6 pb-6 relative">
-          <p className="text-4xl font-bold text-muted-foreground/35 line-through decoration-red-400/50 mb-3">
+          <p className="text-4xl font-bold text-muted-foreground/50 line-through decoration-red-400/50 mb-3">
             {m.talk_ls_name_solene_label()}
           </p>
           <p className="text-sm text-muted-foreground/50">{m.talk_ls_name_solene_desc()}</p>
@@ -96,12 +96,12 @@ function LyraCard({ visible }: { visible: boolean }) {
             <p
               className="text-4xl font-bold tracking-[0.25em] uppercase"
               style={{
-                background: 'linear-gradient(135deg, #60a5fa 0%, #ffffff 50%, #a78bfa 100%)',
+                background: 'linear-gradient(135deg, #60a5fa 0%, #c4b5fd 50%, #a78bfa 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text',
                 filter:
-                  'drop-shadow(0 0 20px rgba(45,127,249,0.6)) drop-shadow(0 0 40px rgba(139,92,246,0.4))',
+                  'drop-shadow(0 0 20px rgba(45,127,249,0.4)) drop-shadow(0 0 40px rgba(139,92,246,0.3))',
               }}
             >
               {m.talk_ls_name_glow()}
@@ -121,18 +121,18 @@ function AliasBlock() {
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
           {m.talk_ls_name_alias_label()}
         </p>
-        <div className="rounded-lg bg-black/40 dark:bg-black/70 overflow-hidden border border-white/5">
-          <div className="flex items-center gap-1.5 px-3 py-2 border-b border-white/5 bg-white/3">
+        <div className="rounded-lg bg-gray-900 dark:bg-black/70 overflow-hidden border border-gray-800 dark:border-white/5">
+          <div className="flex items-center gap-1.5 px-3 py-2 border-b border-gray-700 dark:border-white/5 bg-gray-800/50 dark:bg-white/3">
             <div className="h-2.5 w-2.5 rounded-full bg-red-500/60" />
             <div className="h-2.5 w-2.5 rounded-full bg-yellow-500/60" />
             <div className="h-2.5 w-2.5 rounded-full bg-green-500/60" />
-            <span className="ml-2 text-[10px] text-white/20 font-mono tracking-widest">
+            <span className="ml-2 text-[10px] text-gray-500 dark:text-white/20 font-mono tracking-widest">
               ~/.aliases
             </span>
           </div>
           <pre className="font-mono text-sm text-blue-400 dark:text-blue-300 px-4 py-3 overflow-x-auto">
             <code>
-              <span className="text-white/30 select-none">$ </span>
+              <span className="text-gray-500 dark:text-white/30 select-none">$ </span>
               {m.talk_ls_name_alias_code()}
               <span
                 className="inline-block w-[2px] h-[1em] bg-blue-400/70 dark:bg-blue-300/70 ml-0.5 align-middle animate-pulse"

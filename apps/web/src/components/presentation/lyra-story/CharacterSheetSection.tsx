@@ -158,9 +158,10 @@ export function CharacterSheetSection() {
             'rounded-2xl border-2 overflow-hidden transition-all duration-700',
             visible ? 'opacity-100 scale-100' : 'opacity-0 scale-95',
             'border-blue-500/30 dark:border-blue-500/40',
-            'bg-gradient-to-br from-background via-blue-950/10 to-purple-950/10',
+            'bg-gradient-to-br from-background via-blue-100/40 to-purple-100/40',
             'dark:from-gray-950 dark:via-blue-950/20 dark:to-purple-950/15',
-            'shadow-[0_0_60px_-10px_rgba(45,127,249,0.15),0_0_120px_-20px_rgba(139,92,246,0.1)]'
+            'shadow-[0_0_60px_-10px_rgba(45,127,249,0.08),0_0_120px_-20px_rgba(139,92,246,0.05)]',
+            'dark:shadow-[0_0_60px_-10px_rgba(45,127,249,0.15),0_0_120px_-20px_rgba(139,92,246,0.1)]'
           )}
         >
           <div className="border-b border-blue-500/20 bg-gradient-to-r from-blue-500/10 to-purple-500/10 px-6 py-5 text-center">

@@ -28,7 +28,7 @@ function TimelineRow({
         <span
           className={cn(
             'font-mono text-sm tabular-nums',
-            isKey ? 'text-blue-600 dark:text-blue-300 font-bold' : 'text-muted-foreground/60'
+            isKey ? 'text-blue-300 font-bold' : 'text-gray-500'
           )}
         >
           {time}
@@ -42,14 +42,14 @@ function TimelineRow({
             'h-3 w-3 rounded-full border-2 flex-shrink-0',
             isKey
               ? 'border-blue-400 bg-blue-400/30 shadow-[0_0_12px_3px_rgba(96,165,250,0.4)] animate-pulse'
-              : 'border-border bg-background'
+              : 'border-gray-600 bg-gray-800'
           )}
           style={isKey ? { animationDuration: '2.5s' } : undefined}
         />
         <div
           className={cn(
             'flex-1 w-px mt-1',
-            isKey ? 'bg-gradient-to-b from-blue-400/30 to-border/40' : 'bg-border/40'
+            isKey ? 'bg-gradient-to-b from-blue-400/30 to-gray-700/40' : 'bg-gray-700/40'
           )}
         />
       </div>
@@ -59,7 +59,7 @@ function TimelineRow({
         <p
           className={cn(
             'text-sm leading-relaxed',
-            isKey ? 'text-foreground font-medium' : 'text-muted-foreground'
+            isKey ? 'text-gray-100 font-medium' : 'text-gray-400'
           )}
         >
           {event}
@@ -111,22 +111,10 @@ export function TheNightSection() {
 
   return (
     <div className="relative mx-auto max-w-5xl w-full">
-      {/* Dark night-to-day atmospheric gradient */}
-      <div
-        className="pointer-events-none absolute inset-0 overflow-hidden"
-        style={{
-          mask: 'linear-gradient(to bottom, transparent, black 12%, black 88%, transparent)',
-          WebkitMask: 'linear-gradient(to bottom, transparent, black 12%, black 88%, transparent)',
-        }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0D0D0D]/40 via-blue-950/20 to-purple-950/15 dark:from-[#0D0D0D]/65 dark:via-blue-950/35 dark:to-purple-950/25" />
-        <div className="absolute left-1/3 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/6 blur-[150px] dark:bg-blue-500/15" />
-        <div className="absolute right-0 bottom-0 h-[300px] w-[300px] translate-x-1/4 translate-y-1/4 rounded-full bg-purple-500/7 blur-[100px] dark:bg-purple-500/18" />
-        {/* Probability dots floating in the night */}
-        <ProbabilityDots />
-      </div>
-
       <div className="relative">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <ProbabilityDots />
+        </div>
         <AnimatedSection>
           <div className="flex flex-wrap items-start justify-between gap-4 mb-2">
             <h2 className="text-4xl font-bold tracking-tight lg:text-5xl">
@@ -136,7 +124,7 @@ export function TheNightSection() {
               {m.talk_ls_night_date()}
             </Badge>
           </div>
-          <p className="text-muted-foreground font-mono text-sm">{m.talk_ls_night_stats()}</p>
+          <p className="text-gray-400 font-mono text-sm">{m.talk_ls_night_stats()}</p>
         </AnimatedSection>
 
         {/* Timeline */}
@@ -149,9 +137,7 @@ export function TheNightSection() {
 
         <AnimatedSection className="mt-4">
           <div className="rounded-xl border border-blue-500/30 bg-gradient-to-r from-blue-500/10 to-purple-500/10 px-6 py-5">
-            <p className="text-center italic text-muted-foreground lg:text-lg">
-              {m.talk_ls_night_peak()}
-            </p>
+            <p className="text-center italic text-gray-300 lg:text-lg">{m.talk_ls_night_peak()}</p>
           </div>
         </AnimatedSection>
       </div>

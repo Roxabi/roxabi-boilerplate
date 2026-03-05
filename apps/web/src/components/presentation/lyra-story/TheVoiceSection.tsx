@@ -71,7 +71,7 @@ export function TheVoiceSection() {
                     : 'border-yellow-500/20 bg-yellow-500/5'
               )}
             >
-              <CardContent className="pt-5 space-y-2">
+              <CardContent className="pt-5 pb-5 space-y-2">
                 <div className="flex items-center gap-2">
                   {system.icon}
                   <p

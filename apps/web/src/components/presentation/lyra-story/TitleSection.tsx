@@ -22,7 +22,13 @@ export function TitleSection() {
       </div>
 
       {/* Outer atmospheric radial glow */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      <div
+        className="pointer-events-none absolute inset-0 overflow-hidden"
+        style={{
+          mask: 'radial-gradient(ellipse at center, black 40%, transparent 75%)',
+          WebkitMask: 'radial-gradient(ellipse at center, black 40%, transparent 75%)',
+        }}
+      >
         <div className="absolute left-1/2 top-1/2 h-[700px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/8 blur-[180px] dark:bg-blue-500/14" />
         <div className="absolute left-1/3 top-1/3 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-purple-500/6 blur-[140px] dark:bg-purple-500/10" />
 

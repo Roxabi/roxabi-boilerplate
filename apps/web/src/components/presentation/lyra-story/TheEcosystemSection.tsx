@@ -2,7 +2,15 @@ import { AnimatedSection, cn } from '@repo/ui'
 import { m } from '@/paraglide/messages'
 import { useSlideReveal } from './useSlideReveal'
 
-type RepoNode = { id: string; name: string; desc: string; x: number; y: number; isMain?: boolean }
+type RepoNode = {
+  id: string
+  name: string
+  desc: string
+  x: number
+  y: number
+  isMain?: boolean
+  isInfo?: boolean
+}
 
 const connections: [string, string][] = [
   ['devkit', '2ndbrain'],
@@ -17,6 +25,8 @@ const connections: [string, string][] = [
   ['voice', '2ndbrain'],
   ['voice', 'lyra'],
   ['config', 'lyra'],
+  ['imagecli', 'lyra'],
+  ['imagecli', 'voice'],
 ]
 
 function GraphNode({ repo, visible, index }: { repo: RepoNode; visible: boolean; index: number }) {
@@ -28,29 +38,47 @@ function GraphNode({ repo, visible, index }: { repo: RepoNode; visible: boolean;
       <circle
         cx={repo.x}
         cy={repo.y}
-        r={repo.isMain ? 6 : 4}
-        className={
+        r={repo.isMain ? 7 : repo.isInfo ? 2.5 : 4}
+        className={cn(
           repo.isMain
             ? 'fill-blue-400/80 dark:fill-blue-300/90'
-            : 'fill-muted-foreground/50 dark:fill-muted-foreground/60'
-        }
+            : repo.isInfo
+              ? 'fill-muted-foreground/25 dark:fill-muted-foreground/30'
+              : 'fill-muted-foreground/50 dark:fill-muted-foreground/60'
+        )}
       />
       {repo.isMain && (
-        <circle
-          cx={repo.x}
-          cy={repo.y}
-          r={9}
-          fill="none"
-          className="stroke-blue-400/30 dark:stroke-blue-300/40"
-          strokeWidth="0.6"
-        />
+        <>
+          <circle
+            cx={repo.x}
+            cy={repo.y}
+            r={11}
+            fill="none"
+            className="stroke-blue-400/30 dark:stroke-blue-300/40"
+            strokeWidth="0.6"
+          />
+          <circle
+            cx={repo.x}
+            cy={repo.y}
+            r={16}
+            fill="none"
+            className="stroke-blue-400/15 dark:stroke-blue-300/20"
+            strokeWidth="0.4"
+          />
+        </>
       )}
       <text
         x={repo.x}
-        y={repo.y - (repo.isMain ? 10 : 6)}
+        y={repo.y - (repo.isMain ? 14 : repo.isInfo ? 5 : 8)}
         textAnchor="middle"
-        className="fill-foreground/80 dark:fill-foreground/90"
-        fontSize="3.5"
+        className={cn(
+          repo.isMain
+            ? 'fill-foreground/90 dark:fill-foreground'
+            : repo.isInfo
+              ? 'fill-muted-foreground/40 dark:fill-muted-foreground/45'
+              : 'fill-foreground/80 dark:fill-foreground/90'
+        )}
+        fontSize={repo.isMain ? 4 : repo.isInfo ? 2.5 : 3.5}
         fontWeight={repo.isMain ? 'bold' : 'normal'}
       >
         {repo.name}
@@ -100,7 +128,7 @@ function RepoList({ repos, visible }: { repos: RepoNode[]; visible: boolean }) {
   return (
     <div className="space-y-3">
       {repos
-        .filter((r) => r.id !== 'config')
+        .filter((r) => !r.isInfo)
         .map((repo, index) => (
           <div
             key={repo.id}
@@ -144,51 +172,60 @@ export function TheEcosystemSection() {
       id: 'devkit',
       name: m.talk_ls_ecosystem_repo1(),
       desc: m.talk_ls_ecosystem_repo1_desc(),
-      x: 50,
-      y: 20,
+      x: 18,
+      y: 22,
+      isInfo: true,
     },
     {
       id: '2ndbrain',
       name: m.talk_ls_ecosystem_repo2(),
       desc: m.talk_ls_ecosystem_repo2_desc(),
       x: 50,
-      y: 45,
+      y: 18,
     },
     {
       id: 'boilerplate',
       name: m.talk_ls_ecosystem_repo3(),
       desc: m.talk_ls_ecosystem_repo3_desc(),
       x: 15,
-      y: 70,
+      y: 55,
     },
     {
       id: 'plugins',
       name: m.talk_ls_ecosystem_repo4(),
       desc: m.talk_ls_ecosystem_repo4_desc(),
-      x: 38,
-      y: 80,
+      x: 40,
+      y: 78,
     },
     {
       id: 'voice',
       name: m.talk_ls_ecosystem_repo5(),
       desc: m.talk_ls_ecosystem_repo5_desc(),
-      x: 62,
-      y: 80,
+      x: 72,
+      y: 22,
     },
     {
       id: 'lyra',
       name: m.talk_ls_ecosystem_repo6(),
       desc: m.talk_ls_ecosystem_repo6_desc(),
-      x: 82,
-      y: 60,
+      x: 50,
+      y: 50,
       isMain: true,
     },
     {
       id: 'config',
       name: m.talk_ls_ecosystem_repo7(),
       desc: m.talk_ls_ecosystem_repo7_desc(),
-      x: 80,
-      y: 30,
+      x: 82,
+      y: 78,
+      isInfo: true,
+    },
+    {
+      id: 'imagecli',
+      name: m.talk_ls_ecosystem_repo8(),
+      desc: m.talk_ls_ecosystem_repo8_desc(),
+      x: 82,
+      y: 50,
     },
   ]
 
