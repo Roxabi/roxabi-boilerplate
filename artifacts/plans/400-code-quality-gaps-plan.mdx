@@ -1,0 +1,149 @@
+---
+title: "Plan: Code quality gaps from FE/BE standards audit"
+issue: 400
+spec: artifacts/specs/400-code-quality-gaps-spec.mdx
+complexity: 4/10
+tier: F-lite
+generated: 2026-03-05
+---
+
+## Summary
+
+Patch esbuild CVE via `bun update --recursive`, then extract focused sub-services from 4 backend services following the existing `adminUsers.lifecycle.ts` pattern. All slices are independent and parallel-safe.
+
+## Reference Patterns
+
+- Extraction pattern: `apps/api/src/admin/adminUsers.lifecycle.ts` (service class, same module, DRIZZLE injection)
+- Module registration: `apps/api/src/admin/admin.module.ts` (providers + exports arrays)
+- Shared helpers: `apps/api/src/admin/adminUsers.shared.ts` (cross-service utilities)
+
+## Agents
+
+| Agent | Tasks | Files |
+|-------|-------|-------|
+| devops | 1 | `bun.lock`, `package.json` |
+| backend-dev | 4 | `user/`, `admin/`, `rbac/`, `purge/` — services, modules, tests |
+
+## Consistency Report
+
+| Success Criterion | Task(s) |
+|-------------------|---------|
+| SC-1: esbuild > 0.24.2 | T1 |
+| SC-2: `UserPurgeService` exists + exported | T2 |
+| SC-3: `AdminUsersQueryService` exists + registered | T3 |
+| SC-4: `AdminOrganizationsQueryService` exists + registered | T4 |
+| SC-5: `RbacMemberService` exists + registered | T5 |
+| SC-6: `user.service.ts` < 360 lines | T2 |
+| SC-7: `adminUsers.service.ts` < 280 lines | T3 |
+| SC-8: `adminOrganizations.service.ts` < 280 lines | T4 |
+| SC-9: `rbac.service.ts` < 260 lines | T5 |
+| SC-10: All tests pass | T1-T5 (verify after each) |
+| SC-11: Typecheck passes | T1-T5 |
+| SC-12: Lint passes | T1-T5 |
+| SC-13: No route/signature changes | T2-T5 |
+
+Covered: 13/13 | Uncovered: 0 | Untraced: 0
+
+---
+
+## Micro-Tasks
+
+### Slice 1: Dependency CVE fix
+
+#### T1 — Update dependencies to patch esbuild CVE [P]
+- **Agent:** devops
+- **Description:** Run `bun update --recursive` to pull patched esbuild (>0.24.2). Verify build and dev still work.
+- **Files:** `bun.lock`, root + workspace `package.json` files
+- **Spec trace:** SC-1
+- **Verify:**
+  ```bash
+  bun why esbuild | grep -E "esbuild@" && bun run build --filter=@repo/email
+  ```
+- **Expected:** esbuild version > 0.24.2, email package builds successfully
+
+---
+
+### Slice 2: Extract UserPurgeService
+
+#### T2 — Extract purge helpers from UserService [P]
+- **Agent:** backend-dev
+- **Description:** Create `apps/api/src/user/userPurge.service.ts` with `UserPurgeService` containing `validatePurgeEligibility()`, `anonymizeUserRecords()`, `purgeOwnedOrganizations()`. Move method bodies from `user.service.ts`. Keep `purge()` on `UserService` as orchestrator — inject `UserPurgeService` and delegate. Update `user.module.ts` to register and export `UserPurgeService`. Update `purge.service.ts` to inject `UserPurgeService` instead of `UserService` for anonymization. Update test files for new import paths.
+- **Files:**
+  - Create: `apps/api/src/user/userPurge.service.ts`
+  - Modify: `apps/api/src/user/user.service.ts`, `apps/api/src/user/user.module.ts`, `apps/api/src/purge/purge.service.ts`, `apps/api/src/purge/purge.service.test.ts`, `apps/api/src/user/user.service.test.ts`
+- **Spec trace:** SC-2, SC-6, SC-10, SC-11, SC-12
+- **Reference:** Follow `adminUsers.lifecycle.ts` pattern — `@Injectable()`, same DRIZZLE injection, JSDoc header
+- **Verify:**
+  ```bash
+  wc -l apps/api/src/user/user.service.ts && grep -c 'UserPurgeService' apps/api/src/user/user.module.ts && bun run test --filter user && bun run test --filter purge
+  ```
+- **Expected:** `user.service.ts` < 360 lines, `UserPurgeService` registered in module, all user + purge tests pass
+
+---
+
+### Slice 3: Extract AdminUsersQueryService
+
+#### T3 — Extract query logic from AdminUsersService [P]
+- **Agent:** backend-dev
+- **Description:** Create `apps/api/src/admin/adminUsers.query.ts` with `AdminUsersQueryService` containing `listUsers()`, `buildUserFilterConditions()`, `queryUserRows()`, `fetchMembershipsByUserIds()`, `fetchLastActiveByUserIds()`. Move method bodies from `adminUsers.service.ts`. Update `admin.module.ts` providers. Update `adminUsers.controller.ts` to inject `AdminUsersQueryService` for the list endpoint. Update test files.
+- **Files:**
+  - Create: `apps/api/src/admin/adminUsers.query.ts`
+  - Modify: `apps/api/src/admin/adminUsers.service.ts`, `apps/api/src/admin/admin.module.ts`, `apps/api/src/admin/adminUsers.controller.ts`, `apps/api/src/admin/adminUsers.service.test.ts`, `apps/api/src/admin/adminUsers.controller.test.ts`
+- **Spec trace:** SC-3, SC-7, SC-10, SC-11, SC-12, SC-13
+- **Reference:** Follow `adminUsers.lifecycle.ts` pattern
+- **Verify:**
+  ```bash
+  wc -l apps/api/src/admin/adminUsers.service.ts && grep -c 'AdminUsersQueryService' apps/api/src/admin/admin.module.ts && bun run test --filter adminUsers
+  ```
+- **Expected:** `adminUsers.service.ts` < 280 lines, `AdminUsersQueryService` registered, all admin user tests pass
+
+---
+
+### Slice 4: Extract AdminOrganizationsQueryService
+
+#### T4 — Extract query logic from AdminOrganizationsService [P]
+- **Agent:** backend-dev
+- **Description:** Create `apps/api/src/admin/adminOrganizations.query.ts` with `AdminOrganizationsQueryService` containing `listOrganizations()`, `listOrganizationsForTree()`, `buildOrgFilterConditions()`, `queryOrgRows()`. Move method bodies from `adminOrganizations.service.ts`. Update `admin.module.ts` providers. Update `adminOrganizations.controller.ts` to inject `AdminOrganizationsQueryService` for list endpoints. Update test files.
+- **Files:**
+  - Create: `apps/api/src/admin/adminOrganizations.query.ts`
+  - Modify: `apps/api/src/admin/adminOrganizations.service.ts`, `apps/api/src/admin/admin.module.ts`, `apps/api/src/admin/adminOrganizations.controller.ts`, `apps/api/src/admin/adminOrganizations.service.test.ts`, `apps/api/src/admin/adminOrganizations.controller.test.ts`
+- **Spec trace:** SC-4, SC-8, SC-10, SC-11, SC-12, SC-13
+- **Reference:** Follow `adminUsers.lifecycle.ts` pattern
+- **Verify:**
+  ```bash
+  wc -l apps/api/src/admin/adminOrganizations.service.ts && grep -c 'AdminOrganizationsQueryService' apps/api/src/admin/admin.module.ts && bun run test --filter adminOrganizations
+  ```
+- **Expected:** `adminOrganizations.service.ts` < 280 lines, `AdminOrganizationsQueryService` registered, all admin org tests pass
+
+---
+
+### Slice 5: Extract RbacMemberService
+
+#### T5 — Extract ownership/member ops from RbacService [P]
+- **Agent:** backend-dev
+- **Description:** Create `apps/api/src/rbac/rbacMember.service.ts` with `RbacMemberService` containing `transferOwnership()`, `findOwnerAdminRoles()`, `verifyCurrentOwner()`, `verifyTargetAdmin()`, `changeMemberRole()`. Move method bodies from `rbac.service.ts`. Inject `TenantService` and `ClsService`. Update `rbac.module.ts` providers. Update any controller that calls these methods to inject `RbacMemberService`. Update test files.
+- **Files:**
+  - Create: `apps/api/src/rbac/rbacMember.service.ts`
+  - Modify: `apps/api/src/rbac/rbac.service.ts`, `apps/api/src/rbac/rbac.module.ts`, `apps/api/src/rbac/rbac.service.test.ts`
+- **Spec trace:** SC-5, SC-9, SC-10, SC-11, SC-12
+- **Reference:** Follow `adminUsers.lifecycle.ts` pattern — `TenantService` + `ClsService` injection
+- **Verify:**
+  ```bash
+  wc -l apps/api/src/rbac/rbac.service.ts && grep -c 'RbacMemberService' apps/api/src/rbac/rbac.module.ts && bun run test --filter rbac
+  ```
+- **Expected:** `rbac.service.ts` < 260 lines, `RbacMemberService` registered, all RBAC tests pass
+
+---
+
+## Final Verification
+
+After all tasks complete:
+```bash
+bun run typecheck && bun run lint && bun run test
+```
+
+All must pass. Then verify no HTTP contract changes:
+```bash
+git diff --name-only | grep -v '\.test\.' | grep controller | xargs -I{} git diff {} | grep -E '^\+.*@(Get|Post|Put|Patch|Delete)\(' | wc -l
+```
+Expected: 0 (no route decorator changes).
