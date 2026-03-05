@@ -1,7 +1,8 @@
-import { AnimatedSection, Card, CardContent, cn } from '@repo/ui'
+import { AnimatedSection, Badge, Card, CardContent, cn } from '@repo/ui'
 import { Brain, Github, Twitter, Youtube } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { m } from '@/paraglide/messages'
+import { useLyraMode } from './LyraModeContext'
 import { useSlideReveal } from './useSlideReveal'
 
 type StatItem = { icon: ReactNode; value: string; label: string; color: string }
@@ -162,8 +163,96 @@ function StatCard({ stat, visible, delay }: { stat: StatItem; visible: boolean; 
   )
 }
 
+function TheBrainSectionRpg() {
+  return (
+    <div className="relative mx-auto max-w-4xl w-full">
+      <div className="relative">
+        <AnimatedSection>
+          <div className="mb-2 text-sm font-mono text-yellow-400 tracking-widest uppercase rpg-pixel text-[10px]">
+            {m.talk_ls_rpg_brain_zone()}
+          </div>
+        </AnimatedSection>
+
+        {/* Legendary item drop card */}
+        <AnimatedSection className="mt-6">
+          <div className="relative max-w-md mx-auto">
+            {/* Sparkle dots around the card */}
+            <div
+              className="pointer-events-none absolute -top-3 -left-3 h-2 w-2 rounded-full bg-yellow-400 animate-pulse"
+              style={{ animationDelay: '0ms', boxShadow: '0 0 6px rgba(255,215,0,0.8)' }}
+              aria-hidden="true"
+            />
+            <div
+              className="pointer-events-none absolute -top-2 -right-4 h-1.5 w-1.5 rounded-full bg-yellow-300 animate-pulse"
+              style={{ animationDelay: '600ms', boxShadow: '0 0 5px rgba(255,215,0,0.7)' }}
+              aria-hidden="true"
+            />
+            <div
+              className="pointer-events-none absolute -bottom-3 -right-2 h-2.5 w-2.5 rounded-full bg-yellow-400 animate-pulse"
+              style={{ animationDelay: '300ms', boxShadow: '0 0 8px rgba(255,215,0,0.9)' }}
+              aria-hidden="true"
+            />
+            <div
+              className="pointer-events-none absolute -bottom-2 -left-4 h-1.5 w-1.5 rounded-full bg-yellow-300 animate-pulse"
+              style={{ animationDelay: '900ms', boxShadow: '0 0 5px rgba(255,215,0,0.7)' }}
+              aria-hidden="true"
+            />
+            <Card
+              variant="subtle"
+              className="border-2 border-yellow-400/60 bg-yellow-500/5"
+              style={{
+                boxShadow: '0 0 40px rgba(255,215,0,0.25), 0 0 80px rgba(255,215,0,0.1)',
+                animation: 'rpg-float 3s ease-in-out infinite',
+              }}
+            >
+              <CardContent className="pt-8 pb-8 text-center space-y-4">
+                {/* Legendary badge */}
+                <Badge className="border border-yellow-400/60 bg-yellow-500/20 text-yellow-300 rpg-pixel text-[9px] tracking-widest">
+                  {m.talk_ls_rpg_brain_rarity()}
+                </Badge>
+
+                {/* Item icon */}
+                <div
+                  className="mx-auto flex h-16 w-16 items-center justify-center rounded-xl border-2 border-yellow-400/50 bg-yellow-500/10"
+                  style={{ boxShadow: '0 0 20px rgba(255,215,0,0.3)' }}
+                >
+                  <Brain className="h-8 w-8 text-yellow-400" />
+                </div>
+
+                {/* Item name */}
+                <h2
+                  className="text-2xl font-bold rpg-pixel text-yellow-300 leading-tight"
+                  style={{
+                    textShadow: '0 0 12px rgba(255,215,0,0.6), 0 0 24px rgba(255,215,0,0.3)',
+                  }}
+                >
+                  {m.talk_ls_rpg_brain_item()}
+                </h2>
+
+                {/* Stats */}
+                <p className="font-mono text-sm text-yellow-200/70">
+                  {m.talk_ls_rpg_brain_stats()}
+                </p>
+
+                {/* Divider */}
+                <div className="h-px bg-yellow-400/20" />
+
+                {/* Flavor text */}
+                <p className="text-sm italic text-yellow-100/50">{m.talk_ls_rpg_brain_flavor()}</p>
+              </CardContent>
+            </Card>
+          </div>
+        </AnimatedSection>
+      </div>
+    </div>
+  )
+}
+
 export function TheBrainSection() {
+  const { isRpg } = useLyraMode()
   const { ref, visible } = useSlideReveal({ threshold: 0.2 })
+
+  if (isRpg) return <TheBrainSectionRpg />
 
   const stats: StatItem[] = [
     {

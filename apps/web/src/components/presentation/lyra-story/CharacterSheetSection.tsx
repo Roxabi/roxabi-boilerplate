@@ -1,15 +1,32 @@
 import { AnimatedSection, cn } from '@repo/ui'
 import { CheckCircle, Circle } from 'lucide-react'
 import { m } from '@/paraglide/messages'
-import { QuantumOrbital } from './QuantumOrbital'
+import { useLyraMode } from './LyraModeContext'
 import { useSlideReveal } from './useSlideReveal'
 
 type SkillBar = { name: string; level: number; max: number }
 
-function ProgressBar({ level, max, color }: { level: number; max: number; color: string }) {
+function ProgressBar({
+  level,
+  max,
+  color,
+  label,
+}: {
+  level: number
+  max: number
+  color: string
+  label: string
+}) {
   const pct = Math.round((level / max) * 100)
   return (
-    <div className="h-1.5 w-full rounded-full bg-muted/40 overflow-hidden">
+    <div
+      role="progressbar"
+      aria-label={label}
+      aria-valuenow={level}
+      aria-valuemin={0}
+      aria-valuemax={max}
+      className="h-1.5 w-full rounded-full bg-muted/40 overflow-hidden"
+    >
       <div
         className={cn('h-full rounded-full transition-all duration-1000', color)}
         style={{ width: `${pct}%` }}
@@ -19,6 +36,7 @@ function ProgressBar({ level, max, color }: { level: number; max: number; color:
 }
 
 function SkillsColumn({ skills, visible }: { skills: SkillBar[]; visible: boolean }) {
+  const { isRpg } = useLyraMode()
   return (
     <div className="px-6 py-5">
       <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-5">
@@ -28,7 +46,9 @@ function SkillsColumn({ skills, visible }: { skills: SkillBar[]; visible: boolea
         {skills.map((skill, index) => {
           const isMax = skill.level === skill.max
           const barColor = isMax
-            ? 'bg-gradient-to-r from-blue-400 to-blue-500'
+            ? isRpg
+              ? 'bg-gradient-to-r from-[var(--rpg-gold)] to-amber-500'
+              : 'bg-gradient-to-r from-blue-400 to-blue-500'
             : 'bg-gradient-to-r from-blue-500/70 to-purple-500/70'
           return (
             <div key={skill.name}>
@@ -37,10 +57,14 @@ function SkillsColumn({ skills, visible }: { skills: SkillBar[]; visible: boolea
                 <span
                   className={cn(
                     'text-xs font-mono font-bold',
-                    isMax ? 'text-blue-600 dark:text-blue-300' : 'text-muted-foreground'
+                    isMax
+                      ? isRpg
+                        ? 'text-[var(--rpg-gold)]'
+                        : 'text-blue-600 dark:text-blue-300'
+                      : 'text-muted-foreground'
                   )}
                 >
-                  {isMax ? 'MAX' : `${skill.level}/${skill.max}`}
+                  {isMax ? m.talk_ls_rpg_sheet_max_label() : `${skill.level}/${skill.max}`}
                 </span>
               </div>
               <div
@@ -50,7 +74,12 @@ function SkillsColumn({ skills, visible }: { skills: SkillBar[]; visible: boolea
                 )}
                 style={{ transitionDelay: visible ? `${200 + index * 100}ms` : '0ms' }}
               >
-                <ProgressBar level={visible ? skill.level : 0} max={skill.max} color={barColor} />
+                <ProgressBar
+                  level={visible ? skill.level : 0}
+                  max={skill.max}
+                  color={barColor}
+                  label={skill.name}
+                />
               </div>
             </div>
           )
@@ -116,6 +145,7 @@ function InfoColumn({ traits, quests }: { traits: string[]; quests: string[] }) 
 }
 
 export function CharacterSheetSection() {
+  const { isRpg } = useLyraMode()
   const { ref, visible } = useSlideReveal({ threshold: 0.15 })
 
   const skills: SkillBar[] = [
@@ -137,14 +167,6 @@ export function CharacterSheetSection() {
         <div className="absolute right-0 bottom-0 h-[300px] w-[300px] translate-x-1/4 translate-y-1/4 rounded-full bg-purple-500/5 blur-[90px] dark:bg-purple-500/12" />
       </div>
 
-      {/* Quantum orbital behind the card */}
-      <div
-        className="pointer-events-none absolute inset-0 flex items-center justify-end pr-8 opacity-15"
-        aria-hidden="true"
-      >
-        <QuantumOrbital size={180} />
-      </div>
-
       <div className="relative">
         <AnimatedSection>
           <h2 className="text-4xl font-bold tracking-tight lg:text-5xl mb-8 text-center">
@@ -157,15 +179,33 @@ export function CharacterSheetSection() {
           className={cn(
             'rounded-2xl border-2 overflow-hidden transition-all duration-700',
             visible ? 'opacity-100 scale-100' : 'opacity-0 scale-95',
-            'border-blue-500/30 dark:border-blue-500/40',
-            'bg-gradient-to-br from-background via-blue-100/40 to-purple-100/40',
-            'dark:from-gray-950 dark:via-blue-950/20 dark:to-purple-950/15',
-            'shadow-[0_0_60px_-10px_rgba(45,127,249,0.08),0_0_120px_-20px_rgba(139,92,246,0.05)]',
-            'dark:shadow-[0_0_60px_-10px_rgba(45,127,249,0.15),0_0_120px_-20px_rgba(139,92,246,0.1)]'
+            isRpg
+              ? 'border-[var(--rpg-gold)]/40 shadow-[0_0_60px_-10px_rgba(255,215,0,0.15),0_0_120px_-20px_rgba(255,215,0,0.08)] dark:from-gray-950 dark:via-amber-950/15 dark:to-yellow-950/10 bg-gradient-to-br from-background via-amber-100/20 to-yellow-100/20'
+              : cn(
+                  'border-blue-500/30 dark:border-blue-500/40',
+                  'bg-gradient-to-br from-background via-blue-100/40 to-purple-100/40',
+                  'dark:from-gray-950 dark:via-blue-950/20 dark:to-purple-950/15',
+                  'shadow-[0_0_60px_-10px_rgba(45,127,249,0.08),0_0_120px_-20px_rgba(139,92,246,0.05)]',
+                  'dark:shadow-[0_0_60px_-10px_rgba(45,127,249,0.15),0_0_120px_-20px_rgba(139,92,246,0.1)]'
+                )
           )}
         >
-          <div className="border-b border-blue-500/20 bg-gradient-to-r from-blue-500/10 to-purple-500/10 px-6 py-5 text-center">
-            <p className="text-2xl font-bold tracking-[0.3em] bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-300 dark:to-purple-300 bg-clip-text text-transparent uppercase">
+          <div
+            className={cn(
+              'px-6 py-5 text-center',
+              isRpg
+                ? 'border-b border-[var(--rpg-gold)]/20 bg-gradient-to-r from-[var(--rpg-gold)]/10 to-amber-500/10'
+                : 'border-b border-blue-500/20 bg-gradient-to-r from-blue-500/10 to-purple-500/10'
+            )}
+          >
+            <p
+              className={cn(
+                'text-2xl font-bold tracking-[0.3em] uppercase',
+                isRpg
+                  ? 'rpg-pixel text-lg text-[var(--rpg-gold)] drop-shadow-[0_0_10px_rgba(255,215,0,0.4)]'
+                  : 'bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-300 dark:to-purple-300 bg-clip-text text-transparent'
+              )}
+            >
               {m.talk_ls_sheet_name()}
             </p>
             <p className="text-sm text-muted-foreground mt-1 italic">

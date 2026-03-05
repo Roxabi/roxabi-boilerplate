@@ -4,6 +4,7 @@
 @import '@repo/ui/theme.css';
 @import '@fontsource-variable/plus-jakarta-sans';
 @import '@fontsource-variable/inter';
+@import '@fontsource/press-start-2p';
 
 @source "../node_modules/@repo/ui/src";
 
@@ -241,8 +242,19 @@ html.dark .shiki span {
 [data-presentation] .v4-particle-glow { animation: v4-part-glow 3s ease-in-out infinite; }
 [data-presentation] .v4-pdot         { animation: v4-pdot-idle 4s ease-in-out infinite; }
 
+/* ── TheCharacterSection slow spin ── */
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+[data-presentation] .animate-spin-slow {
+  animation: spin-slow var(--spin-duration, 20s) linear infinite;
+}
+
 /* ── Reduced motion: disable all Lyra animations ── */
 @media (prefers-reduced-motion: reduce) {
+  [data-presentation] .animate-spin-slow,
   [data-presentation] .v2-ring1,
   [data-presentation] .v2-ring2,
   [data-presentation] .v2-ring3,
@@ -268,127 +280,102 @@ html.dark .shiki span {
   }
 }
 
-/* ─── Lyra Companion animations ─── */
-@keyframes lyra-core-pulse {
-  0%, 100% { opacity: 0.15; r: inherit; }
-  50% { opacity: 0.25; }
+/* ══════════════════════════════════════════════════════
+   MMORPG MODE — RPG theme for Lyra presentation
+   Scoped to [data-presentation][data-mode="mmorpg"]
+   ══════════════════════════════════════════════════════ */
+
+[data-presentation][data-mode="mmorpg"] {
+  --rpg-gold: #FFD700;
+  --rpg-crimson: #DC143C;
+  --rpg-emerald: #50C878;
+  --rpg-deep-purple: #2D1B69;
 }
 
-@keyframes lyra-ring-spin1 {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+/* Pixel font for RPG headings + utility class */
+[data-presentation][data-mode="mmorpg"] h1,
+[data-presentation][data-mode="mmorpg"] h2,
+[data-presentation][data-mode="mmorpg"] .rpg-pixel {
+  font-family: 'Press Start 2P', monospace;
 }
 
-@keyframes lyra-ring-spin2 {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(-360deg); }
+/* RPG XP bar fill animation */
+@keyframes rpg-xp-fill {
+  from { width: 0; }
 }
 
-@keyframes lyra-ring-spin3 {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+/* Zone name slide-in */
+@keyframes rpg-zone-slide {
+  from { transform: translateX(-20px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
 }
 
-@keyframes lyra-electron-orbit {
-  0% { transform: rotate(0deg) translateX(8px) rotate(0deg); }
-  100% { transform: rotate(360deg) translateX(8px) rotate(-360deg); }
+[data-presentation][data-mode="mmorpg"] .rpg-zone-enter {
+  animation: rpg-zone-slide 0.4s ease-out both;
 }
 
-@keyframes lyra-glitch-shake {
-  0%, 100% { transform: translate(0); filter: none; }
-  10% { transform: translate(-2px, 1px); }
-  20% { transform: translate(2px, -1px); filter: hue-rotate(90deg); }
-  30% { transform: translate(-1px, 2px); }
-  40% { transform: translate(1px, -2px); filter: hue-rotate(-90deg); }
-  50% { transform: translate(0); }
+/* RPG blink cursor */
+@keyframes rpg-blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
 }
 
-@keyframes lyra-wave-flow {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-20px); }
+[data-presentation][data-mode="mmorpg"] .rpg-blink {
+  animation: rpg-blink 1s step-end infinite;
 }
 
-@keyframes lyra-satellite-orbit {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 0.8; }
+/* Boss HP bar drain */
+@keyframes rpg-hp-drain {
+  from { width: 100%; }
 }
 
-@keyframes lyra-aura-peak-pulse {
-  0%, 100% { opacity: 0.15; r: 42; }
-  50% { opacity: 0.3; r: 45; }
+/* Achievement popup */
+@keyframes rpg-achievement-pop {
+  0% { transform: scale(0.5); opacity: 0; }
+  60% { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
 }
 
-@keyframes lyra-star-twinkle {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+[data-presentation][data-mode="mmorpg"] .rpg-achievement {
+  animation: rpg-achievement-pop 0.6s ease-out both;
 }
 
-@keyframes lyra-glitch-text {
-  0%, 100% { opacity: 1; transform: none; }
-  15% { opacity: 0.6; transform: translateX(-1px) skewX(-5deg); }
-  30% { opacity: 0.8; transform: translateX(1px) skewX(3deg); }
-  45% { opacity: 0.4; }
-  60% { opacity: 0.9; transform: translateX(-1px); }
+/* Save progress bar */
+@keyframes rpg-save-progress {
+  from { width: 0; }
+  to { width: 100%; }
 }
 
-.lyra-core-pulse { animation: lyra-core-pulse 3s ease-in-out infinite; }
-.lyra-ring1 { animation: lyra-ring-spin1 10s linear infinite; }
-.lyra-ring2 { animation: lyra-ring-spin2 12s linear infinite; }
-.lyra-ring3 { animation: lyra-ring-spin3 15s linear infinite; }
-.lyra-electron-1 { animation: lyra-electron-orbit 4s linear infinite; }
-.lyra-electron-2 { animation: lyra-electron-orbit 5s linear infinite reverse; }
-.lyra-electron-3 { animation: lyra-electron-orbit 6s linear infinite; }
-.lyra-glitch { animation: lyra-glitch-shake 0.8s ease-in-out infinite; }
-.lyra-wave { animation: lyra-wave-flow 3s linear infinite; }
-.lyra-satellite { animation: lyra-satellite-orbit 2s ease-in-out infinite; }
-.lyra-aura-peak { animation: lyra-aura-peak-pulse 2s ease-in-out infinite; }
-.lyra-star-pulse { animation: lyra-star-twinkle 2s ease-in-out infinite; }
-.lyra-glitch-text { animation: lyra-glitch-text 0.6s ease-in-out infinite; }
+/* Boss screen shake */
+@keyframes rpg-screen-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-3px); }
+  40% { transform: translateX(3px); }
+  60% { transform: translateX(-2px); }
+  80% { transform: translateX(1px); }
+}
 
-/* RPG idle bounce */
-@keyframes lyra-rpg-idle {
+/* Item float/bob */
+@keyframes rpg-float {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-1px); }
+  50% { transform: translateY(-6px); }
 }
-.lyra-rpg-idle { animation: lyra-rpg-idle 0.8s ease-in-out infinite; }
 
-/* Tamagotchi animations */
-@keyframes lyra-tama-bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-2px); }
+[data-presentation][data-mode="mmorpg"] .rpg-float {
+  animation: rpg-float 3s ease-in-out infinite;
 }
-@keyframes lyra-tama-wobble {
-  0%, 100% { transform: rotate(0deg); }
-  25% { transform: rotate(-3deg); }
-  75% { transform: rotate(3deg); }
-}
-@keyframes lyra-tama-sparkle {
-  0%, 100% { opacity: 0.6; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.3); }
-}
-.lyra-tama-bounce { animation: lyra-tama-bounce 0.6s ease-in-out infinite; }
-.lyra-tama-wobble { animation: lyra-tama-wobble 1.5s ease-in-out infinite; }
-.lyra-tama-sparkle { animation: lyra-tama-sparkle 1s ease-in-out infinite; }
 
-/* Blob morph */
-@keyframes lyra-blob-morph {
-  0%, 100% { transform: scale(1) rotate(0deg); }
-  33% { transform: scale(1.02) rotate(1deg); }
-  66% { transform: scale(0.98) rotate(-1deg); }
+/* Sparkle */
+@keyframes rpg-sparkle {
+  0%, 100% { opacity: 0; transform: scale(0.5); }
+  50% { opacity: 1; transform: scale(1); }
 }
-.lyra-blob-morph { animation: lyra-blob-morph 4s ease-in-out infinite; }
 
-/* Blob tendrils */
-@keyframes lyra-tendril-sway1 {
-  0%, 100% { transform: rotate(0deg); }
-  50% { transform: rotate(3deg); }
+/* Golden shimmer pulse for crafted item cards */
+@keyframes rpg-golden-pulse {
+  0%, 100% { box-shadow: 0 0 30px rgba(255,215,0,0.2), 0 0 0 1px rgba(255,215,0,0.15); }
+  50% { box-shadow: 0 0 40px rgba(255,215,0,0.4), 0 0 0 1px rgba(255,215,0,0.3); }
 }
-@keyframes lyra-tendril-sway2 {
-  0%, 100% { transform: rotate(0deg); }
-  50% { transform: rotate(-3deg); }
-}
-.lyra-tendril-1 { animation: lyra-tendril-sway1 3s ease-in-out infinite; transform-origin: top center; }
-.lyra-tendril-2 { animation: lyra-tendril-sway2 3.5s ease-in-out infinite; transform-origin: top center; }
 
 /* Respect reduced motion */
 @media (prefers-reduced-motion: reduce) {
@@ -416,5 +403,13 @@ html.dark .shiki span {
 
   .terminal-scroll {
     animation: none;
+  }
+
+  /* RPG animations */
+  [data-presentation][data-mode="mmorpg"] .rpg-zone-enter,
+  [data-presentation][data-mode="mmorpg"] .rpg-blink,
+  [data-presentation][data-mode="mmorpg"] .rpg-achievement,
+  [data-presentation][data-mode="mmorpg"] .rpg-float {
+    animation: none !important;
   }
 }

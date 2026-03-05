@@ -1,16 +1,98 @@
 import { AnimatedSection, Badge, Card, CardContent } from '@repo/ui'
 import { MessageCircle, Timer, Wrench } from 'lucide-react'
 import { m } from '@/paraglide/messages'
+import { useLyraMode } from './LyraModeContext'
 
-export function TheMessengerSection() {
+function TheMessengerSectionRpg() {
+  const logs = [
+    m.talk_ls_rpg_messenger_log1(),
+    m.talk_ls_rpg_messenger_log2(),
+    m.talk_ls_rpg_messenger_log3(),
+  ]
+
   return (
     <div className="relative mx-auto max-w-5xl w-full">
-      {/* Background glows */}
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute left-0 top-1/3 h-[350px] w-[350px] -translate-x-1/3 rounded-full bg-blue-500/6 blur-[100px] dark:bg-blue-500/12" />
-        <div className="absolute right-1/4 bottom-0 h-[300px] w-[300px] translate-y-1/4 rounded-full bg-purple-500/5 blur-[80px] dark:bg-purple-500/10" />
-      </div>
+      <div className="relative">
+        <AnimatedSection>
+          <div className="mb-2 text-sm font-mono text-emerald-400 tracking-widest uppercase rpg-pixel text-[10px]">
+            {m.talk_ls_rpg_messenger_zone()}
+          </div>
+          <h2 className="text-4xl font-bold tracking-tight lg:text-5xl mb-2 rpg-pixel leading-tight text-emerald-300">
+            SUMMON: MESSENGER
+          </h2>
+        </AnimatedSection>
 
+        {/* Terminal card */}
+        <AnimatedSection className="mt-10">
+          <div className="relative max-w-2xl mx-auto">
+            <Card
+              variant="subtle"
+              className="border border-emerald-500/40 bg-gray-950/80"
+              style={{ boxShadow: '0 0 30px rgba(80,200,120,0.15)' }}
+            >
+              {/* Scanlines overlay */}
+              <div
+                className="pointer-events-none absolute inset-0 rounded-[inherit] z-10"
+                aria-hidden="true"
+                style={{
+                  background:
+                    'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.15) 4px)',
+                }}
+              />
+              <CardContent className="pt-6 pb-6 space-y-3 font-mono relative z-20">
+                {/* Command */}
+                <div className="flex items-center gap-2">
+                  <span
+                    className="text-emerald-400"
+                    style={{ textShadow: '0 0 8px var(--color-emerald-400, #34d399)' }}
+                  >
+                    {'>'}
+                  </span>
+                  <span
+                    className="text-emerald-300 text-sm"
+                    style={{ textShadow: '0 0 8px rgba(80,200,120,0.8)' }}
+                  >
+                    {m.talk_ls_rpg_messenger_terminal()}
+                  </span>
+                  <span
+                    className="inline-block h-5 w-2.5 bg-emerald-400 ml-0.5 animate-pulse"
+                    style={{ boxShadow: '0 0 6px rgba(80,200,120,0.9)', animationDuration: '0.8s' }}
+                  />
+                </div>
+
+                {/* Log lines with staggered animation */}
+                {logs.map((log, index) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: static ordered log lines
+                  <div
+                    key={index}
+                    className="text-xs text-emerald-200/70 animate-fade-in"
+                    style={{
+                      animationDelay: `${(index + 1) * 400}ms`,
+                      animationFillMode: 'both',
+                      textShadow: '0 0 4px rgba(80,200,120,0.4)',
+                    }}
+                  >
+                    <span className="text-emerald-500/50 mr-2">
+                      [{String(index + 1).padStart(2, '0')}]
+                    </span>
+                    {log}
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+        </AnimatedSection>
+      </div>
+    </div>
+  )
+}
+
+export function TheMessengerSection() {
+  const { isRpg } = useLyraMode()
+
+  if (isRpg) return <TheMessengerSectionRpg />
+  return (
+    <div className="relative mx-auto max-w-5xl w-full">
       <div className="relative grid gap-10 lg:grid-cols-2 lg:items-center">
         {/* Left — chat bubbles mockup */}
         <div className="hidden lg:block space-y-3 max-w-xs">

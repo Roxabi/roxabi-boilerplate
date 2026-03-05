@@ -1,5 +1,6 @@
 import { AnimatedSection, cn, StatCounter } from '@repo/ui'
 import { m } from '@/paraglide/messages'
+import { useLyraMode } from './LyraModeContext'
 import { useSlideReveal } from './useSlideReveal'
 
 type Stat = {
@@ -9,8 +10,82 @@ type Stat = {
   color: string
 }
 
-export function TheNumbersSection() {
+function TheNumbersSectionRpg() {
   const { ref, visible } = useSlideReveal({ threshold: 0.2 })
+
+  const sessionStats = [
+    { value: 52, label: m.talk_ls_rpg_numbers_time(), color: 'gold' as const },
+    { value: 462, label: m.talk_ls_rpg_numbers_xp_earned(), color: 'emerald' as const },
+    { value: 6, label: m.talk_ls_numbers_repos_label(), color: 'gold' as const },
+    { value: 15, label: m.talk_ls_rpg_numbers_quests(), suffix: '+', color: 'emerald' as const },
+    { value: 11, label: m.talk_ls_numbers_plugins_label(), color: 'gold' as const },
+    { value: 1, label: m.talk_ls_rpg_numbers_gold(), color: 'emerald' as const },
+  ]
+
+  const colorStyle = {
+    gold: { text: 'text-[var(--rpg-gold)]', glow: 'bg-amber-500' },
+    emerald: { text: 'text-[var(--rpg-emerald)]', glow: 'bg-emerald-500' },
+  }
+
+  return (
+    <div className="relative mx-auto max-w-5xl w-full">
+      <AnimatedSection className="text-center mb-12">
+        <h2 className="rpg-pixel text-xl lg:text-2xl text-[var(--rpg-gold)] drop-shadow-[0_0_10px_rgba(255,215,0,0.5)]">
+          {m.talk_ls_rpg_numbers_zone()}
+        </h2>
+      </AnimatedSection>
+
+      <div ref={ref} className="grid grid-cols-2 gap-8 sm:grid-cols-3 mb-12">
+        {sessionStats.map((stat, index) => {
+          const style = colorStyle[stat.color]
+          return (
+            <div
+              key={stat.label}
+              className={cn(
+                'text-center transition-all duration-700',
+                visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+              )}
+              style={{ transitionDelay: visible ? `${index * 120}ms` : '0ms' }}
+            >
+              <div className="relative">
+                <div
+                  className={cn(
+                    'absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-24 w-24 rounded-full blur-2xl opacity-20',
+                    style.glow
+                  )}
+                />
+                <div className={cn('relative', style.text)}>
+                  <StatCounter value={stat.value} label={''} />
+                  {stat.suffix && (
+                    <span className={cn('absolute -right-3 top-0 text-2xl font-bold', style.text)}>
+                      {stat.suffix}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <p className={cn('rpg-pixel text-[7px] uppercase tracking-wider mt-2', style.text)}>
+                {stat.label}
+              </p>
+            </div>
+          )
+        })}
+      </div>
+
+      <AnimatedSection className="text-center">
+        <div className="inline-block rounded-xl border border-[var(--rpg-gold)]/40 bg-[var(--rpg-gold)]/10 px-8 py-4">
+          <p className="rpg-pixel text-sm text-[var(--rpg-gold)] drop-shadow-[0_0_10px_rgba(255,215,0,0.5)]">
+            {m.talk_ls_rpg_numbers_rating()}
+          </p>
+        </div>
+      </AnimatedSection>
+    </div>
+  )
+}
+
+export function TheNumbersSection() {
+  const { isRpg } = useLyraMode()
+  const { ref, visible } = useSlideReveal({ threshold: 0.2 })
+  if (isRpg) return <TheNumbersSectionRpg />
 
   const stats: Stat[] = [
     { value: 52, label: m.talk_ls_numbers_days_label(), color: 'blue' },
@@ -23,12 +98,6 @@ export function TheNumbersSection() {
 
   return (
     <div className="relative mx-auto max-w-5xl w-full">
-      {/* Background glows */}
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/5 blur-[140px] dark:bg-blue-500/12" />
-        <div className="absolute right-0 top-0 h-[250px] w-[250px] translate-x-1/4 -translate-y-1/4 rounded-full bg-purple-500/5 blur-[80px] dark:bg-purple-500/10" />
-      </div>
-
       <div className="relative">
         <AnimatedSection className="text-center mb-16">
           <h2 className="text-4xl font-bold tracking-tight lg:text-5xl">

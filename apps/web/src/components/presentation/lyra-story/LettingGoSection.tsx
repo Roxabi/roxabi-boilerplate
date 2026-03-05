@@ -1,10 +1,80 @@
 import { AnimatedSection, Badge, Card, CardContent, cn } from '@repo/ui'
 import { GitCommit, RefreshCw, Trash2 } from 'lucide-react'
 import { m } from '@/paraglide/messages'
+import { useLyraMode } from './LyraModeContext'
 import { useSlideReveal } from './useSlideReveal'
 
+function LettingGoSectionRpg() {
+  return (
+    <div className="relative mx-auto max-w-5xl w-full">
+      <div className="relative">
+        <AnimatedSection>
+          <div className="mb-2 text-sm font-mono text-red-400 tracking-widest uppercase rpg-pixel text-[10px]">
+            {m.talk_ls_rpg_letting_go_zone()}
+          </div>
+          <h2 className="text-4xl font-bold tracking-tight lg:text-5xl mb-2 rpg-pixel leading-tight text-red-300">
+            QUEST LOG
+          </h2>
+        </AnimatedSection>
+
+        <AnimatedSection className="mt-10">
+          <Card
+            variant="subtle"
+            className="relative border border-red-500/30 bg-red-500/5 max-w-md mx-auto overflow-hidden shadow-[0_4px_12px_rgba(220,20,60,0.3)]"
+          >
+            {/* Diagonal line pattern background */}
+            <div
+              className="pointer-events-none absolute inset-0"
+              aria-hidden="true"
+              style={{
+                backgroundImage:
+                  'repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(220,20,60,0.04) 8px, rgba(220,20,60,0.04) 9px)',
+              }}
+            />
+
+            {/* ABANDONED stamp — absolute positioned, rotated */}
+            <div
+              className="pointer-events-none absolute inset-0 flex items-center justify-center"
+              aria-hidden="true"
+            >
+              <span className="rpg-pixel text-3xl font-bold text-red-500/30 rotate-[-12deg] tracking-widest select-none border-4 border-red-500/25 px-4 py-2 drop-shadow-lg">
+                {m.talk_ls_rpg_letting_go_stamp()}
+              </span>
+            </div>
+
+            <CardContent className="pt-6 pb-6 space-y-3 relative z-10">
+              {/* Quest name with strikethrough */}
+              <div className="flex items-center gap-2 text-red-400">
+                <Trash2 className="h-4 w-4 flex-shrink-0" />
+                <span className="font-mono text-lg line-through text-red-300/80">
+                  {m.talk_ls_rpg_letting_go_quest()}
+                </span>
+              </div>
+              {/* Stats */}
+              <p className="font-mono text-sm text-muted-foreground/70">
+                {m.talk_ls_rpg_letting_go_abandoned()}
+              </p>
+            </CardContent>
+          </Card>
+        </AnimatedSection>
+
+        <AnimatedSection className="mt-10">
+          <blockquote className="text-center">
+            <p className="text-xl italic text-yellow-200/60 lg:text-2xl">
+              "{m.talk_ls_rpg_letting_go_wisdom()}"
+            </p>
+          </blockquote>
+        </AnimatedSection>
+      </div>
+    </div>
+  )
+}
+
 export function LettingGoSection() {
+  const { isRpg } = useLyraMode()
   const { ref, visible } = useSlideReveal()
+
+  if (isRpg) return <LettingGoSectionRpg />
 
   const refactorTexts = [
     m.talk_ls_letting_go_refactor1(),

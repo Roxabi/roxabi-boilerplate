@@ -1,5 +1,6 @@
 import { AnimatedSection, Badge, cn } from '@repo/ui'
 import { m } from '@/paraglide/messages'
+import { useLyraMode } from './LyraModeContext'
 import { useSlideReveal } from './useSlideReveal'
 
 type TimelineEntry = {
@@ -28,7 +29,7 @@ function TimelineRow({
         <span
           className={cn(
             'font-mono text-sm tabular-nums',
-            isKey ? 'text-blue-300 font-bold' : 'text-gray-500'
+            isKey ? 'text-blue-300 font-bold' : 'text-gray-400'
           )}
         >
           {time}
@@ -97,15 +98,99 @@ function ProbabilityDots() {
   )
 }
 
-export function TheNightSection() {
+function TheNightSectionRpg() {
   const { ref, visible } = useSlideReveal({ threshold: 0.15 })
+
+  const phases = [
+    { label: m.talk_ls_rpg_night_phase1(), damage: '-84 HP', number: '-89' },
+    { label: m.talk_ls_rpg_night_phase2(), damage: '-92 HP', number: '-92' },
+    { label: m.talk_ls_rpg_night_phase3(), damage: '-90 HP', number: '-90' },
+  ]
+
+  return (
+    <div className="relative mx-auto max-w-5xl w-full">
+      <AnimatedSection>
+        <h2 className="rpg-pixel text-xl lg:text-2xl text-[var(--rpg-crimson)] mb-8 text-center drop-shadow-[0_0_10px_rgba(220,20,60,0.5)] rpg-zone-enter">
+          {m.talk_ls_rpg_night_zone()}
+        </h2>
+      </AnimatedSection>
+
+      {/* Boss HP bar */}
+      <AnimatedSection className="mb-10">
+        <div className="rounded-xl border border-[var(--rpg-crimson)]/40 bg-gray-950/80 px-6 py-5">
+          <div className="flex items-center justify-between mb-3">
+            <span className="rpg-pixel text-[10px] text-[var(--rpg-crimson)]">
+              {m.talk_ls_rpg_night_boss_name()}
+            </span>
+            <span className="rpg-pixel text-[9px] text-gray-400">
+              {m.talk_ls_rpg_night_boss_hp()}
+            </span>
+          </div>
+          <div className="h-4 w-full rounded-full bg-gray-800 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-[var(--rpg-crimson)] to-red-700 transition-all duration-[3000ms]"
+              style={{ width: visible ? '0%' : '100%' }}
+            />
+          </div>
+        </div>
+      </AnimatedSection>
+
+      {/* Attack phases */}
+      <div ref={ref} className="space-y-4 mb-10">
+        {phases.map((phase, index) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: static ordered phase list
+          <div
+            key={index}
+            className={cn(
+              'flex items-center justify-between rounded-xl border border-[var(--rpg-crimson)]/25 bg-gray-950/60 px-6 py-4 transition-all duration-700',
+              visible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8'
+            )}
+            style={{ transitionDelay: visible ? `${index * 150}ms` : '0ms' }}
+          >
+            <span className="text-gray-200 font-semibold">{phase.label}</span>
+            <div className="flex items-center gap-3 ml-4 flex-shrink-0">
+              <span
+                className="rpg-pixel text-[9px] text-[var(--rpg-crimson)] transition-opacity duration-500"
+                style={{
+                  opacity: visible ? 1 : 0,
+                  transitionDelay: visible ? `${index * 150 + 400}ms` : '0ms',
+                }}
+              >
+                {phase.number}
+              </span>
+              <span className="rpg-pixel text-[9px] text-[var(--rpg-crimson)]">{phase.damage}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Victory */}
+      <AnimatedSection className="text-center space-y-3">
+        <p className="rpg-pixel text-lg text-[var(--rpg-gold)] drop-shadow-[0_0_12px_rgba(255,215,0,0.6)] animate-pulse">
+          {m.talk_ls_rpg_night_victory()}
+        </p>
+        <p className="rpg-pixel text-[10px] text-[var(--rpg-emerald)]">
+          {m.talk_ls_rpg_night_loot()}
+        </p>
+      </AnimatedSection>
+    </div>
+  )
+}
+
+export function TheNightSection() {
+  const { isRpg } = useLyraMode()
+  const { ref, visible } = useSlideReveal({ threshold: 0.15 })
+  if (isRpg) return <TheNightSectionRpg />
 
   const timeline: TimelineEntry[] = [
     { time: m.talk_ls_night_t1(), event: m.talk_ls_night_e1(), isKey: false },
     { time: m.talk_ls_night_t2(), event: m.talk_ls_night_e2(), isKey: false },
     { time: m.talk_ls_night_t3(), event: m.talk_ls_night_e3(), isKey: true },
     { time: m.talk_ls_night_t4(), event: m.talk_ls_night_e4(), isKey: false },
+    { time: m.talk_ls_night_t7(), event: m.talk_ls_night_e7(), isKey: true },
     { time: m.talk_ls_night_t5(), event: m.talk_ls_night_e5(), isKey: true },
+    { time: m.talk_ls_night_t8(), event: m.talk_ls_night_e8(), isKey: false },
+    { time: m.talk_ls_night_t9(), event: m.talk_ls_night_e9(), isKey: true },
     { time: m.talk_ls_night_t6(), event: m.talk_ls_night_e6(), isKey: true },
   ]
 

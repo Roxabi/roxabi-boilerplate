@@ -1,3 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { z } from 'zod'
 
-export const Route = createFileRoute('/talks/lyra-story')({})
+const searchSchema = z.object({
+  mode: z.enum(['story', 'mmorpg']).optional().default('story'),
+})
+
+export const Route = createFileRoute('/talks/lyra-story')({
+  validateSearch: searchSchema,
+})
