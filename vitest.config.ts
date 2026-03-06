@@ -55,6 +55,7 @@ export default defineConfig({
         '**/components/presentation/lyra-story/**',
         '**/components/presentation/lyra-dev/**',
         '**/components/presentation/lyra-product/**',
+        '**/components/presentation/lyra-product/**',
         // Pure Radix UI re-export wrappers (no business logic)
         '**/components/ContextMenu.tsx',
         '**/vite-env.d.ts',
