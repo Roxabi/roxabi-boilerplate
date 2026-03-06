@@ -377,6 +377,89 @@ html.dark .shiki span {
   50% { box-shadow: 0 0 40px rgba(255,215,0,0.4), 0 0 0 1px rgba(255,215,0,0.3); }
 }
 
+/* ─── Lyra Companion animations ─────────────────────────────────────────── */
+
+@keyframes lyra-ring-cw {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes lyra-ring-ccw {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(-360deg); }
+}
+@keyframes lyra-core-pulse {
+  0%, 100% { transform: scale(1);   opacity: 0.8; }
+  50%       { transform: scale(1.4); opacity: 0.4; }
+}
+@keyframes lyra-aura-peak {
+  0%, 100% { transform: scale(1);    opacity: 0.12; }
+  50%       { transform: scale(1.06); opacity: 0.22; }
+}
+@keyframes lyra-wave {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-2px); }
+}
+@keyframes lyra-satellite {
+  0%, 100% { transform: translateY(0);    opacity: 0.5; }
+  50%       { transform: translateY(-2px); opacity: 0.8; }
+}
+@keyframes lyra-glitch {
+  0%, 92%, 100% { transform: translate(0, 0)    skew(0deg); }
+  2%            { transform: translate(-2px, 1px) skew(-1deg); }
+  4%            { transform: translate(2px, -1px) skew(1deg); }
+  6%            { transform: translate(-1px, 2px) skew(0.5deg); }
+  8%            { transform: translate(1px, 1px)  skew(-0.5deg); }
+  10%           { transform: translate(-1px, 0)   skew(0deg); }
+}
+@keyframes lyra-star-pulse {
+  0%, 100% { transform: scale(1);   opacity: 1; }
+  50%       { transform: scale(1.5); opacity: 0.6; }
+}
+@keyframes lyra-tama-wobble {
+  0%, 100% { transform: rotate(-3deg); }
+  50%       { transform: rotate(3deg); }
+}
+@keyframes lyra-tama-bounce {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-2px); }
+}
+@keyframes lyra-tama-sparkle {
+  0%, 100% { opacity: 0; transform: scale(0.5); }
+  50%       { opacity: 1; transform: scale(1.2); }
+}
+@keyframes lyra-blob-morph {
+  0%, 100% { transform: scale(1, 1); }
+  33%       { transform: scale(1.03, 0.97); }
+  66%       { transform: scale(0.97, 1.03); }
+}
+@keyframes lyra-tendril {
+  0%, 100% { transform: translateX(0) translateY(0); }
+  50%       { transform: translateX(1px) translateY(-1px); }
+}
+
+.lyra-ring1 { animation: lyra-ring-cw  30s linear infinite; transform-origin: 50px 50px; }
+.lyra-ring2 { animation: lyra-ring-ccw 20s linear infinite; transform-origin: 50px 50px; }
+.lyra-ring3 { animation: lyra-ring-cw  45s linear infinite; transform-origin: 50px 50px; }
+.lyra-electron-1 { animation: lyra-ring-cw 3s linear         infinite; transform-origin: 50px 50px; }
+.lyra-electron-2 { animation: lyra-ring-cw 5s linear         infinite; transform-origin: 50px 50px; }
+.lyra-electron-3 { animation: lyra-ring-cw 7s linear reverse  infinite; transform-origin: 50px 50px; }
+.lyra-core-pulse  { animation: lyra-core-pulse  2s   ease-in-out infinite; transform-origin: 50px 50px; }
+.lyra-aura-peak   { animation: lyra-aura-peak   3s   ease-in-out infinite; transform-origin: 50px 50px; }
+.lyra-wave        { animation: lyra-wave         3.5s ease-in-out infinite; }
+.lyra-satellite   { animation: lyra-satellite    4s   ease-in-out infinite; }
+.lyra-glitch      { animation: lyra-glitch       2s   steps(1)    infinite; }
+.lyra-star-pulse  {
+  animation: lyra-star-pulse 2.5s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.lyra-tama-wobble  { animation: lyra-tama-wobble  2s   ease-in-out infinite; transform-box: fill-box; transform-origin: center bottom; }
+.lyra-tama-bounce  { animation: lyra-tama-bounce  1.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.lyra-tama-sparkle { animation: lyra-tama-sparkle 1.8s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.lyra-blob-morph   { animation: lyra-blob-morph   4s   ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.lyra-tendril-1    { animation: lyra-tendril       3s   ease-in-out infinite; }
+.lyra-tendril-2    { animation: lyra-tendril       3.5s ease-in-out infinite reverse; }
+
 /* Respect reduced motion */
 @media (prefers-reduced-motion: reduce) {
   html {
@@ -410,6 +493,16 @@ html.dark .shiki span {
   [data-presentation][data-mode="mmorpg"] .rpg-blink,
   [data-presentation][data-mode="mmorpg"] .rpg-achievement,
   [data-presentation][data-mode="mmorpg"] .rpg-float {
+    animation: none !important;
+  }
+
+  /* Lyra Companion animations */
+  .lyra-ring1, .lyra-ring2, .lyra-ring3,
+  .lyra-electron-1, .lyra-electron-2, .lyra-electron-3,
+  .lyra-core-pulse, .lyra-aura-peak, .lyra-wave,
+  .lyra-satellite, .lyra-glitch, .lyra-star-pulse,
+  .lyra-tama-wobble, .lyra-tama-bounce, .lyra-tama-sparkle,
+  .lyra-blob-morph, .lyra-tendril-1, .lyra-tendril-2 {
     animation: none !important;
   }
 }
