@@ -35,12 +35,11 @@ export function TamagotchiVariant({ stage, size, className }: TamagotchiVariantP
         width="46"
         height="46"
         rx="10"
-        fill="#1a1a2e"
-        stroke="#2D7FF9"
-        strokeWidth="0.5"
-        opacity="0.3"
+        fill="#4c1d95"
+        stroke="#c084fc"
+        strokeWidth="1.5"
       />
-      <rect x="3" y="3" width="42" height="42" rx="8" fill="#0a0a18" />
+      <rect x="3" y="3" width="42" height="42" rx="8" fill="#0d0921" />
 
       {/* Stage 0-1: Egg */}
       {stage <= 1 && <Egg stage={stage} animate={animate} />}
@@ -67,14 +66,14 @@ export function TamagotchiVariant({ stage, size, className }: TamagotchiVariantP
       {stage >= 3 && <MoodIndicator stage={stage} />}
 
       {/* Stats bar */}
-      <rect x="6" y="42" width="36" height="2" rx="1" fill="#1a1a2e" />
+      <rect x="6" y="42" width="36" height="2" rx="1" fill="#2e1065" />
       <rect
         x="6"
         y="42"
         width={36 * (stage / 16)}
         height="2"
         rx="1"
-        fill="#2D7FF9"
+        fill="#a78bfa"
         className="transition-all duration-1000"
       />
     </svg>

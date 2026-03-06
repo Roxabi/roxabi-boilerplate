@@ -16,8 +16,8 @@ export function BlobVariant({ stage, size, className }: BlobVariantProps) {
   const t = stage / 16
 
   const path = interpolatePath(stage)
-  const color1 = `hsl(${lerp(220, 260, t)}, ${lerp(60, 80, t)}%, ${lerp(40, 55, t)}%)`
-  const color2 = `hsl(${lerp(240, 280, t)}, ${lerp(50, 70, t)}%, ${lerp(30, 45, t)}%)`
+  const color1 = `hsl(${lerp(295, 315, t)}, ${lerp(65, 72, t)}%, ${lerp(68, 76, t)}%)`
+  const color2 = `hsl(${lerp(275, 295, t)}, ${lerp(55, 65, t)}%, ${lerp(56, 66, t)}%)`
 
   return (
     <svg
@@ -33,7 +33,7 @@ export function BlobVariant({ stage, size, className }: BlobVariantProps) {
           <stop offset="100%" stopColor={color2} />
         </linearGradient>
         <radialGradient id={`blob-glow-${uid}`} cx="50%" cy="40%" r="50%">
-          <stop offset="0%" stopColor="#2D7FF9" stopOpacity={lerp(0, 0.4, t)} />
+          <stop offset="0%" stopColor="#e879f9" stopOpacity={lerp(0.1, 0.5, t)} />
           <stop offset="100%" stopColor="transparent" />
         </radialGradient>
         <filter id={`blob-blur-${uid}`} x="-30%" y="-30%" width="160%" height="160%">
@@ -65,8 +65,8 @@ export function BlobVariant({ stage, size, className }: BlobVariantProps) {
         <path
           d={path}
           fill={`url(#blob-grad-${uid})`}
-          stroke={stage >= 8 ? '#2D7FF9' : 'none'}
-          strokeWidth={lerp(0, 0.8, (stage - 8) / 8)}
+          stroke={stage >= 5 ? '#e879f9' : 'none'}
+          strokeWidth={lerp(0, 0.8, (stage - 5) / 11)}
           opacity={lerp(0.4, 1, t)}
           className={cn('transition-all duration-1000', animate && stage < 10 && 'lyra-blob-morph')}
         />
@@ -84,42 +84,77 @@ export function BlobVariant({ stage, size, className }: BlobVariantProps) {
         )}
       </g>
 
-      {/* Eyes emerge */}
-      {stage >= 5 && (
+      {/* Eyes + face */}
+      {stage >= 3 && (
         <>
+          {/* Blush cheeks */}
+          <circle
+            cx="39"
+            cy={lerp(52, 34, t)}
+            r="3"
+            fill="#f9a8d4"
+            opacity={lerp(0.2, 0.4, (stage - 3) / 13)}
+            className="transition-all duration-1000"
+          />
+          <circle
+            cx="61"
+            cy={lerp(52, 34, t)}
+            r="3"
+            fill="#f9a8d4"
+            opacity={lerp(0.2, 0.4, (stage - 3) / 13)}
+            className="transition-all duration-1000"
+          />
+          {/* White of eye */}
           <circle
             cx={lerp(44, 44, t)}
             cy={lerp(48, 30, t)}
-            r={lerp(1, 2.5, (stage - 5) / 11)}
+            r={lerp(1, 2.5, (stage - 3) / 13)}
             fill="white"
-            opacity={lerp(0.3, 1, (stage - 5) / 11)}
+            opacity={lerp(0.5, 1, (stage - 3) / 13)}
             className="transition-all duration-1000"
           />
           <circle
             cx={lerp(56, 56, t)}
             cy={lerp(48, 30, t)}
-            r={lerp(1, 2.5, (stage - 5) / 11)}
+            r={lerp(1, 2.5, (stage - 3) / 13)}
             fill="white"
-            opacity={lerp(0.3, 1, (stage - 5) / 11)}
+            opacity={lerp(0.5, 1, (stage - 3) / 13)}
             className="transition-all duration-1000"
           />
-          {/* Pupils */}
-          {stage >= 7 && (
+          {/* Pupils + highlights */}
+          {stage >= 5 && (
             <>
               <circle
                 cx={lerp(44.5, 44.5, t)}
                 cy={lerp(48, 30, t)}
-                r={lerp(0.3, 1, (stage - 7) / 9)}
-                fill="#2D7FF9"
-                opacity={lerp(0.3, 1, (stage - 7) / 9)}
+                r={lerp(0.3, 1, (stage - 5) / 11)}
+                fill="#2d1b4e"
+                opacity={lerp(0.6, 1, (stage - 5) / 11)}
                 className="transition-all duration-1000"
               />
               <circle
                 cx={lerp(56.5, 56.5, t)}
                 cy={lerp(48, 30, t)}
-                r={lerp(0.3, 1, (stage - 7) / 9)}
-                fill="#2D7FF9"
-                opacity={lerp(0.3, 1, (stage - 7) / 9)}
+                r={lerp(0.3, 1, (stage - 5) / 11)}
+                fill="#2d1b4e"
+                opacity={lerp(0.6, 1, (stage - 5) / 11)}
+                className="transition-all duration-1000"
+              />
+              {/* Highlight dots */}
+              <circle
+                cx={lerp(43.5, 43.5, t)}
+                cy={lerp(47, 29, t)}
+                r="0.4"
+                fill="white"
+                opacity={lerp(0.5, 0.9, (stage - 5) / 11)}
+                className="transition-all duration-1000"
+              />
+              <circle
+                cx={lerp(55.5, 55.5, t)}
+                cy={lerp(47, 29, t)}
+                r="0.4"
+                fill="white"
+                opacity={lerp(0.5, 0.9, (stage - 5) / 11)}
                 className="transition-all duration-1000"
               />
             </>
@@ -128,7 +163,7 @@ export function BlobVariant({ stage, size, className }: BlobVariantProps) {
       )}
 
       {/* Mouth */}
-      {stage >= 8 && (
+      {stage >= 5 && (
         <path
           d={`M ${lerp(46, 44, t)} ${lerp(54, 36, t)} Q 50 ${lerp(56, 38, t)} ${lerp(54, 56, t)} ${lerp(54, 36, t)}`}
           fill="none"

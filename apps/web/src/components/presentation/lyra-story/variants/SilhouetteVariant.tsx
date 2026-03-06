@@ -24,7 +24,7 @@ export function SilhouetteVariant({ stage, size, className }: SilhouetteVariantP
     >
       <defs>
         <radialGradient id={`sil-glow-${uid}`} cx="50%" cy="40%" r="60%">
-          <stop offset="0%" stopColor="#2D7FF9" stopOpacity={lerp(0, 0.3, t)} />
+          <stop offset="0%" stopColor="#7c3aed" stopOpacity={lerp(0.2, 0.6, t)} />
           <stop offset="100%" stopColor="#8B5CF6" stopOpacity="0" />
         </radialGradient>
         <filter id={`sil-blur-${uid}`} x="-50%" y="-50%" width="200%" height="200%">
@@ -45,7 +45,7 @@ export function SilhouetteVariant({ stage, size, className }: SilhouetteVariantP
       <circle
         cx="50"
         cy="48"
-        r={lerp(10, 50, t)}
+        r={lerp(22, 56, t)}
         fill={`url(#sil-glow-${uid})`}
         className="transition-all duration-1000"
       />
@@ -59,10 +59,10 @@ export function SilhouetteVariant({ stage, size, className }: SilhouetteVariantP
           {/* Dark silhouette base — always visible */}
           <path
             d={SILHOUETTE_PATH}
-            fill="#0a0a1a"
-            stroke={stage >= 3 ? '#2D7FF9' : 'none'}
-            strokeWidth={lerp(0, 0.5, (stage - 3) / 13)}
-            opacity={lerp(0.3, 1, Math.min(t * 3, 1))}
+            fill="#1e0a4e"
+            stroke={stage >= 1 ? '#8B5CF6' : 'none'}
+            strokeWidth={lerp(0.4, 1, stage / 16)}
+            opacity={lerp(0.65, 1, Math.min(t * 2, 1))}
             className="transition-all duration-1000"
           />
 
@@ -101,31 +101,31 @@ export function SilhouetteVariant({ stage, size, className }: SilhouetteVariantP
                     cx="45"
                     cy="20"
                     r="1.5"
-                    fill="#2D7FF9"
-                    opacity={lerp(0.3, 1, (stage - 7) / 9)}
+                    fill="#c084fc"
+                    opacity={lerp(0.4, 1, (stage - 7) / 9)}
                   />
                   <circle
                     cx="55"
                     cy="20"
                     r="1.5"
-                    fill="#2D7FF9"
-                    opacity={lerp(0.3, 1, (stage - 7) / 9)}
+                    fill="#c084fc"
+                    opacity={lerp(0.4, 1, (stage - 7) / 9)}
                   />
                   {/* Glow behind eyes */}
                   <circle
                     cx="45"
                     cy="20"
                     r="3"
-                    fill="#2D7FF9"
-                    opacity={lerp(0, 0.2, (stage - 7) / 9)}
+                    fill="#a855f7"
+                    opacity={lerp(0, 0.25, (stage - 7) / 9)}
                     filter={`url(#sil-blur-${uid})`}
                   />
                   <circle
                     cx="55"
                     cy="20"
                     r="3"
-                    fill="#2D7FF9"
-                    opacity={lerp(0, 0.2, (stage - 7) / 9)}
+                    fill="#a855f7"
+                    opacity={lerp(0, 0.25, (stage - 7) / 9)}
                     filter={`url(#sil-blur-${uid})`}
                   />
                 </>
@@ -242,7 +242,7 @@ export function SilhouetteVariant({ stage, size, className }: SilhouetteVariantP
             <path
               d={SILHOUETTE_PATH}
               fill="none"
-              stroke="#2D7FF9"
+              stroke="#8B5CF6"
               strokeWidth={lerp(0.5, 1.5, (stage - 14) / 2)}
               opacity={lerp(0.2, 0.5, (stage - 14) / 2)}
               filter={`url(#sil-blur-${uid})`}

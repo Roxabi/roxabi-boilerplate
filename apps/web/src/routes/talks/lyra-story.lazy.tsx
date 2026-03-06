@@ -1,5 +1,5 @@
-import { PresentationNav } from '@repo/ui'
-import { createLazyFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { cn, PresentationNav } from '@repo/ui'
+import { createLazyFileRoute, Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { LocaleSwitcher } from '@/components/LocaleSwitcher'
 import { AwakeningDivider } from '@/components/presentation/lyra-story/AwakeningDivider'
@@ -7,9 +7,12 @@ import { BreakingThingsSection } from '@/components/presentation/lyra-story/Brea
 import { BuildingHabitsSection } from '@/components/presentation/lyra-story/BuildingHabitsSection'
 import { CharacterSheetSection } from '@/components/presentation/lyra-story/CharacterSheetSection'
 import { ClosingSection } from '@/components/presentation/lyra-story/ClosingSection'
+import { computeCompanionStage } from '@/components/presentation/lyra-story/companionStage'
 import { FindingTheNameSection } from '@/components/presentation/lyra-story/FindingTheNameSection'
 import { LettingGoSection } from '@/components/presentation/lyra-story/LettingGoSection'
+import { LyraCompanion } from '@/components/presentation/lyra-story/LyraCompanion'
 import { LyraModeProvider, useLyraMode } from '@/components/presentation/lyra-story/LyraModeContext'
+import type { AvatarVariant } from '@/components/presentation/lyra-story/lyra.constants'
 import { ModeToggle } from '@/components/presentation/lyra-story/ModeToggle'
 import { NextStepsSection } from '@/components/presentation/lyra-story/NextStepsSection'
 import { RpgHud } from '@/components/presentation/lyra-story/RpgHud'
@@ -27,6 +30,12 @@ import { TitleSection } from '@/components/presentation/lyra-story/TitleSection'
 import { SectionContainer } from '@/components/presentation/SectionContainer'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { m } from '@/paraglide/messages'
+import {
+  AVATAR_POSITIONS,
+  AVATAR_SIZES,
+  AVATAR_VARIANTS,
+  type AvatarPosition,
+} from '@/routes/talks/lyra-story'
 
 export const Route = createLazyFileRoute('/talks/lyra-story')({
   component: LyraStoryPresentation,
@@ -61,12 +70,121 @@ export function LyraStoryPresentation() {
   )
 }
 
+// 'awakening' is a thin divider — not a companion stage; precomputed from module-level constant
+const AWAKENING_IDX = sectionIds.indexOf('awakening')
+if (AWAKENING_IDX === -1)
+  throw new Error("'awakening' missing from sectionIds — check the sectionIds array")
+
+const VARIANT_LABELS: Record<AvatarVariant, string> = {
+  quantum: 'Q',
+  constellation: 'C',
+  'rpg-canvas': 'RPG',
+  tamagotchi: 'T',
+  silhouette: 'S',
+  blob: 'B',
+  pokemon: 'P',
+}
+
+const POSITION_CLASSES: Record<AvatarPosition, string> = {
+  'bottom-right': 'bottom-6 right-16',
+  'bottom-left': 'bottom-6 left-6',
+  'top-right': 'top-20 right-16',
+  'top-left': 'top-20 left-6',
+}
+
+const KEYBOARD_HINTS = [
+  { key: 'V', label: 'variant' },
+  { key: '[', label: 'smaller' },
+  { key: ']', label: 'larger' },
+  { key: 'P', label: 'position' },
+] as const
+
+function ChipButton({
+  active,
+  onClick,
+  title,
+  'aria-label': ariaLabel,
+  children,
+}: {
+  active: boolean
+  onClick: () => void
+  title?: string
+  'aria-label'?: string
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      title={title}
+      aria-label={ariaLabel}
+      onClick={onClick}
+      className={cn(
+        'text-[9px] font-mono px-1 py-0.5 rounded transition-colors',
+        active ? 'text-white bg-white/20' : 'text-white/40 hover:text-white/80'
+      )}
+    >
+      {children}
+    </button>
+  )
+}
+
 function LyraStoryContent() {
   const navigate = useNavigate()
   const handleEscape = useCallback(() => navigate({ to: '/talks' }), [navigate])
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const { isRpg, mode } = useLyraMode()
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0)
+
+  const { mode: talkMode, avatar, avatarSize, avatarPos } = useSearch({ from: '/talks/lyra-story' })
+
+  // Stable ref so the keydown listener never needs to re-register on param changes
+  const avatarParamsRef = useRef({ avatar, avatarSize, avatarPos })
+  useEffect(() => {
+    avatarParamsRef.current = { avatar, avatarSize, avatarPos }
+  }, [avatar, avatarSize, avatarPos])
+
+  // talkMode stays in dep array so navigate() always writes the current mode.
+  // avatar/size/pos are read via ref to keep setAvatarParam stable, avoiding
+  // keydown listener re-registration on every param change.
+  const setAvatarParam = useCallback(
+    (params: { avatar?: AvatarVariant; avatarSize?: number; avatarPos?: AvatarPosition }) =>
+      navigate({
+        to: '/talks/lyra-story',
+        search: {
+          mode: talkMode,
+          avatar: params.avatar ?? avatarParamsRef.current.avatar,
+          avatarSize: params.avatarSize ?? avatarParamsRef.current.avatarSize,
+          avatarPos: params.avatarPos ?? avatarParamsRef.current.avatarPos,
+        },
+        replace: true,
+      }),
+    [navigate, talkMode]
+  )
+
+  // Keyboard shortcuts: V = cycle variant, [/] = resize, P = cycle position
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      const { avatar: av, avatarSize: sz, avatarPos: pos } = avatarParamsRef.current
+      if (e.key === 'v' || e.key === 'V') {
+        const idx = AVATAR_VARIANTS.indexOf(av)
+        setAvatarParam({ avatar: AVATAR_VARIANTS[(idx + 1) % AVATAR_VARIANTS.length] })
+      } else if (e.key === ']') {
+        const idx = AVATAR_SIZES.indexOf(sz as (typeof AVATAR_SIZES)[number])
+        setAvatarParam({ avatarSize: AVATAR_SIZES[Math.min(idx + 1, AVATAR_SIZES.length - 1)] })
+      } else if (e.key === '[') {
+        const idx = AVATAR_SIZES.indexOf(sz as (typeof AVATAR_SIZES)[number])
+        setAvatarParam({ avatarSize: AVATAR_SIZES[Math.max(idx - 1, 0)] })
+      } else if (e.key === 'p' || e.key === 'P') {
+        const idx = AVATAR_POSITIONS.indexOf(pos)
+        setAvatarParam({ avatarPos: AVATAR_POSITIONS[(idx + 1) % AVATAR_POSITIONS.length] })
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [setAvatarParam])
+
+  const companionStage = computeCompanionStage(currentSectionIndex, AWAKENING_IDX)
 
   useEffect(() => {
     const callback: IntersectionObserverCallback = (entries) => {
@@ -159,6 +277,54 @@ function LyraStoryContent() {
 
       {/* RPG HUD overlay */}
       <RpgHud currentSectionIndex={currentSectionIndex} totalSections={sections.length} />
+
+      {/* Lyra avatar companion — evolves with each section.
+          Hidden on mobile (hidden md:block) — presenter uses a desktop + slide clicker.
+          TODO: add a mobile FAB for touch control if needed. */}
+      <div className={cn('fixed z-40 hidden md:block group', POSITION_CLASSES[avatarPos])}>
+        <Link to="/talks/lyra-companion-test" aria-label="Open avatar playground">
+          <LyraCompanion stage={companionStage} variant={avatar} size={avatarSize} />
+        </Link>
+
+        {/* Hover-reveal controls */}
+        <div className="mt-1 flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200">
+          {/* Variant chips */}
+          <div className="flex items-center gap-1 rounded-lg bg-black/60 backdrop-blur-sm px-2 py-1">
+            {AVATAR_VARIANTS.map((v) => (
+              <ChipButton
+                key={v}
+                active={avatar === v}
+                onClick={() => setAvatarParam({ avatar: v })}
+                title={v}
+                aria-label={`Switch to ${v} variant`}
+              >
+                {VARIANT_LABELS[v]}
+              </ChipButton>
+            ))}
+          </div>
+          {/* Size chips */}
+          <div className="flex items-center gap-1 rounded-lg bg-black/60 backdrop-blur-sm px-2 py-1">
+            {AVATAR_SIZES.map((s) => (
+              <ChipButton
+                key={s}
+                active={avatarSize === s}
+                onClick={() => setAvatarParam({ avatarSize: s })}
+                aria-label={`Set size to ${s}`}
+              >
+                {s}
+              </ChipButton>
+            ))}
+          </div>
+          {/* Keyboard shortcut hints */}
+          <div className="flex items-center gap-2 rounded-lg bg-black/40 backdrop-blur-sm px-2 py-1">
+            {KEYBOARD_HINTS.map(({ key, label }) => (
+              <span key={key} className="text-[9px] font-mono text-white/30">
+                <span className="text-white/50">{key}</span> {label}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* Section navigation dots */}
       <PresentationNav

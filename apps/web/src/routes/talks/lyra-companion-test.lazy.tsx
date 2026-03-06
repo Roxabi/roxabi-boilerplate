@@ -1,7 +1,14 @@
 import { cn } from '@repo/ui'
 import { createLazyFileRoute } from '@tanstack/react-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { LyraCompanion, type LyraVariant } from '@/components/presentation/lyra-story/LyraCompanion'
+import { LyraCompanion } from '@/components/presentation/lyra-story/LyraCompanion'
+import {
+  AVATAR_VARIANTS,
+  type AvatarVariant,
+} from '@/components/presentation/lyra-story/lyra.constants'
+
+const TEST_POSITIONS = ['middle', 'bottom-right', 'bottom-left', 'top-right', 'top-left'] as const
+type TestPosition = (typeof TEST_POSITIONS)[number]
 
 export const Route = createLazyFileRoute('/talks/lyra-companion-test')({
   component: LyraCompanionTestPage,
@@ -27,17 +34,7 @@ const SLIDE_LABELS = [
   'Closing — Serene',
 ]
 
-const VARIANTS: LyraVariant[] = [
-  'quantum',
-  'constellation',
-  'rpg-canvas',
-  'tamagotchi',
-  'silhouette',
-  'blob',
-  'pokemon',
-]
-
-const VARIANT_LABELS: Record<LyraVariant, string> = {
+const VARIANT_LABELS: Record<AvatarVariant, string> = {
   quantum: 'Quantum',
   constellation: 'Stars',
   'rpg-canvas': 'RPG',
@@ -47,14 +44,11 @@ const VARIANT_LABELS: Record<LyraVariant, string> = {
   pokemon: 'Pokemon',
 }
 
-const POSITIONS = ['bottom-right', 'bottom-left', 'top-right', 'top-left'] as const
-type Position = (typeof POSITIONS)[number]
-
-const SIZES = [48, 64, 80, 100, 120] as const
+const SIZES = [48, 80, 200, 400] as const
 
 function LyraCompanionTestPage() {
-  const [variant, setVariant] = useState<LyraVariant>('quantum')
-  const [position, setPosition] = useState<Position>('bottom-right')
+  const [variant, setVariant] = useState<AvatarVariant>('quantum')
+  const [position, setPosition] = useState<TestPosition>('middle')
   const [size, setSize] = useState<number>(80)
   const [stage, setStage] = useState(0)
   const [bgMode, setBgMode] = useState<'dark' | 'light'>('dark')
@@ -91,7 +85,8 @@ function LyraCompanionTestPage() {
     []
   )
 
-  const positionClasses: Record<Position, string> = {
+  const positionClasses: Record<TestPosition, string> = {
+    middle: 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2',
     'bottom-right': 'bottom-6 right-6',
     'bottom-left': 'bottom-6 left-6',
     'top-right': 'top-20 right-6',
@@ -124,7 +119,7 @@ function LyraCompanionTestPage() {
 
           {/* Variant selector — scrollable row */}
           <div className="flex items-center gap-1 overflow-x-auto">
-            {VARIANTS.map((v) => (
+            {AVATAR_VARIANTS.map((v) => (
               <button
                 key={v}
                 type="button"
@@ -149,7 +144,7 @@ function LyraCompanionTestPage() {
             {/* Position */}
             <select
               value={position}
-              onChange={(e) => setPosition(e.target.value as Position)}
+              onChange={(e) => setPosition(e.target.value as TestPosition)}
               className={cn(
                 'text-xs rounded px-1.5 py-1 border',
                 isDark
@@ -157,7 +152,7 @@ function LyraCompanionTestPage() {
                   : 'bg-white border-gray-300 text-gray-700'
               )}
             >
-              {POSITIONS.map((p) => (
+              {TEST_POSITIONS.map((p) => (
                 <option key={p} value={p}>
                   {p}
                 </option>
@@ -232,7 +227,7 @@ function LyraCompanionTestPage() {
             isDark ? 'bg-gray-900/70 border-gray-700/50' : 'bg-white/70 border-gray-200'
           )}
         >
-          {VARIANTS.map((v) => (
+          {AVATAR_VARIANTS.map((v) => (
             <button
               key={v}
               type="button"
