@@ -103,17 +103,20 @@ function ChipButton({
   active,
   onClick,
   title,
+  'aria-label': ariaLabel,
   children,
 }: {
   active: boolean
   onClick: () => void
   title?: string
+  'aria-label'?: string
   children: React.ReactNode
 }) {
   return (
     <button
       type="button"
       title={title}
+      aria-label={ariaLabel}
       onClick={onClick}
       className={cn(
         'text-[9px] font-mono px-1 py-0.5 rounded transition-colors',
@@ -140,6 +143,9 @@ function LyraStoryContent() {
     avatarParamsRef.current = { avatar, avatarSize, avatarPos }
   }, [avatar, avatarSize, avatarPos])
 
+  // talkMode stays in dep array so navigate() always writes the current mode.
+  // avatar/size/pos are read via ref to keep setAvatarParam stable, avoiding
+  // keydown listener re-registration on every param change.
   const setAvatarParam = useCallback(
     (params: { avatar?: AvatarVariant; avatarSize?: number; avatarPos?: AvatarPosition }) =>
       navigate({
@@ -272,7 +278,9 @@ function LyraStoryContent() {
       {/* RPG HUD overlay */}
       <RpgHud currentSectionIndex={currentSectionIndex} totalSections={sections.length} />
 
-      {/* Lyra avatar companion — evolves with each section */}
+      {/* Lyra avatar companion — evolves with each section.
+          Hidden on mobile (hidden md:block) — presenter uses a desktop + slide clicker.
+          TODO: add a mobile FAB for touch control if needed. */}
       <div className={cn('fixed z-40 hidden md:block group', POSITION_CLASSES[avatarPos])}>
         <Link to="/talks/lyra-companion-test" aria-label="Open avatar playground">
           <LyraCompanion stage={companionStage} variant={avatar} size={avatarSize} />
@@ -288,6 +296,7 @@ function LyraStoryContent() {
                 active={avatar === v}
                 onClick={() => setAvatarParam({ avatar: v })}
                 title={v}
+                aria-label={`Switch to ${v} variant`}
               >
                 {VARIANT_LABELS[v]}
               </ChipButton>
@@ -300,6 +309,7 @@ function LyraStoryContent() {
                 key={s}
                 active={avatarSize === s}
                 onClick={() => setAvatarParam({ avatarSize: s })}
+                aria-label={`Set size to ${s}`}
               >
                 {s}
               </ChipButton>
