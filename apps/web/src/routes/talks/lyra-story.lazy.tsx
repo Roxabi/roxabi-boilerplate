@@ -236,7 +236,9 @@ function LyraStoryContent() {
 
       {/* Lyra avatar companion — evolves with each section */}
       <div className={cn('fixed z-40 hidden md:block group', POSITION_CLASSES[avatarPos])}>
-        <LyraCompanion stage={companionStage} variant={avatar} size={avatarSize} />
+        <Link to="/talks/lyra-companion-test" title="Open avatar playground">
+          <LyraCompanion stage={companionStage} variant={avatar} size={avatarSize} />
+        </Link>
 
         {/* Hover-reveal controls */}
         <div className="mt-1 flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
