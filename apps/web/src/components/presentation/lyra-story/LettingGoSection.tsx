@@ -149,7 +149,7 @@ export function LettingGoSection() {
                   <div
                     key={index}
                     className={cn(
-                      'flex flex-col items-center gap-3 text-center transition-all duration-600',
+                      'flex flex-col items-center gap-3 text-center transition-all duration-500',
                       visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
                     )}
                     style={{ transitionDelay: visible ? `${index * 120}ms` : '0ms' }}

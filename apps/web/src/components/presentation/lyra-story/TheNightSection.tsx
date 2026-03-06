@@ -29,7 +29,7 @@ function TimelineRow({
         <span
           className={cn(
             'font-mono text-sm tabular-nums',
-            isKey ? 'text-blue-300 font-bold' : 'text-white/50'
+            isKey ? 'text-blue-300 font-bold' : 'text-white/75'
           )}
         >
           {time}
@@ -60,7 +60,7 @@ function TimelineRow({
         <p
           className={cn(
             'text-sm leading-relaxed',
-            isKey ? 'text-white font-medium' : 'text-white/60'
+            isKey ? 'text-white font-medium' : 'text-white/75'
           )}
         >
           {event}
@@ -196,7 +196,11 @@ export function TheNightSection() {
 
   return (
     <div className="relative mx-auto max-w-5xl w-full">
-      {/* Forced-dark overlay — ensures darkness in both light and dark themes */}
+      {/*
+        Forced-dark: two layers work together so this section stays dark in both themes.
+        1. Overlay div — semi-transparent dark gradient (lighter in light mode, heavier in dark)
+        2. Child selector overrides — [&_.text-*] rewires muted/foreground tokens to white
+      */}
       <div
         className="pointer-events-none absolute -inset-16 rounded-3xl bg-gradient-to-br from-[#0D0D0D]/70 via-[#0a0a1a]/65 to-[#0D0D0D]/70 dark:from-[#0D0D0D]/85 dark:via-[#0a0a1a]/80 dark:to-[#0D0D0D]/85"
         aria-hidden="true"
@@ -214,7 +218,7 @@ export function TheNightSection() {
               {m.talk_ls_night_date()}
             </Badge>
           </div>
-          <p className="text-white/50 font-mono text-sm">{m.talk_ls_night_stats()}</p>
+          <p className="text-white/70 font-mono text-sm">{m.talk_ls_night_stats()}</p>
         </AnimatedSection>
 
         {/* Timeline */}

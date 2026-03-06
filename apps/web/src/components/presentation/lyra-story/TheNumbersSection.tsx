@@ -129,6 +129,7 @@ export function TheNumbersSection() {
                       stat.color === 'blue' ? 'bg-blue-500' : 'bg-purple-500'
                     )}
                   />
+                  {/* [&_p:first-child] targets StatCounter's value <p> — coupled to @repo/ui internals */}
                   <div
                     className={cn(
                       'relative [&_p:first-child]:text-7xl [&_p:first-child]:lg:text-8xl [&_p:first-child]:font-extrabold',
@@ -172,10 +173,11 @@ export function TheNumbersSection() {
                   />
                   <div className="relative">
                     {stat.isIdentity ? (
-                      <p className="text-5xl font-bold tracking-tight lg:text-6xl bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
+                      <p className="text-5xl font-bold tracking-tight lg:text-6xl bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent forced-colors:text-[CanvasText]">
                         {stat.value}
                       </p>
                     ) : (
+                      /* [&_p:first-child] targets StatCounter's value <p> — coupled to @repo/ui internals */
                       <div
                         className={cn(
                           'relative',

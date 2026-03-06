@@ -279,7 +279,8 @@ html.dark .shiki span {
   [data-presentation] .v4-particle,
   [data-presentation] .v4-particle-glow,
   [data-presentation] .v4-pdot,
-  [data-presentation] .animate-fade-in {
+  [data-presentation] .animate-fade-in,
+  [data-presentation] .animate-pulse {
     animation: none !important;
   }
 }

@@ -22,6 +22,7 @@
     "@dicebear/pixel-art": "^9.3.1",
     "@dicebear/thumbs": "^9.3.1",
     "@dicebear/toon-head": "^9.3.1",
+    "@fontsource-variable/bricolage-grotesque": "^5.2.10",
     "@fontsource-variable/plus-jakarta-sans": "^5.2.8",
     "@fontsource/press-start-2p": "^5.2.7",
     "@fumadocs/mdx-remote": "^1.4.5",
