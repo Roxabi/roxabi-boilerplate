@@ -80,7 +80,9 @@ export function GuildHallSection() {
                   className={`rounded-lg border bg-black/20 px-4 py-3 ${border}`}
                 >
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-base">{repo.emoji}</span>
+                    <span className="text-base" aria-hidden="true">
+                      {repo.emoji}
+                    </span>
                     <p className={`font-mono text-xs font-bold ${text}`}>{repo.name}</p>
                   </div>
                   <p className="font-mono text-xs text-muted-foreground/60">{repo.role}</p>

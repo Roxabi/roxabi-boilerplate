@@ -53,7 +53,7 @@ export function CharacterCreationSection() {
         </AnimatedSection>
 
         <AnimatedSection className="mt-6">
-          <p className="animate-pulse text-center font-mono text-[10px] tracking-[0.3em] text-amber-400/70 uppercase">
+          <p className="motion-safe:animate-pulse text-center font-mono text-[10px] tracking-[0.3em] text-amber-400/70 uppercase">
             [ PRESS START ]
           </p>
         </AnimatedSection>

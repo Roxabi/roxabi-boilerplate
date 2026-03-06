@@ -11,11 +11,13 @@ const skills = () => [
 ]
 
 function ProgressBar({
+  name,
   level,
   max,
   visible,
   delay,
 }: {
+  name: string
   level: number
   max: number
   visible: boolean
@@ -25,6 +27,7 @@ function ProgressBar({
   return (
     <div
       role="progressbar"
+      aria-label={name}
       aria-valuenow={level}
       aria-valuemin={0}
       aria-valuemax={max}
@@ -121,7 +124,13 @@ export function CharacterSheetSection() {
                         {level === max ? 'MAX' : `${level}/${max}`}
                       </span>
                     </div>
-                    <ProgressBar level={level} max={max} visible={inView} delay={200 + i * 100} />
+                    <ProgressBar
+                      name={name}
+                      level={level}
+                      max={max}
+                      visible={inView}
+                      delay={200 + i * 100}
+                    />
                   </div>
                 ))}
               </div>

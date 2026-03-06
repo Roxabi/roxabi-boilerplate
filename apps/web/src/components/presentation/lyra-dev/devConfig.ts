@@ -29,6 +29,10 @@ export const devZones: Record<string, DevZoneConfig> = {
 
 export const DEV_TOTAL_XP = 52000
 
+export type SectionId = keyof typeof devZones
+
+export const DEV_SECTION_IDS = Object.keys(devZones) as string[]
+
 export const colorMap: Record<
   DevZoneColor,
   { text: string; border: string; bg: string; glow: string }

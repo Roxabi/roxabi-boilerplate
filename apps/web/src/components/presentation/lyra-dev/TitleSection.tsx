@@ -15,7 +15,7 @@ export function TitleSection() {
         {[0, 1, 2, 3, 4].map((i) => (
           <div
             key={i}
-            className="absolute h-px w-px bg-emerald-400 animate-pulse"
+            className="absolute h-px w-px bg-emerald-400 motion-safe:animate-pulse"
             style={{
               left: `${10 + i * 20}%`,
               top: `${15 + (i % 3) * 25}%`,
@@ -68,7 +68,7 @@ export function TitleSection() {
         </AnimatedSection>
 
         <AnimatedSection>
-          <p className="animate-pulse font-mono text-[11px] tracking-[0.3em] text-emerald-400/60 select-none">
+          <p className="motion-safe:animate-pulse font-mono text-[11px] tracking-[0.3em] text-emerald-400/60 select-none">
             {m.talk_ld_title_prompt()}
           </p>
         </AnimatedSection>

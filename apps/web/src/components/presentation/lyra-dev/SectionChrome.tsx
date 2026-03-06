@@ -1,8 +1,8 @@
 import { cn } from '@repo/ui'
-import { colorMap, devZones } from './devConfig'
+import { colorMap, devZones, type SectionId } from './devConfig'
 
 type SectionChromeProps = {
-  sectionId: string
+  sectionId: SectionId
 }
 
 export function SectionChrome({ sectionId }: SectionChromeProps) {

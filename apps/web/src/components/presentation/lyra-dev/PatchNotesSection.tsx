@@ -1,11 +1,11 @@
 import { AnimatedSection } from '@repo/ui'
 import { m } from '@/paraglide/messages'
 
-export function PatchNotesSection() {
-  const removed = () => [m.talk_ld_patch_removed1(), m.talk_ld_patch_removed2()]
-  const added = () => [m.talk_ld_patch_added1(), m.talk_ld_patch_added2(), m.talk_ld_patch_added3()]
-  const known = () => [m.talk_ld_patch_known1(), m.talk_ld_patch_known2()]
+const removed = () => [m.talk_ld_patch_removed1(), m.talk_ld_patch_removed2()]
+const added = () => [m.talk_ld_patch_added1(), m.talk_ld_patch_added2(), m.talk_ld_patch_added3()]
+const known = () => [m.talk_ld_patch_known1(), m.talk_ld_patch_known2()]
 
+export function PatchNotesSection() {
   return (
     <div className="relative mx-auto max-w-4xl w-full">
       <div className="pointer-events-none absolute inset-0">

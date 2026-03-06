@@ -19,7 +19,7 @@ export function ClosingSection() {
               <span className="font-mono text-[9px] tracking-widest text-emerald-400 uppercase">
                 SAVE POINT
               </span>
-              <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 motion-safe:animate-pulse" />
             </div>
             <div className="px-5 py-5 space-y-2 text-left">
               <p className="font-mono text-[10px] text-emerald-400/60">
@@ -29,7 +29,7 @@ export function ClosingSection() {
                 <span className="text-emerald-400">{'>'}</span> {m.talk_ld_closing_saving()}
               </p>
               <div className="h-1 w-full rounded-full bg-emerald-500/20 overflow-hidden">
-                <div className="h-full w-full rounded-full bg-emerald-400/60 animate-pulse" />
+                <div className="h-full w-full rounded-full bg-emerald-400/60 motion-safe:animate-pulse" />
               </div>
               <p className="font-mono text-xs text-emerald-300">{m.talk_ld_closing_complete()}</p>
             </div>
@@ -48,15 +48,19 @@ export function ClosingSection() {
               {m.talk_ld_closing_links_label()}
             </p>
             <div className="flex items-center justify-center gap-6">
-              <span className="font-mono text-sm text-emerald-400">github.com/MickaelV0</span>
+              <a href="https://github.com/MickaelV0" target="_blank" rel="noopener noreferrer">
+                <span className="font-mono text-sm text-emerald-400">github.com/MickaelV0</span>
+              </a>
               <span className="font-mono text-xs text-muted-foreground/40">·</span>
-              <span className="font-mono text-sm text-emerald-400">roxabi.dev</span>
+              <a href="https://roxabi.dev" target="_blank" rel="noopener noreferrer">
+                <span className="font-mono text-sm text-emerald-400">roxabi.dev</span>
+              </a>
             </div>
           </div>
         </AnimatedSection>
 
         <AnimatedSection>
-          <p className="animate-pulse font-mono text-[10px] tracking-[0.3em] text-emerald-400/50 uppercase select-none">
+          <p className="motion-safe:animate-pulse font-mono text-[10px] tracking-[0.3em] text-emerald-400/50 uppercase select-none">
             {m.talk_ld_closing_continue()}
           </p>
         </AnimatedSection>

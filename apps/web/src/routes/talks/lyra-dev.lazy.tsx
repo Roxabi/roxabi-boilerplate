@@ -1,6 +1,6 @@
 import { PresentationNav } from '@repo/ui'
 import { createLazyFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { LocaleSwitcher } from '@/components/LocaleSwitcher'
 import { AbandonedQuestSection } from '@/components/presentation/lyra-dev/AbandonedQuestSection'
 import { AwakeningNightSection } from '@/components/presentation/lyra-dev/AwakeningNightSection'
@@ -9,6 +9,7 @@ import { CharacterCreationSection } from '@/components/presentation/lyra-dev/Cha
 import { CharacterSheetSection } from '@/components/presentation/lyra-dev/CharacterSheetSection'
 import { ClosingSection } from '@/components/presentation/lyra-dev/ClosingSection'
 import { CraftSystemSection } from '@/components/presentation/lyra-dev/CraftSystemSection'
+import { DEV_SECTION_IDS } from '@/components/presentation/lyra-dev/devConfig'
 import { EndgameSection } from '@/components/presentation/lyra-dev/EndgameSection'
 import { GrandRespecSection } from '@/components/presentation/lyra-dev/GrandRespecSection'
 import { GuildHallSection } from '@/components/presentation/lyra-dev/GuildHallSection'
@@ -29,25 +30,27 @@ export const Route = createLazyFileRoute('/talks/lyra-dev')({
   component: LyraDevPresentation,
 })
 
-const sectionIds = [
-  'title',
-  'character-creation',
-  'tutorial-zone',
-  'skill-tree',
-  'abandoned-quest',
-  'build-change',
-  'grand-respec',
-  'industrialization',
-  'patch-notes',
-  'craft-system',
-  'awakening-night',
-  'guild-hall',
-  'quest-journal',
-  'session-log',
-  'endgame',
-  'character-sheet',
-  'the-lesson',
-  'closing',
+const sectionIds = DEV_SECTION_IDS
+
+const sections = [
+  { id: 'title', label: m.talk_ld_nav_title() },
+  { id: 'character-creation', label: m.talk_ld_nav_char_creation() },
+  { id: 'tutorial-zone', label: m.talk_ld_nav_tutorial() },
+  { id: 'skill-tree', label: m.talk_ld_nav_skill_tree() },
+  { id: 'abandoned-quest', label: m.talk_ld_nav_abandoned() },
+  { id: 'build-change', label: m.talk_ld_nav_build_shift() },
+  { id: 'grand-respec', label: m.talk_ld_nav_grand_respec() },
+  { id: 'industrialization', label: m.talk_ld_nav_factory() },
+  { id: 'patch-notes', label: m.talk_ld_nav_patch_notes() },
+  { id: 'craft-system', label: m.talk_ld_nav_craft() },
+  { id: 'awakening-night', label: m.talk_ld_nav_awakening() },
+  { id: 'guild-hall', label: m.talk_ld_nav_guild_hall() },
+  { id: 'quest-journal', label: m.talk_ld_nav_quest_journal() },
+  { id: 'session-log', label: m.talk_ld_nav_session_log() },
+  { id: 'endgame', label: m.talk_ld_nav_endgame() },
+  { id: 'character-sheet', label: m.talk_ld_nav_char_sheet() },
+  { id: 'the-lesson', label: m.talk_ld_nav_lesson() },
+  { id: 'closing', label: m.talk_ld_nav_closing() },
 ]
 
 export function LyraDevPresentation() {
@@ -72,30 +75,6 @@ export function LyraDevPresentation() {
     }
     return () => observer.disconnect()
   }, [])
-
-  const sections = useMemo(
-    () => [
-      { id: 'title', label: m.talk_ld_nav_title() },
-      { id: 'character-creation', label: m.talk_ld_nav_char_creation() },
-      { id: 'tutorial-zone', label: m.talk_ld_nav_tutorial() },
-      { id: 'skill-tree', label: m.talk_ld_nav_skill_tree() },
-      { id: 'abandoned-quest', label: m.talk_ld_nav_abandoned() },
-      { id: 'build-change', label: m.talk_ld_nav_build_shift() },
-      { id: 'grand-respec', label: m.talk_ld_nav_grand_respec() },
-      { id: 'industrialization', label: m.talk_ld_nav_factory() },
-      { id: 'patch-notes', label: m.talk_ld_nav_patch_notes() },
-      { id: 'craft-system', label: m.talk_ld_nav_craft() },
-      { id: 'awakening-night', label: m.talk_ld_nav_awakening() },
-      { id: 'guild-hall', label: m.talk_ld_nav_guild_hall() },
-      { id: 'quest-journal', label: m.talk_ld_nav_quest_journal() },
-      { id: 'session-log', label: m.talk_ld_nav_session_log() },
-      { id: 'endgame', label: m.talk_ld_nav_endgame() },
-      { id: 'character-sheet', label: m.talk_ld_nav_char_sheet() },
-      { id: 'the-lesson', label: m.talk_ld_nav_lesson() },
-      { id: 'closing', label: m.talk_ld_nav_closing() },
-    ],
-    []
-  )
 
   return (
     <div
@@ -139,52 +118,52 @@ export function LyraDevPresentation() {
         ref={scrollContainerRef}
         className="md:h-dvh md:overflow-y-auto md:snap-y md:snap-mandatory"
       >
-        <SectionContainer id="title" className="relative bg-[#060d08]">
+        <SectionContainer id="title" className="relative">
           <SectionChrome sectionId="title" />
           <TitleSection />
         </SectionContainer>
 
-        <SectionContainer id="character-creation" className="relative bg-[#060d08]">
+        <SectionContainer id="character-creation" className="relative">
           <SectionChrome sectionId="character-creation" />
           <CharacterCreationSection />
         </SectionContainer>
 
-        <SectionContainer id="tutorial-zone" className="relative bg-[#060d08]">
+        <SectionContainer id="tutorial-zone" className="relative">
           <SectionChrome sectionId="tutorial-zone" />
           <TutorialZoneSection />
         </SectionContainer>
 
-        <SectionContainer id="skill-tree" className="relative bg-[#060d08]">
+        <SectionContainer id="skill-tree" className="relative">
           <SectionChrome sectionId="skill-tree" />
           <SkillTreeSection />
         </SectionContainer>
 
-        <SectionContainer id="abandoned-quest" className="relative bg-[#060d08]">
+        <SectionContainer id="abandoned-quest" className="relative">
           <SectionChrome sectionId="abandoned-quest" />
           <AbandonedQuestSection />
         </SectionContainer>
 
-        <SectionContainer id="build-change" className="relative bg-[#060d08]">
+        <SectionContainer id="build-change" className="relative">
           <SectionChrome sectionId="build-change" />
           <BuildChangeSection />
         </SectionContainer>
 
-        <SectionContainer id="grand-respec" className="relative bg-[#060d08]">
+        <SectionContainer id="grand-respec" className="relative">
           <SectionChrome sectionId="grand-respec" />
           <GrandRespecSection />
         </SectionContainer>
 
-        <SectionContainer id="industrialization" className="relative bg-[#060d08]">
+        <SectionContainer id="industrialization" className="relative">
           <SectionChrome sectionId="industrialization" />
           <IndustrializationSection />
         </SectionContainer>
 
-        <SectionContainer id="patch-notes" className="relative bg-[#060d08]">
+        <SectionContainer id="patch-notes" className="relative">
           <SectionChrome sectionId="patch-notes" />
           <PatchNotesSection />
         </SectionContainer>
 
-        <SectionContainer id="craft-system" className="relative bg-[#060d08]">
+        <SectionContainer id="craft-system" className="relative">
           <SectionChrome sectionId="craft-system" />
           <CraftSystemSection />
         </SectionContainer>
@@ -194,37 +173,37 @@ export function LyraDevPresentation() {
           <AwakeningNightSection />
         </SectionContainer>
 
-        <SectionContainer id="guild-hall" className="relative bg-[#060d08]">
+        <SectionContainer id="guild-hall" className="relative">
           <SectionChrome sectionId="guild-hall" />
           <GuildHallSection />
         </SectionContainer>
 
-        <SectionContainer id="quest-journal" className="relative bg-[#060d08]">
+        <SectionContainer id="quest-journal" className="relative">
           <SectionChrome sectionId="quest-journal" />
           <QuestJournalSection />
         </SectionContainer>
 
-        <SectionContainer id="session-log" className="relative bg-[#060d08]">
+        <SectionContainer id="session-log" className="relative">
           <SectionChrome sectionId="session-log" />
           <SessionLogSection />
         </SectionContainer>
 
-        <SectionContainer id="endgame" className="relative bg-[#060d08]">
+        <SectionContainer id="endgame" className="relative">
           <SectionChrome sectionId="endgame" />
           <EndgameSection />
         </SectionContainer>
 
-        <SectionContainer id="character-sheet" className="relative bg-[#060d08]">
+        <SectionContainer id="character-sheet" className="relative">
           <SectionChrome sectionId="character-sheet" />
           <CharacterSheetSection />
         </SectionContainer>
 
-        <SectionContainer id="the-lesson" className="relative bg-[#060d08]">
+        <SectionContainer id="the-lesson" className="relative">
           <SectionChrome sectionId="the-lesson" />
           <TheLessonSection />
         </SectionContainer>
 
-        <SectionContainer id="closing" className="relative bg-[#060d08]">
+        <SectionContainer id="closing" className="relative">
           <SectionChrome sectionId="closing" />
           <ClosingSection />
         </SectionContainer>
