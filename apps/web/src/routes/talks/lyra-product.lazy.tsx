@@ -93,28 +93,27 @@ function ChipButton({
   )
 }
 
-const sections = [
-  { id: 'title', label: m.talk_lp_nav_title() },
-  { id: 'wrong-bet', label: m.talk_lp_nav_wrong_bet() },
-  { id: 'pivot-speed', label: m.talk_lp_nav_pivot() },
-  { id: 'kill-darlings', label: m.talk_lp_nav_kill() },
-  { id: 'shared-foundation', label: m.talk_lp_nav_foundation() },
-  { id: 'knowledge-radar', label: m.talk_lp_nav_radar() },
-  { id: 'telegram-anywhere', label: m.talk_lp_nav_telegram() },
-  { id: 'industrial-turn', label: m.talk_lp_nav_process() },
-  { id: 'patch-notes', label: m.talk_lp_nav_changelog() },
-  { id: 'the-day', label: m.talk_lp_nav_explosion() },
-  { id: 'voice', label: m.talk_lp_nav_voice() },
-  { id: 'the-night', label: m.talk_lp_nav_night() },
-  { id: 'lyra-not-solene', label: m.talk_lp_nav_identity() },
-  { id: 'the-ecosystem', label: m.talk_lp_nav_ecosystem() },
-  { id: 'the-numbers', label: m.talk_lp_nav_numbers() },
-  { id: 'lyra-in-4-days', label: m.talk_lp_nav_four_days() },
-  { id: 'the-lesson', label: m.talk_lp_nav_lesson() },
-  { id: 'closing', label: m.talk_lp_nav_closing() },
-]
-
 export function LyraProductPresentation() {
+  const sections = [
+    { id: 'title', label: m.talk_lp_nav_title() },
+    { id: 'wrong-bet', label: m.talk_lp_nav_wrong_bet() },
+    { id: 'pivot-speed', label: m.talk_lp_nav_pivot() },
+    { id: 'kill-darlings', label: m.talk_lp_nav_kill() },
+    { id: 'shared-foundation', label: m.talk_lp_nav_foundation() },
+    { id: 'knowledge-radar', label: m.talk_lp_nav_radar() },
+    { id: 'telegram-anywhere', label: m.talk_lp_nav_telegram() },
+    { id: 'industrial-turn', label: m.talk_lp_nav_process() },
+    { id: 'patch-notes', label: m.talk_lp_nav_changelog() },
+    { id: 'the-day', label: m.talk_lp_nav_explosion() },
+    { id: 'voice', label: m.talk_lp_nav_voice() },
+    { id: 'the-night', label: m.talk_lp_nav_night() },
+    { id: 'lyra-not-solene', label: m.talk_lp_nav_identity() },
+    { id: 'the-ecosystem', label: m.talk_lp_nav_ecosystem() },
+    { id: 'the-numbers', label: m.talk_lp_nav_numbers() },
+    { id: 'lyra-in-4-days', label: m.talk_lp_nav_four_days() },
+    { id: 'the-lesson', label: m.talk_lp_nav_lesson() },
+    { id: 'closing', label: m.talk_lp_nav_closing() },
+  ]
   const navigate = useNavigate()
   const handleEscape = useCallback(() => navigate({ to: '/talks' }), [navigate])
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -122,6 +121,7 @@ export function LyraProductPresentation() {
 
   const { avatar, avatarSize, avatarPos } = useSearch({ from: '/talks/lyra-product' })
 
+  // Stable ref for keydown handler — avoids re-registering on every param change
   const avatarParamsRef = useRef({ avatar, avatarSize, avatarPos })
   useEffect(() => {
     avatarParamsRef.current = { avatar, avatarSize, avatarPos }
@@ -172,7 +172,10 @@ export function LyraProductPresentation() {
         }
       }
     }
-    const observer = new IntersectionObserver(callback, { threshold: 0.5 })
+    const observer = new IntersectionObserver(callback, {
+      threshold: 0.5,
+      root: scrollContainerRef.current,
+    })
     for (const id of sectionIds) {
       const el = document.getElementById(id)
       if (el) observer.observe(el)
@@ -216,7 +219,7 @@ export function LyraProductPresentation() {
         </Link>
 
         {/* Hover-reveal controls */}
-        <div className="mt-1 flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200">
+        <div className="mt-1 flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200">
           <div className="flex items-center gap-1 rounded-lg bg-black/60 backdrop-blur-sm px-2 py-1">
             {AVATAR_VARIANTS.map((v) => (
               <ChipButton

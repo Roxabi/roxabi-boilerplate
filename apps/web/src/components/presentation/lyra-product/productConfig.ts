@@ -6,7 +6,7 @@ export type ProductSectionConfig = {
   color: ProductPhaseColor
 }
 
-export const productSections: Record<string, ProductSectionConfig> = {
+export const productSections = {
   title: { phase: 'INTRO', day: 'D00', color: 'amber' },
   'wrong-bet': { phase: 'WRONG_BET', day: 'D01-05', color: 'rose' },
   'pivot-speed': { phase: 'PIVOT', day: 'D05', color: 'orange' },
@@ -25,7 +25,7 @@ export const productSections: Record<string, ProductSectionConfig> = {
   'lyra-in-4-days': { phase: 'OUTCOME', day: 'D52-55', color: 'orange' },
   'the-lesson': { phase: 'LESSON', day: '—', color: 'amber' },
   closing: { phase: 'NEXT', day: '—', color: 'amber' },
-}
+} satisfies Record<string, ProductSectionConfig>
 
 export const colorMap: Record<
   ProductPhaseColor,
@@ -58,4 +58,5 @@ export const colorMap: Record<
 }
 
 export type SectionId = keyof typeof productSections
+// Preserves insertion order — ordering is load-bearing for section index tracking
 export const PRODUCT_SECTION_IDS = Object.keys(productSections) as string[]
