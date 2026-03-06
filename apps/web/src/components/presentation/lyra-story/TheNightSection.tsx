@@ -29,7 +29,7 @@ function TimelineRow({
         <span
           className={cn(
             'font-mono text-sm tabular-nums',
-            isKey ? 'text-blue-300 font-bold' : 'text-gray-400'
+            isKey ? 'text-blue-300 font-bold' : 'text-white/75'
           )}
         >
           {time}
@@ -42,15 +42,15 @@ function TimelineRow({
           className={cn(
             'h-3 w-3 rounded-full border-2 flex-shrink-0',
             isKey
-              ? 'border-blue-400 bg-blue-400/30 shadow-[0_0_12px_3px_rgba(96,165,250,0.4)] animate-pulse'
-              : 'border-gray-600 bg-gray-800'
+              ? 'border-blue-300 bg-blue-400/50 shadow-[0_0_14px_4px_rgba(96,165,250,0.55)] animate-pulse'
+              : 'border-white/30 bg-white/10'
           )}
           style={isKey ? { animationDuration: '2.5s' } : undefined}
         />
         <div
           className={cn(
             'flex-1 w-px mt-1',
-            isKey ? 'bg-gradient-to-b from-blue-400/30 to-gray-700/40' : 'bg-gray-700/40'
+            isKey ? 'bg-gradient-to-b from-blue-300/40 to-white/10' : 'bg-white/15'
           )}
         />
       </div>
@@ -60,7 +60,7 @@ function TimelineRow({
         <p
           className={cn(
             'text-sm leading-relaxed',
-            isKey ? 'text-gray-100 font-medium' : 'text-gray-400'
+            isKey ? 'text-white font-medium' : 'text-white/75'
           )}
         >
           {event}
@@ -73,16 +73,16 @@ function TimelineRow({
 /** Static probability dots — no JS animation, positioned with CSS */
 function ProbabilityDots() {
   const dots = [
-    { x: '8%', y: '15%', size: 'h-1 w-1', color: 'bg-blue-400/20' },
-    { x: '92%', y: '25%', size: 'h-1.5 w-1.5', color: 'bg-purple-400/15' },
-    { x: '5%', y: '60%', size: 'h-1 w-1', color: 'bg-blue-400/15' },
-    { x: '95%', y: '70%', size: 'h-1 w-1', color: 'bg-purple-400/20' },
-    { x: '20%', y: '85%', size: 'h-1 w-1', color: 'bg-blue-300/15' },
-    { x: '80%', y: '10%', size: 'h-1 w-1', color: 'bg-purple-300/20' },
-    { x: '50%', y: '5%', size: 'h-1.5 w-1.5', color: 'bg-blue-400/12' },
-    { x: '35%', y: '90%', size: 'h-1 w-1', color: 'bg-purple-400/12' },
-    { x: '65%', y: '80%', size: 'h-1 w-1', color: 'bg-blue-300/18' },
-    { x: '12%', y: '40%', size: 'h-1 w-1', color: 'bg-purple-300/12' },
+    { x: '8%', y: '15%', size: 'h-1 w-1', color: 'bg-blue-300/50' },
+    { x: '92%', y: '25%', size: 'h-1.5 w-1.5', color: 'bg-purple-300/45' },
+    { x: '5%', y: '60%', size: 'h-1 w-1', color: 'bg-blue-300/45' },
+    { x: '95%', y: '70%', size: 'h-1 w-1', color: 'bg-purple-300/50' },
+    { x: '20%', y: '85%', size: 'h-1 w-1', color: 'bg-blue-200/45' },
+    { x: '80%', y: '10%', size: 'h-1 w-1', color: 'bg-purple-200/50' },
+    { x: '50%', y: '5%', size: 'h-1.5 w-1.5', color: 'bg-blue-300/40' },
+    { x: '35%', y: '90%', size: 'h-1 w-1', color: 'bg-purple-300/40' },
+    { x: '65%', y: '80%', size: 'h-1 w-1', color: 'bg-blue-200/45' },
+    { x: '12%', y: '40%', size: 'h-1 w-1', color: 'bg-purple-200/40' },
   ]
   return (
     <>
@@ -196,20 +196,29 @@ export function TheNightSection() {
 
   return (
     <div className="relative mx-auto max-w-5xl w-full">
-      <div className="relative">
+      {/*
+        Forced-dark: two layers work together so this section stays dark in both themes.
+        1. Overlay div — semi-transparent dark gradient (lighter in light mode, heavier in dark)
+        2. Child selector overrides — [&_.text-*] rewires muted/foreground tokens to white
+      */}
+      <div
+        className="pointer-events-none absolute -inset-16 rounded-3xl bg-gradient-to-br from-[#0D0D0D]/70 via-[#0a0a1a]/65 to-[#0D0D0D]/70 dark:from-[#0D0D0D]/85 dark:via-[#0a0a1a]/80 dark:to-[#0D0D0D]/85"
+        aria-hidden="true"
+      />
+      <div className="relative [&_.text-muted-foreground]:text-white/60 [&_.text-foreground]:text-white">
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <ProbabilityDots />
         </div>
         <AnimatedSection>
           <div className="flex flex-wrap items-start justify-between gap-4 mb-2">
-            <h2 className="text-4xl font-bold tracking-tight lg:text-5xl">
+            <h2 className="text-4xl font-bold tracking-tight lg:text-5xl text-white">
               {m.talk_ls_night_title()}
             </h2>
-            <Badge className="bg-blue-500/15 text-blue-600 dark:text-blue-300 border-blue-500/30 self-start">
+            <Badge className="bg-blue-400/20 text-blue-200 border-blue-400/40 self-start">
               {m.talk_ls_night_date()}
             </Badge>
           </div>
-          <p className="text-gray-400 font-mono text-sm">{m.talk_ls_night_stats()}</p>
+          <p className="text-white/70 font-mono text-sm">{m.talk_ls_night_stats()}</p>
         </AnimatedSection>
 
         {/* Timeline */}
@@ -221,8 +230,8 @@ export function TheNightSection() {
         </div>
 
         <AnimatedSection className="mt-4">
-          <div className="rounded-xl border border-blue-500/30 bg-gradient-to-r from-blue-500/10 to-purple-500/10 px-6 py-5">
-            <p className="text-center italic text-gray-300 lg:text-lg">{m.talk_ls_night_peak()}</p>
+          <div className="rounded-xl border border-blue-400/30 bg-gradient-to-r from-blue-500/15 to-purple-500/15 px-6 py-5">
+            <p className="text-center italic text-white/80 lg:text-lg">{m.talk_ls_night_peak()}</p>
           </div>
         </AnimatedSection>
       </div>

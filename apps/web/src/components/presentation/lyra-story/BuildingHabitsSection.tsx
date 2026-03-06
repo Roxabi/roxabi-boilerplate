@@ -26,47 +26,55 @@ function SkillNode({
   return (
     <div
       className={cn(
-        'transition-all duration-700',
+        'flex flex-col items-center gap-4 transition-all duration-700',
         visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
       )}
       style={{ transitionDelay: visible ? `${delay}ms` : '0ms' }}
     >
-      <Card
-        variant="subtle"
+      {/* Icon tower — top */}
+      <div
         className={cn(
-          'h-full text-center border',
+          'flex h-16 w-16 items-center justify-center rounded-2xl border-2',
           skill.color === 'blue'
-            ? 'border-blue-500/20 bg-blue-500/5'
-            : 'border-purple-500/20 bg-purple-500/5'
+            ? 'border-blue-500/30 bg-blue-500/10'
+            : 'border-purple-500/30 bg-purple-500/10'
         )}
       >
-        <CardContent className="pt-6 pb-6 space-y-3">
-          <div
-            className={cn(
-              'flex items-center justify-center gap-2 mx-auto w-10 h-10 rounded-lg',
-              skill.color === 'blue' ? 'bg-blue-500/10' : 'bg-purple-500/10'
-            )}
-          >
-            <skill.icon
-              className={cn(
-                'h-5 w-5',
-                skill.color === 'blue' ? 'text-blue-400' : 'text-purple-400'
-              )}
-            />
-          </div>
-          <p
-            className={cn(
-              'font-mono text-sm font-bold',
-              skill.color === 'blue'
-                ? 'text-blue-600 dark:text-blue-300'
-                : 'text-purple-600 dark:text-purple-300'
-            )}
-          >
-            {skill.name}
-          </p>
-          <p className="text-sm text-muted-foreground">{skill.desc}</p>
-        </CardContent>
-      </Card>
+        <skill.icon
+          className={cn('h-7 w-7', skill.color === 'blue' ? 'text-blue-400' : 'text-purple-400')}
+        />
+      </div>
+      {/* Vertical connector */}
+      <div
+        className={cn(
+          'h-8 w-px',
+          skill.color === 'blue'
+            ? 'bg-gradient-to-b from-blue-500/40 to-blue-500/10'
+            : 'bg-gradient-to-b from-purple-500/40 to-purple-500/10'
+        )}
+      />
+      {/* Name — middle */}
+      <p
+        className={cn(
+          'font-mono text-sm font-bold text-center',
+          skill.color === 'blue'
+            ? 'text-blue-600 dark:text-blue-300'
+            : 'text-purple-600 dark:text-purple-300'
+        )}
+      >
+        {skill.name}
+      </p>
+      {/* Vertical connector */}
+      <div
+        className={cn(
+          'h-8 w-px',
+          skill.color === 'blue'
+            ? 'bg-gradient-to-b from-blue-500/10 to-transparent'
+            : 'bg-gradient-to-b from-purple-500/10 to-transparent'
+        )}
+      />
+      {/* Description — bottom */}
+      <p className="text-sm text-muted-foreground text-center">{skill.desc}</p>
     </div>
   )
 }
@@ -209,31 +217,33 @@ export function BuildingHabitsSection() {
           <p className="text-lg text-muted-foreground">{m.talk_ls_habits_subtitle()}</p>
         </AnimatedSection>
 
-        <div ref={ref} className="mt-12 grid gap-4 sm:grid-cols-3">
+        <div ref={ref} className="mt-12 grid gap-8 sm:grid-cols-3">
           {skillData.map((skill, index) => (
             <SkillNode key={skill.name} skill={skill} visible={visible} delay={index * 150} />
           ))}
         </div>
 
-        <AnimatedSection className="mt-8">
-          <Card
-            variant="subtle"
-            className="border border-purple-500/20 bg-gradient-to-r from-blue-500/5 to-purple-500/5"
-          >
-            <CardContent className="pt-6 pb-6 flex items-start gap-4">
-              <div className="flex-shrink-0 rounded-lg bg-purple-500/10 p-2">
-                <GitMerge className="h-5 w-5 text-purple-400" />
+        <AnimatedSection className="mt-10">
+          {/* Full-width highlighted strip for shared discovery */}
+          <div className="relative overflow-hidden rounded-2xl border border-purple-500/30 bg-gradient-to-r from-blue-500/8 via-purple-500/12 to-blue-500/8 px-8 py-5">
+            <div
+              className="pointer-events-none absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5"
+              aria-hidden="true"
+            />
+            <div className="relative flex items-center gap-5">
+              <div className="flex-shrink-0 rounded-xl bg-purple-500/15 p-3 border border-purple-500/25">
+                <GitMerge className="h-6 w-6 text-purple-400" />
               </div>
-              <div>
-                <p className="font-mono text-sm font-bold text-purple-300">
+              <div className="flex-1 min-w-0">
+                <p className="font-mono text-sm font-bold text-purple-600 dark:text-purple-300">
                   {m.talk_ls_habits_shared_label()}
                 </p>
-                <p className="mt-1 text-muted-foreground text-sm">
+                <p className="mt-0.5 text-muted-foreground text-sm">
                   {m.talk_ls_habits_shared_desc()}
                 </p>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </AnimatedSection>
 
         <AnimatedSection className="mt-6 flex flex-wrap gap-3">

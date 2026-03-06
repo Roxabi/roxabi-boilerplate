@@ -82,18 +82,23 @@ function TheNumbersSectionRpg() {
   )
 }
 
+type HeroStat = Stat & { isIdentity?: boolean }
+
 export function TheNumbersSection() {
   const { isRpg } = useLyraMode()
   const { ref, visible } = useSlideReveal({ threshold: 0.2 })
   if (isRpg) return <TheNumbersSectionRpg />
 
-  const stats: Stat[] = [
+  const heroStats: HeroStat[] = [
     { value: 52, label: m.talk_ls_numbers_days_label(), color: 'blue' },
     { value: 462, label: m.talk_ls_numbers_commits_label(), color: 'purple' },
     { value: 6, label: m.talk_ls_numbers_repos_label(), color: 'blue' },
+  ]
+
+  const supportStats: HeroStat[] = [
     { value: 15, label: m.talk_ls_numbers_skills_label(), suffix: '+', color: 'purple' },
     { value: 11, label: m.talk_ls_numbers_plugins_label(), color: 'blue' },
-    { value: 1, label: m.talk_ls_numbers_identity_label(), color: 'purple' },
+    { value: 1, label: m.talk_ls_numbers_identity_label(), color: 'purple', isIdentity: true },
   ]
 
   return (
@@ -105,51 +110,114 @@ export function TheNumbersSection() {
           </h2>
         </AnimatedSection>
 
-        <div ref={ref} className="grid grid-cols-2 gap-8 sm:grid-cols-3">
-          {stats.map((stat, index) => (
-            <div
-              key={stat.label}
-              className={cn(
-                'text-center transition-all duration-700',
-                visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-              )}
-              style={{ transitionDelay: visible ? `${index * 120}ms` : '0ms' }}
-            >
-              {/* Big number */}
-              <div className="relative">
-                {/* Glow behind number */}
-                <div
-                  className={cn(
-                    'absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-24 w-24 rounded-full blur-2xl opacity-30',
-                    stat.color === 'blue' ? 'bg-blue-500' : 'bg-purple-500'
-                  )}
-                />
-                <div className="relative">
-                  <StatCounter value={stat.value} label={''} />
-                  {stat.suffix && (
-                    <span
-                      className={cn(
-                        'absolute -right-3 top-0 text-2xl font-bold',
-                        stat.color === 'blue'
-                          ? 'text-blue-600 dark:text-blue-300'
-                          : 'text-purple-600 dark:text-purple-300'
-                      )}
-                    >
-                      {stat.suffix}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <p
+        <div ref={ref} className="space-y-10">
+          {/* Hero row — larger numbers */}
+          <div className="grid grid-cols-3 gap-6">
+            {heroStats.map((stat, index) => (
+              <div
+                key={stat.label}
                 className={cn(
-                  'text-sm font-semibold uppercase tracking-wider mt-2',
-                  stat.color === 'blue' ? 'text-blue-400' : 'text-purple-400'
+                  'text-center transition-all duration-700',
+                  visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
                 )}
+                style={{ transitionDelay: visible ? `${index * 120}ms` : '0ms' }}
               >
-                {stat.label}
-              </p>
-            </div>
-          ))}
+                <div className="relative">
+                  <div
+                    className={cn(
+                      'absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-32 w-32 rounded-full blur-3xl opacity-30',
+                      stat.color === 'blue' ? 'bg-blue-500' : 'bg-purple-500'
+                    )}
+                  />
+                  {/* [&_p:first-child] targets StatCounter's value <p> — coupled to @repo/ui internals */}
+                  <div
+                    className={cn(
+                      'relative [&_p:first-child]:text-7xl [&_p:first-child]:lg:text-8xl [&_p:first-child]:font-extrabold',
+                      stat.color === 'blue'
+                        ? '[&_p:first-child]:text-blue-600 dark:[&_p:first-child]:text-blue-300'
+                        : '[&_p:first-child]:text-purple-600 dark:[&_p:first-child]:text-purple-300'
+                    )}
+                  >
+                    <StatCounter value={stat.value} label={''} />
+                  </div>
+                </div>
+                <p
+                  className={cn(
+                    'text-sm font-semibold uppercase tracking-wider mt-2',
+                    stat.color === 'blue' ? 'text-blue-400' : 'text-purple-400'
+                  )}
+                >
+                  {stat.label}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* Support row — standard size */}
+          <div className="grid grid-cols-3 gap-6">
+            {supportStats.map((stat, index) => (
+              <div
+                key={stat.label}
+                className={cn(
+                  'text-center transition-all duration-700',
+                  visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+                )}
+                style={{ transitionDelay: visible ? `${(index + 3) * 120}ms` : '0ms' }}
+              >
+                <div className="relative">
+                  <div
+                    className={cn(
+                      'absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-24 w-24 rounded-full blur-2xl opacity-25',
+                      stat.color === 'blue' ? 'bg-blue-500' : 'bg-purple-500'
+                    )}
+                  />
+                  <div className="relative">
+                    {stat.isIdentity ? (
+                      <p className="text-5xl font-bold tracking-tight lg:text-6xl bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent forced-colors:text-[CanvasText]">
+                        {stat.value}
+                      </p>
+                    ) : (
+                      /* [&_p:first-child] targets StatCounter's value <p> — coupled to @repo/ui internals */
+                      <div
+                        className={cn(
+                          'relative',
+                          stat.color === 'blue'
+                            ? '[&_p:first-child]:text-blue-600 dark:[&_p:first-child]:text-blue-300'
+                            : '[&_p:first-child]:text-purple-600 dark:[&_p:first-child]:text-purple-300'
+                        )}
+                      >
+                        <StatCounter value={stat.value} label={''} />
+                        {stat.suffix && (
+                          <sup
+                            className={cn(
+                              'absolute -right-4 top-2 text-xl font-bold',
+                              stat.color === 'blue'
+                                ? 'text-blue-600 dark:text-blue-300'
+                                : 'text-purple-600 dark:text-purple-300'
+                            )}
+                          >
+                            {stat.suffix}
+                          </sup>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <p
+                  className={cn(
+                    'text-sm font-semibold uppercase tracking-wider mt-2',
+                    stat.isIdentity
+                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent'
+                      : stat.color === 'blue'
+                        ? 'text-blue-400'
+                        : 'text-purple-400'
+                  )}
+                >
+                  {stat.label}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

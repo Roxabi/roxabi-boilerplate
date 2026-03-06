@@ -100,10 +100,16 @@ export function LettingGoSection() {
         </AnimatedSection>
 
         <div className="mt-12 grid gap-8 lg:grid-cols-2">
-          {/* linkedin-jobs deletion */}
+          {/* linkedin-jobs deletion — dramatic torn-edge card */}
           <AnimatedSection>
-            <Card variant="subtle" className="border border-red-500/20 bg-red-500/5">
-              <CardContent className="pt-6 pb-6 space-y-4">
+            <div
+              className="relative border border-red-500/30 bg-red-500/5"
+              style={{
+                clipPath:
+                  'polygon(0 0, 100% 0, 100% 82%, 96% 88%, 91% 84%, 86% 90%, 80% 85%, 74% 92%, 67% 86%, 61% 93%, 54% 87%, 47% 94%, 40% 88%, 33% 95%, 26% 89%, 19% 96%, 12% 90%, 5% 97%, 0 91%)',
+              }}
+            >
+              <div className="px-6 pt-6 pb-14 space-y-4">
                 <div className="flex items-center gap-2 text-red-400">
                   <Trash2 className="h-4 w-4" />
                   <span className="text-sm font-semibold uppercase tracking-wider">
@@ -117,37 +123,46 @@ export function LettingGoSection() {
                   <GitCommit className="h-3 w-3" />
                   cfa0ce3
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </AnimatedSection>
 
-          {/* 4 refactors */}
+          {/* 4 refactors — horizontal stepper */}
           <div>
             <AnimatedSection>
-              <div className="flex items-center gap-2 mb-4 text-blue-400">
+              <div className="flex items-center gap-2 mb-6 text-blue-400">
                 <RefreshCw className="h-4 w-4" />
                 <p className="text-sm font-semibold uppercase tracking-wider">
                   {m.talk_ls_letting_go_refactor_label()}
                 </p>
               </div>
             </AnimatedSection>
-            <div ref={ref} className="space-y-3">
-              {refactorTexts.map((text, index) => (
-                // biome-ignore lint/suspicious/noArrayIndexKey: static ordered refactor steps
-                <div
-                  key={index}
-                  className={cn(
-                    'flex items-center gap-3 rounded-lg border border-border/50 bg-background/30 px-4 py-3 text-sm transition-all duration-600',
-                    visible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-6'
-                  )}
-                  style={{ transitionDelay: visible ? `${index * 100}ms` : '0ms' }}
-                >
-                  <div className="flex-shrink-0 h-6 w-6 rounded-full bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-xs text-blue-400 font-bold">
-                    {index + 1}
+            <div ref={ref} className="relative">
+              {/* Horizontal connecting line */}
+              <div
+                className="absolute top-5 left-0 right-0 h-px bg-blue-500/20"
+                aria-hidden="true"
+              />
+              <div className="grid grid-cols-4 gap-2">
+                {refactorTexts.map((text, index) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: static ordered refactor steps
+                  <div
+                    key={index}
+                    className={cn(
+                      'flex flex-col items-center gap-3 text-center transition-all duration-500',
+                      visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+                    )}
+                    style={{ transitionDelay: visible ? `${index * 120}ms` : '0ms' }}
+                  >
+                    <div className="relative z-10 flex-shrink-0 h-10 w-10 rounded-full bg-background border-2 border-blue-500/40 flex items-center justify-center text-sm text-blue-400 font-bold">
+                      {index + 1}
+                    </div>
+                    <span className="text-muted-foreground font-mono text-xs leading-relaxed">
+                      {text}
+                    </span>
                   </div>
-                  <span className="text-muted-foreground font-mono text-xs">{text}</span>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         </div>

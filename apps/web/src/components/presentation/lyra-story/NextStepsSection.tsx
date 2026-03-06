@@ -42,8 +42,10 @@ const guildEdges = [
 
 function CompanionOrbs() {
   return (
-    <div className="relative mx-auto h-24 w-24" aria-hidden="true">
-      <svg viewBox="0 0 100 100" className="w-full h-full" aria-hidden="true">
+    <div className="relative mx-auto h-40 w-40" aria-hidden="true">
+      {/* Radial glow behind SVG */}
+      <div className="absolute inset-0 rounded-full bg-blue-500/10 blur-2xl" aria-hidden="true" />
+      <svg viewBox="0 0 100 100" className="relative w-full h-full" aria-hidden="true">
         {orbs.map((orb) => (
           <circle
             key={orb.id}
@@ -51,8 +53,8 @@ function CompanionOrbs() {
             cy={orb.cy}
             r={orb.r}
             fill="none"
-            className="stroke-blue-400/30 dark:stroke-blue-300/25"
-            strokeWidth="0.5"
+            className="stroke-blue-400/40 dark:stroke-blue-300/35"
+            strokeWidth="0.6"
             strokeDasharray="2 3"
             style={{
               animation: `spin ${orb.speed}s linear infinite`,
@@ -62,14 +64,14 @@ function CompanionOrbs() {
           />
         ))}
         {/* Central core */}
-        <circle cx={50} cy={50} r={5} className="fill-blue-500/70 dark:fill-blue-400/80" />
+        <circle cx={50} cy={50} r={6} className="fill-blue-500/80 dark:fill-blue-400/90" />
         <circle
           cx={50}
           cy={50}
-          r={7}
+          r={9}
           fill="none"
-          className="stroke-blue-400/50 dark:stroke-blue-300/60"
-          strokeWidth="0.5"
+          className="stroke-blue-400/60 dark:stroke-blue-300/70"
+          strokeWidth="0.6"
         />
         {/* Companion dots */}
         {companions.map((c) => {
@@ -82,10 +84,10 @@ function CompanionOrbs() {
               <circle
                 cx={x}
                 cy={y}
-                r={c.size + 1.5}
+                r={c.size + 2}
                 fill="none"
-                className="stroke-blue-300/20 dark:stroke-blue-200/15"
-                strokeWidth="0.3"
+                className="stroke-blue-300/30 dark:stroke-blue-200/25"
+                strokeWidth="0.4"
               />
             </g>
           )
@@ -97,8 +99,10 @@ function CompanionOrbs() {
 
 function GuildNetwork() {
   return (
-    <div className="relative mx-auto h-24 w-24" aria-hidden="true">
-      <svg viewBox="0 0 100 100" className="w-full h-full" aria-hidden="true">
+    <div className="relative mx-auto h-40 w-40" aria-hidden="true">
+      {/* Radial glow behind SVG */}
+      <div className="absolute inset-0 rounded-full bg-purple-500/10 blur-2xl" aria-hidden="true" />
+      <svg viewBox="0 0 100 100" className="relative w-full h-full" aria-hidden="true">
         {guildEdges.map((edge) => {
           const nodeA = guildNodes[edge.a]
           const nodeB = guildNodes[edge.b]
@@ -110,8 +114,8 @@ function GuildNetwork() {
               y1={nodeA.y}
               x2={nodeB.x}
               y2={nodeB.y}
-              className="stroke-purple-400/35 dark:stroke-purple-300/30"
-              strokeWidth="0.5"
+              className="stroke-purple-400/50 dark:stroke-purple-300/45"
+              strokeWidth="0.7"
             />
           )
         })}
@@ -121,20 +125,20 @@ function GuildNetwork() {
               <circle
                 cx={node.x}
                 cy={node.y}
-                r={8}
+                r={10}
                 fill="none"
-                className="stroke-purple-400/25 dark:stroke-purple-300/20"
-                strokeWidth="0.5"
+                className="stroke-purple-400/30 dark:stroke-purple-300/25"
+                strokeWidth="0.6"
               />
             )}
             <circle
               cx={node.x}
               cy={node.y}
-              r={node.main ? 5 : 3}
+              r={node.main ? 6 : 3.5}
               className={
                 node.main
-                  ? 'fill-purple-500/80 dark:fill-purple-400/90'
-                  : 'fill-purple-400/55 dark:fill-purple-300/65'
+                  ? 'fill-purple-500/90 dark:fill-purple-400/95'
+                  : 'fill-purple-400/65 dark:fill-purple-300/75'
               }
             />
           </g>
@@ -236,7 +240,7 @@ export function NextStepsSection() {
           <Card
             className={cn(
               'group relative overflow-hidden border-blue-500/20 bg-gradient-to-br from-blue-500/5 via-background to-cyan-500/5 transition-all duration-700',
-              'hover:border-blue-500/40 hover:shadow-[0_0_40px_-8px_rgba(59,130,246,0.25)] hover:-translate-y-1',
+              'hover:border-blue-500/40 hover:shadow-[0_0_40px_-8px_rgba(59,130,246,0.25)] hover:-translate-y-1 hover:scale-[1.02]',
               visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
             )}
             style={{ transitionDelay: visible ? '100ms' : '0ms' }}
@@ -263,7 +267,7 @@ export function NextStepsSection() {
               </div>
 
               {/* Blue accent line */}
-              <div className="mt-6 h-px w-full bg-gradient-to-r from-transparent via-blue-500/30 to-transparent" />
+              <div className="mt-6 h-0.5 w-full bg-gradient-to-r from-transparent via-blue-500/40 to-transparent" />
             </CardContent>
           </Card>
 
@@ -271,7 +275,7 @@ export function NextStepsSection() {
           <Card
             className={cn(
               'group relative overflow-hidden border-purple-500/20 bg-gradient-to-br from-purple-500/5 via-background to-violet-500/5 transition-all duration-700',
-              'hover:border-purple-500/40 hover:shadow-[0_0_40px_-8px_rgba(168,85,247,0.25)] hover:-translate-y-1',
+              'hover:border-purple-500/40 hover:shadow-[0_0_40px_-8px_rgba(168,85,247,0.25)] hover:-translate-y-1 hover:scale-[1.02]',
               visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
             )}
             style={{ transitionDelay: visible ? '220ms' : '0ms' }}
@@ -298,7 +302,7 @@ export function NextStepsSection() {
               </div>
 
               {/* Purple accent line */}
-              <div className="mt-6 h-px w-full bg-gradient-to-r from-transparent via-purple-500/30 to-transparent" />
+              <div className="mt-6 h-0.5 w-full bg-gradient-to-r from-transparent via-purple-500/40 to-transparent" />
             </CardContent>
           </Card>
         </div>

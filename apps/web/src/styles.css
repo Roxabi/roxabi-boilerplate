@@ -4,6 +4,7 @@
 @import '@repo/ui/theme.css';
 @import '@fontsource-variable/plus-jakarta-sans';
 @import '@fontsource-variable/inter';
+@import '@fontsource-variable/bricolage-grotesque';
 @import '@fontsource/press-start-2p';
 
 @source "../node_modules/@repo/ui/src";
@@ -36,7 +37,10 @@ code {
 
 /* Presentation heading font — scoped to /talks pages */
 [data-presentation] h1,
-[data-presentation] h2,
+[data-presentation] h2 {
+  font-family: 'Bricolage Grotesque Variable', var(--font-sans);
+}
+
 [data-presentation] h3 {
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
 }
@@ -275,7 +279,8 @@ html.dark .shiki span {
   [data-presentation] .v4-particle,
   [data-presentation] .v4-particle-glow,
   [data-presentation] .v4-pdot,
-  [data-presentation] .animate-fade-in {
+  [data-presentation] .animate-fade-in,
+  [data-presentation] .animate-pulse {
     animation: none !important;
   }
 }

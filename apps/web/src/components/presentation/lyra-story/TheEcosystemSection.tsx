@@ -45,8 +45,8 @@ function GraphNode({ repo, visible, index }: { repo: RepoNode; visible: boolean;
           repo.isMain
             ? 'fill-teal-400/80 dark:fill-teal-300/90'
             : repo.isInfo
-              ? 'fill-muted-foreground/25 dark:fill-muted-foreground/30'
-              : 'fill-muted-foreground/50 dark:fill-muted-foreground/60'
+              ? 'fill-muted-foreground/50 dark:fill-muted-foreground/55'
+              : 'fill-muted-foreground/65 dark:fill-muted-foreground/70'
         )}
       />
       {repo.isMain && (
@@ -75,9 +75,9 @@ function GraphNode({ repo, visible, index }: { repo: RepoNode; visible: boolean;
         textAnchor="middle"
         className={cn(
           repo.isMain
-            ? 'fill-foreground/90 dark:fill-foreground'
+            ? 'fill-foreground dark:fill-foreground'
             : repo.isInfo
-              ? 'fill-muted-foreground/40 dark:fill-muted-foreground/45'
+              ? 'fill-muted-foreground/60 dark:fill-muted-foreground/60'
               : 'fill-foreground/80 dark:fill-foreground/90'
         )}
         fontSize={repo.isMain ? 4 : repo.isInfo ? 2.5 : 3.5}
