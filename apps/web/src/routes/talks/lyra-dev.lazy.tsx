@@ -167,9 +167,7 @@ export function LyraDevPresentation() {
 
       {/* Lyra avatar companion — hidden on mobile */}
       <div className={cn('fixed z-40 hidden md:block group', POSITION_CLASSES[avatarPos])}>
-        <Link to="/talks/lyra-companion-test" aria-label={m.talk_avatar_companion_label()}>
-          <LyraCompanion stage={currentSectionIndex} variant={avatar} size={avatarSize} />
-        </Link>
+        <LyraCompanion stage={currentSectionIndex} variant={avatar} size={avatarSize} />
 
         {/* Hover-reveal controls */}
         <div className="mt-1 flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200">

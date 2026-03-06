@@ -1951,6 +1951,8 @@
   "talk_lp_foundation_label": "_shared/ modules",
   "talk_lp_foundation_body": "Every skill reimplemented auth, env loading, error handling. One shared layer — immediate return on every script written after.",
   "talk_lp_foundation_lesson_label": "LESSON #2",
+  "talk_lp_foundation_before_label": "BEFORE",
+  "talk_lp_foundation_after_label": "AFTER",
   "talk_lp_foundation_lesson": "Mutualize at the second duplication. Not the third.",
 
   "talk_lp_radar_date": "D22 · January 22",
@@ -1990,6 +1992,8 @@
   "talk_lp_patch_added1": "GitHub Issues as official task system",
   "talk_lp_patch_added2": "Strict mypy config",
   "talk_lp_patch_added3": "Session persistence JSONL",
+  "talk_lp_patch_removed_label": "REMOVED",
+  "talk_lp_patch_added_label": "ADDED",
   "talk_lp_patch_insight": "Every deletion is a statement about what matters.",
 
   "talk_lp_day_date": "D47 · February 28",

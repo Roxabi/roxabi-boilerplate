@@ -23,7 +23,7 @@ export function SharedFoundationSection() {
             {/* Before */}
             <div className="flex-1 rounded-lg border border-rose-400/30 bg-rose-500/5 p-5 text-center">
               <p className="font-mono text-xs text-rose-400/60 uppercase tracking-wider mb-2">
-                BEFORE
+                {m.talk_lp_foundation_before_label()}
               </p>
               <p className="font-mono text-3xl font-bold text-rose-300 line-through opacity-70">
                 240
@@ -38,7 +38,7 @@ export function SharedFoundationSection() {
             {/* After */}
             <div className="flex-1 rounded-lg border border-amber-400/30 bg-amber-500/8 p-5 text-center">
               <p className="font-mono text-xs text-amber-400/60 uppercase tracking-wider mb-2">
-                AFTER
+                {m.talk_lp_foundation_after_label()}
               </p>
               <p className="font-mono text-3xl font-bold text-amber-300">10</p>
               <p className="font-mono text-xs text-amber-400/50 mt-1">lines / script</p>

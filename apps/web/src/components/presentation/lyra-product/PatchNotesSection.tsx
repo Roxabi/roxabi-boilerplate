@@ -24,7 +24,7 @@ export function PatchNotesSection() {
               {/* REMOVED */}
               <div>
                 <p className="text-[9px] text-rose-400/80 uppercase tracking-widest mb-2">
-                  REMOVED
+                  {m.talk_lp_patch_removed_label()}
                 </p>
                 <ul className="space-y-1">
                   <li className="flex items-start gap-2 text-sm text-rose-300/70">
@@ -40,7 +40,9 @@ export function PatchNotesSection() {
 
               {/* ADDED */}
               <div>
-                <p className="text-[9px] text-amber-400/80 uppercase tracking-widest mb-2">ADDED</p>
+                <p className="text-[9px] text-amber-400/80 uppercase tracking-widest mb-2">
+                  {m.talk_lp_patch_added_label()}
+                </p>
                 <ul className="space-y-1">
                   <li className="flex items-start gap-2 text-sm text-amber-300/70">
                     <span className="text-amber-400 mt-0.5">+</span>

@@ -1951,6 +1951,8 @@
   "talk_lp_foundation_label": "modules _shared/",
   "talk_lp_foundation_body": "Chaque skill réimplémentait l'auth, le chargement des variables, la gestion d'erreur. Une couche partagée — retour immédiat sur chaque script écrit ensuite.",
   "talk_lp_foundation_lesson_label": "LEÇON #2",
+  "talk_lp_foundation_before_label": "AVANT",
+  "talk_lp_foundation_after_label": "APRÈS",
   "talk_lp_foundation_lesson": "Mutualisez à la deuxième duplication. Pas à la troisième.",
 
   "talk_lp_radar_date": "D22 · 22 janvier",
@@ -1990,6 +1992,8 @@
   "talk_lp_patch_added1": "GitHub Issues comme système de tâches officiel",
   "talk_lp_patch_added2": "Config mypy stricte",
   "talk_lp_patch_added3": "Persistance de sessions JSONL",
+  "talk_lp_patch_removed_label": "RETIRÉ",
+  "talk_lp_patch_added_label": "AJOUTÉ",
   "talk_lp_patch_insight": "Chaque suppression est une déclaration sur ce qui compte.",
 
   "talk_lp_day_date": "D47 · 28 février",
