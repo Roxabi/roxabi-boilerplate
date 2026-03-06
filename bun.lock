@@ -60,7 +60,7 @@
         "@nestjs/config": "^4.0.3",
         "@nestjs/core": "^11.1.14",
         "@nestjs/event-emitter": "^3.0.1",
-        "@nestjs/platform-fastify": "^11.1.14",
+        "@nestjs/platform-fastify": "^11.1.16",
         "@nestjs/swagger": "^11.2.6",
         "@nestjs/throttler": "^6.5.0",
         "@repo/email": "workspace:*",
