@@ -1,5 +1,5 @@
-import { PresentationNav } from '@repo/ui'
-import { createLazyFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { cn, PresentationNav } from '@repo/ui'
+import { createLazyFileRoute, Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { LocaleSwitcher } from '@/components/LocaleSwitcher'
 import { AbandonedQuestSection } from '@/components/presentation/lyra-dev/AbandonedQuestSection'
@@ -22,15 +22,76 @@ import { SkillTreeSection } from '@/components/presentation/lyra-dev/SkillTreeSe
 import { TheLessonSection } from '@/components/presentation/lyra-dev/TheLessonSection'
 import { TitleSection } from '@/components/presentation/lyra-dev/TitleSection'
 import { TutorialZoneSection } from '@/components/presentation/lyra-dev/TutorialZoneSection'
+import { LyraCompanion } from '@/components/presentation/lyra-story/LyraCompanion'
 import { SectionContainer } from '@/components/presentation/SectionContainer'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { m } from '@/paraglide/messages'
+import {
+  AVATAR_POSITIONS,
+  AVATAR_SIZES,
+  AVATAR_VARIANTS,
+  type AvatarPosition,
+  type AvatarVariant,
+} from '@/routes/talks/lyra-dev'
 
 export const Route = createLazyFileRoute('/talks/lyra-dev')({
   component: LyraDevPresentation,
 })
 
 const sectionIds = DEV_SECTION_IDS
+
+const POSITION_CLASSES: Record<AvatarPosition, string> = {
+  'bottom-right': 'bottom-6 right-16',
+  'bottom-left': 'bottom-6 left-6',
+  'top-right': 'top-20 right-16',
+  'top-left': 'top-20 left-6',
+}
+
+const VARIANT_LABELS: Record<AvatarVariant, string> = {
+  quantum: 'Q',
+  constellation: 'C',
+  'rpg-canvas': 'RPG',
+  tamagotchi: 'T',
+  silhouette: 'S',
+  blob: 'B',
+  pokemon: 'P',
+}
+
+const KEYBOARD_HINTS = [
+  { key: 'V', label: 'variant' },
+  { key: '[', label: 'smaller' },
+  { key: ']', label: 'larger' },
+  { key: 'P', label: 'position' },
+] as const
+
+function ChipButton({
+  active,
+  onClick,
+  title,
+  'aria-label': ariaLabel,
+  children,
+}: {
+  active: boolean
+  onClick: () => void
+  title?: string
+  'aria-label'?: string
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      title={title}
+      aria-label={ariaLabel}
+      onClick={onClick}
+      className={cn(
+        'text-[9px] font-mono px-1 py-0.5 rounded transition-colors',
+        active ? 'text-white bg-white/20' : 'text-white/40 hover:text-white/80'
+      )}
+    >
+      {children}
+    </button>
+  )
+}
 
 const sections = [
   { id: 'title', label: m.talk_ld_nav_title() },
@@ -58,6 +119,49 @@ export function LyraDevPresentation() {
   const handleEscape = useCallback(() => navigate({ to: '/talks' }), [navigate])
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0)
+
+  const { avatar, avatarSize, avatarPos } = useSearch({ from: '/talks/lyra-dev' })
+
+  const avatarParamsRef = useRef({ avatar, avatarSize, avatarPos })
+  useEffect(() => {
+    avatarParamsRef.current = { avatar, avatarSize, avatarPos }
+  }, [avatar, avatarSize, avatarPos])
+
+  const setAvatarParam = useCallback(
+    (params: { avatar?: AvatarVariant; avatarSize?: number; avatarPos?: AvatarPosition }) =>
+      navigate({
+        to: '/talks/lyra-dev',
+        search: {
+          avatar: params.avatar ?? avatarParamsRef.current.avatar,
+          avatarSize: params.avatarSize ?? avatarParamsRef.current.avatarSize,
+          avatarPos: params.avatarPos ?? avatarParamsRef.current.avatarPos,
+        },
+        replace: true,
+      }),
+    [navigate]
+  )
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      const { avatar: av, avatarSize: sz, avatarPos: pos } = avatarParamsRef.current
+      if (e.key === 'v' || e.key === 'V') {
+        const idx = AVATAR_VARIANTS.indexOf(av)
+        setAvatarParam({ avatar: AVATAR_VARIANTS[(idx + 1) % AVATAR_VARIANTS.length] })
+      } else if (e.key === ']') {
+        const idx = AVATAR_SIZES.indexOf(sz as (typeof AVATAR_SIZES)[number])
+        setAvatarParam({ avatarSize: AVATAR_SIZES[Math.min(idx + 1, AVATAR_SIZES.length - 1)] })
+      } else if (e.key === '[') {
+        const idx = AVATAR_SIZES.indexOf(sz as (typeof AVATAR_SIZES)[number])
+        setAvatarParam({ avatarSize: AVATAR_SIZES[Math.max(idx - 1, 0)] })
+      } else if (e.key === 'p' || e.key === 'P') {
+        const idx = AVATAR_POSITIONS.indexOf(pos)
+        setAvatarParam({ avatarPos: AVATAR_POSITIONS[(idx + 1) % AVATAR_POSITIONS.length] })
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [setAvatarParam])
 
   useEffect(() => {
     const callback: IntersectionObserverCallback = (entries) => {
@@ -103,6 +207,49 @@ export function LyraDevPresentation() {
         <p className="font-mono text-[9px] tracking-widest text-emerald-400/40 uppercase">
           {currentSectionIndex + 1} / {sectionIds.length}
         </p>
+      </div>
+
+      {/* Lyra avatar companion — hidden on mobile */}
+      <div className={cn('fixed z-40 hidden md:block group', POSITION_CLASSES[avatarPos])}>
+        <Link to="/talks/lyra-companion-test" aria-label="Open avatar playground">
+          <LyraCompanion stage={currentSectionIndex} variant={avatar} size={avatarSize} />
+        </Link>
+
+        {/* Hover-reveal controls */}
+        <div className="mt-1 flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200">
+          <div className="flex items-center gap-1 rounded-lg bg-black/60 backdrop-blur-sm px-2 py-1">
+            {AVATAR_VARIANTS.map((v) => (
+              <ChipButton
+                key={v}
+                active={avatar === v}
+                onClick={() => setAvatarParam({ avatar: v })}
+                title={v}
+                aria-label={`Switch to ${v} variant`}
+              >
+                {VARIANT_LABELS[v]}
+              </ChipButton>
+            ))}
+          </div>
+          <div className="flex items-center gap-1 rounded-lg bg-black/60 backdrop-blur-sm px-2 py-1">
+            {AVATAR_SIZES.map((s) => (
+              <ChipButton
+                key={s}
+                active={avatarSize === s}
+                onClick={() => setAvatarParam({ avatarSize: s })}
+                aria-label={`Set size to ${s}`}
+              >
+                {s}
+              </ChipButton>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 rounded-lg bg-black/40 backdrop-blur-sm px-2 py-1">
+            {KEYBOARD_HINTS.map(({ key, label }) => (
+              <span key={key} className="text-[9px] font-mono text-white/30">
+                <span className="text-white/50">{key}</span> {label}
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Section navigation */}
