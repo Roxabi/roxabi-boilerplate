@@ -33,9 +33,9 @@ describe('lyra-story searchSchema', () => {
     const result = searchSchema.safeParse({})
     expect(result.success).toBe(true)
     if (result.success) {
-      expect(result.data.avatar).toBe('quantum')
-      expect(result.data.avatarSize).toBe(80)
-      expect(result.data.avatarPos).toBe('bottom-right')
+      expect(result.data.avatar).toBe('constellation')
+      expect(result.data.avatarSize).toBe(400)
+      expect(result.data.avatarPos).toBe('bottom-left')
       expect(result.data.mode).toBe('story')
     }
   })
