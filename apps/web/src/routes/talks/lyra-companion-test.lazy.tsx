@@ -43,13 +43,11 @@ const VARIANT_LABELS: Record<AvatarVariant, string> = {
   pokemon: 'Pokemon',
 }
 
-type Position = AvatarPosition
-
 const SIZES = [48, 64, 80, 100, 120] as const
 
 function LyraCompanionTestPage() {
   const [variant, setVariant] = useState<AvatarVariant>('quantum')
-  const [position, setPosition] = useState<Position>('bottom-right')
+  const [position, setPosition] = useState<AvatarPosition>('bottom-right')
   const [size, setSize] = useState<number>(80)
   const [stage, setStage] = useState(0)
   const [bgMode, setBgMode] = useState<'dark' | 'light'>('dark')
@@ -86,7 +84,7 @@ function LyraCompanionTestPage() {
     []
   )
 
-  const positionClasses: Record<Position, string> = {
+  const positionClasses: Record<AvatarPosition, string> = {
     'bottom-right': 'bottom-6 right-6',
     'bottom-left': 'bottom-6 left-6',
     'top-right': 'top-20 right-6',
@@ -144,7 +142,7 @@ function LyraCompanionTestPage() {
             {/* Position */}
             <select
               value={position}
-              onChange={(e) => setPosition(e.target.value as Position)}
+              onChange={(e) => setPosition(e.target.value as AvatarPosition)}
               className={cn(
                 'text-xs rounded px-1.5 py-1 border',
                 isDark
