@@ -597,6 +597,7 @@ jobs:
     needs: [e2e-matrix]
     if: always() && needs.e2e-matrix.result != 'skipped'
     permissions:
+      contents: read
       actions: read
     steps:
       - name: Checkout
