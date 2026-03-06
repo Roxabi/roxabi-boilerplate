@@ -13,15 +13,19 @@ describe('lyra-story searchSchema', () => {
     }
   })
 
-  it('rejects avatarSize not in allowlist', () => {
-    expect(searchSchema.safeParse({ avatarSize: 999 }).success).toBe(false)
-    expect(searchSchema.safeParse({ avatarSize: 0 }).success).toBe(false)
-    expect(searchSchema.safeParse({ avatarSize: -1 }).success).toBe(false)
+  it('falls back to 400 on avatarSize not in allowlist', () => {
+    for (const invalid of [999, 0, -1]) {
+      const result = searchSchema.safeParse({ avatarSize: invalid })
+      expect(result.success).toBe(true)
+      if (result.success) expect(result.data.avatarSize).toBe(400)
+    }
   })
 
-  it('coerces string avatarSize to number', () => {
+  it('coerces string avatarSize to number, falls back to 400 if not in allowlist', () => {
     expect(searchSchema.safeParse({ avatarSize: '80' }).success).toBe(true)
-    expect(searchSchema.safeParse({ avatarSize: '81' }).success).toBe(false)
+    const result = searchSchema.safeParse({ avatarSize: '81' })
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data.avatarSize).toBe(400)
   })
 
   it('accepts valid avatarPos values', () => {
