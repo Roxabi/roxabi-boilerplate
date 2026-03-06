@@ -20,9 +20,6 @@ async function configureSecurityHeaders(
   const styleSrc = swaggerEnabled ? ["'self'", "'unsafe-inline'", 'https://unpkg.com'] : ["'self'"]
 
   // Security headers (must be registered before routes)
-  // @ts-expect-error: @fastify/cookie@11 global FastifyInstance augmentation creates a type identity
-  // split between @nestjs/platform-fastify's bundled fastify@5.7.4 and our workspace fastify@5.8.1.
-  // Runtime behavior is correct. Track: https://github.com/fastify/fastify-cookie/issues
   await app.register(helmet, {
     global: true,
     contentSecurityPolicy: {
@@ -42,7 +39,6 @@ async function configureSecurityHeaders(
   })
 
   // Cookie parsing and serialization (required for reply.setCookie())
-  // @ts-expect-error: same FastifyInstance type identity split as above
   await app.register(fastifyCookie)
 
   // Permissions-Policy (not included in helmet v8)

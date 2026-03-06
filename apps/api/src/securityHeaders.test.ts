@@ -23,8 +23,6 @@ describe('Security Headers', () => {
       logger: false,
     })
 
-    // @ts-expect-error: @fastify/cookie@11 global FastifyInstance augmentation creates a type identity
-    // split between @nestjs/platform-fastify's bundled fastify@5.7.4 and workspace fastify@5.8.1.
     await app.register(helmet, {
       global: true,
       contentSecurityPolicy: { directives: { defaultSrc: ["'none'"] } },
