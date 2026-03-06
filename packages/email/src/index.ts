@@ -1,5 +1,6 @@
 import { render } from '@react-email/components'
 import { createElement } from 'react'
+import { ExistingAccountEmail } from './templates/existingAccount'
 import { MagicLinkEmail } from './templates/magicLink'
 import { ResetPasswordEmail } from './templates/resetPassword'
 import { VerificationEmail } from './templates/verification'
@@ -75,4 +76,23 @@ export async function renderMagicLinkEmail(
   const text = await render(element, { plainText: true })
 
   return { html, text, subject: translations.magicLink.subject }
+}
+
+export async function renderExistingAccountEmail(
+  loginUrl: string,
+  locale: string,
+  appUrl?: string
+): Promise<EmailRenderResult> {
+  const translations = getTranslations(locale)
+
+  const element = createElement(ExistingAccountEmail, {
+    url: loginUrl,
+    translations: translations.existingAccount,
+    locale,
+    appUrl,
+  })
+  const html = await render(element)
+  const text = await render(element, { plainText: true })
+
+  return { html, text, subject: translations.existingAccount.subject }
 }

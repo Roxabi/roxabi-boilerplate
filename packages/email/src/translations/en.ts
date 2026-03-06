@@ -25,4 +25,12 @@ export const en: Translations = {
     expiry: 'This link expires in 5 minutes.',
     footer: 'If you did not request this link, you can safely ignore this email.',
   },
+  existingAccount: {
+    subject: 'Someone tried to sign up with your email',
+    heading: 'New sign-up attempt',
+    body: 'Someone tried to create an account using your email address. If this was you, sign in to your existing account instead.',
+    cta: 'Sign in',
+    expiry: 'This is an automated security notification.',
+    footer: 'If you did not attempt to sign up, you can safely ignore this email.',
+  },
 }

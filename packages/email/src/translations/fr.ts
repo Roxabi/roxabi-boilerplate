@@ -28,4 +28,13 @@ export const fr: Translations = {
     footer:
       'Si vous n\u2019avez pas demandé ce lien, vous pouvez ignorer cet e-mail en toute sécurité.',
   },
+  existingAccount: {
+    subject: 'Quelqu\u2019un a tenté de s\u2019inscrire avec votre adresse e-mail',
+    heading: 'Tentative d\u2019inscription',
+    body: 'Quelqu\u2019un a tenté de créer un compte avec votre adresse e-mail. Si c\u2019était vous, connectez-vous à votre compte existant.',
+    cta: 'Se connecter',
+    expiry: 'Ceci est une notification de sécurité automatisée.',
+    footer:
+      'Si vous n\u2019avez pas tenté de vous inscrire, vous pouvez ignorer cet e-mail en toute sécurité.',
+  },
 }
