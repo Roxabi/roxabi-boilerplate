@@ -18,7 +18,7 @@ APP_PASSWORD="${POSTGRES_APP_PASSWORD:-roxabi_app}"
 DB_NAME="${POSTGRES_DB:-roxabi}"
 
 # Validate credentials to prevent SQL injection in interpolated SQL strings
-if ! echo "$APP_USER" | grep -qP '^[a-z_][a-z0-9_]*$'; then
+if ! echo "$APP_USER" | grep -qE '^[a-z_][a-z0-9_]*$'; then
   echo "ERROR: Invalid APP_USER: '$APP_USER'" >&2
   exit 1
 fi

@@ -28,6 +28,7 @@ import { toast } from 'sonner'
 import { BackLink, DetailSkeleton } from '@/components/admin/DetailShared'
 import { MemberContextMenu, MemberKebabButton } from '@/components/admin/MemberContextMenu'
 import { OrgActions } from '@/components/admin/OrgActions'
+import { adminOrgKeys } from '@/lib/admin/queryKeys'
 import { useSession } from '@/lib/authClient'
 import { formatDate } from '@/lib/formatDate'
 import { enforceRoutePermission } from '@/lib/routePermissions'
@@ -308,7 +309,7 @@ function EditOrgForm({ org, onSave, onCancel }: EditOrgFormProps) {
   const [error, setError] = useState<string | null>(null)
 
   const { data: allOrgs } = useQuery<{ data: AdminOrganization[] }>({
-    queryKey: ['admin', 'organizations', 'all-for-parent'],
+    queryKey: adminOrgKeys.allForParent(),
     queryFn: async () => {
       const res = await fetch('/api/admin/organizations?view=tree')
       if (!res.ok) throw new Error('Failed to fetch organizations')
@@ -434,7 +435,7 @@ function AdminOrgDetailPage() {
   const currentUserId = session?.user?.id ?? ''
 
   const { data, isLoading, error } = useQuery<AdminOrgDetail>({
-    queryKey: ['admin', 'organizations', orgId],
+    queryKey: adminOrgKeys.detail(orgId),
     queryFn: async () => {
       const res = await fetch(`/api/admin/organizations/${orgId}`)
       if (!res.ok) throw new Error('Organization not found')
@@ -443,8 +444,8 @@ function AdminOrgDetailPage() {
   })
 
   function handleActionComplete() {
-    queryClient.invalidateQueries({ queryKey: ['admin', 'organizations', orgId] })
-    queryClient.invalidateQueries({ queryKey: ['admin', 'organizations'] })
+    queryClient.invalidateQueries({ queryKey: adminOrgKeys.detail(orgId) })
+    queryClient.invalidateQueries({ queryKey: adminOrgKeys.all })
   }
 
   function handleEditSave() {

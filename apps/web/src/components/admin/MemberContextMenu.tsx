@@ -40,6 +40,8 @@ import {
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { adminOrgKeys } from '@/lib/admin/queryKeys'
+import type { OrgRole } from './types'
 
 export type MemberForMenu = {
   id: string
@@ -65,12 +67,6 @@ export type MemberKebabButtonProps = {
   onActionComplete: () => void
 }
 
-type OrgRole = {
-  id: string
-  name: string
-  slug: string
-}
-
 type MemberMenuContentProps = {
   member: MemberForMenu
   orgId: string
@@ -85,7 +81,7 @@ type MemberMenuContentProps = {
 
 function useOrgRoles(orgId: string) {
   return useQuery<{ data: OrgRole[] }>({
-    queryKey: ['admin', 'organizations', orgId, 'roles'],
+    queryKey: adminOrgKeys.roles(orgId),
     queryFn: async () => {
       const res = await fetch(`/api/admin/organizations/${orgId}/roles`, { credentials: 'include' })
       if (!res.ok) throw new Error('Failed to load roles')

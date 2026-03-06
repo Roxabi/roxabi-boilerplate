@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Entries are generated automatically by `/promote` and committed to staging before the promotion PR.
 
+## [v0.7.0] - 2026-03-06
+
+### Added
+- feat(auth): implement API key Bearer fallback in AuthGuard (#448, #319)
+- feat(talks): add Lyra origin story presentation (#452, #453, #456)
+- feat(talks): add Lyra companion component with 7 evolving variants (#452, #455)
+- feat(talks): display Lyra avatar animation in origin story talk (#458)
+- feat(talks): add Lyra MMORPG dev talk presentation (#450, #460)
+- feat(talks): add Lyra companion avatar + narrative improvements to lyra-dev talk (#450, #463)
+- feat(docs): add frontmatter check and group docs quality gates
+
+### Fixed
+- fix(auth): magic link callbackURL missing at request time + Mailpit + E2E coverage (#446)
+- fix(web): use API_PORT env fallback in server session fetcher (#462)
+- fix(ci): add contents:read to merge-reports job permissions (#461)
+- fix(ci): add Mailpit service and disable rate limiting for E2E jobs
+- fix(ci): allowlist artifacts/ and docs/ dirs in gitleaks
+- fix(ci): scope vercel-env-check to actual deployment triggers
+- fix(dev): add NITRO_PORT to prevent collision with API PORT
+- fix(dev): source .env at shell level so turbo receives env vars
+- fix(dev): source .env in dev:clean so EMAIL_PORT override is respected
+- fix(docker): use grep -E instead of -P for Alpine compatibility
+- fix(e2e): derive test credentials from APP_SLUG to match seed fixtures
+- fix(api): update env validation tests PORT→API_PORT
+- fix(talks): set lyra-story avatar defaults to constellation/400/bottom-left
+
+### Changed
+- refactor(api): extract focused sub-services for SRP compliance (#449, #400)
+- refactor(env): rename PORT→API_PORT, WEB_PORT→APP_PORT + hardcoded port env var fallbacks
+
+### Tests
+- test(seed): change default preset from minimal to full
+
+### Documentation
+- docs: add badges and doc table to README, add CONTRIBUTING.md
+
+### Maintenance
+- chore(web): low-priority code quality cleanup (#447)
+- chore: remove memory-audit plugin
+- chore: use APP_SLUG for docker defaults and seed data
+- chore(docker): configurable Mailpit ports, env var container/volume names, EMAIL_PORT passthrough
+- chore(dev): Docker health check improvements and auto-start in predev
+- chore(ci): add docs:links check to lefthook pre-push
+
 ## [v0.6.0] - 2026-03-03
 
 ### Added

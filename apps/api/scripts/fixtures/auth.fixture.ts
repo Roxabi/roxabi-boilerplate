@@ -2,6 +2,8 @@ import { hashPassword } from 'better-auth/crypto'
 import * as schema from '../../src/database/schema/index.js'
 import type { FixtureContext, Preset, SeedResult, Tx } from './types.js'
 
+const slug = process.env.APP_SLUG ?? process.env.POSTGRES_DB ?? 'app'
+
 export type UserDef = {
   email: string
   name: string
@@ -10,22 +12,22 @@ export type UserDef = {
 }
 
 export const MINIMAL_USERS: UserDef[] = [
-  { email: 'dev@roxabi.local', name: 'Dev User' },
-  { email: 'admin@roxabi.local', name: 'Admin User' },
-  { email: 'viewer@roxabi.local', name: 'Viewer User' },
-  { email: 'superadmin@roxabi.local', name: 'Super Admin', role: 'superadmin' },
+  { email: `dev@${slug}.local`, name: 'Dev User' },
+  { email: `admin@${slug}.local`, name: 'Admin User' },
+  { email: `viewer@${slug}.local`, name: 'Viewer User' },
+  { email: `superadmin@${slug}.local`, name: 'Super Admin', role: 'superadmin' },
 ]
 
 export const FULL_EXTRA_USERS: UserDef[] = [
-  { email: 'manager@roxabi.local', name: 'Manager User' },
-  { email: 'editor@roxabi.local', name: 'Editor User' },
-  { email: 'analyst@roxabi.local', name: 'Analyst User' },
-  { email: 'support@roxabi.local', name: 'Support User' },
-  { email: 'designer@roxabi.local', name: 'Designer User' },
-  { email: 'devops@roxabi.local', name: 'DevOps User' },
-  { email: 'marketing@roxabi.local', name: 'Marketing User' },
-  { email: 'sales@roxabi.local', name: 'Sales User' },
-  { email: 'intern@roxabi.local', name: 'Intern User', emailVerified: false },
+  { email: `manager@${slug}.local`, name: 'Manager User' },
+  { email: `editor@${slug}.local`, name: 'Editor User' },
+  { email: `analyst@${slug}.local`, name: 'Analyst User' },
+  { email: `support@${slug}.local`, name: 'Support User' },
+  { email: `designer@${slug}.local`, name: 'Designer User' },
+  { email: `devops@${slug}.local`, name: 'DevOps User' },
+  { email: `marketing@${slug}.local`, name: 'Marketing User' },
+  { email: `sales@${slug}.local`, name: 'Sales User' },
+  { email: `intern@${slug}.local`, name: 'Intern User', emailVerified: false },
 ]
 
 /** Create users and credential accounts. All users get password "password123". Intern is unverified. */

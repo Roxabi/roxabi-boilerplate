@@ -5,13 +5,13 @@ describe('env validation', () => {
   it('should pass with valid config', () => {
     const result = validate({
       NODE_ENV: 'development',
-      PORT: 4000,
+      API_PORT: 4000,
       CORS_ORIGIN: 'http://localhost:3000',
       LOG_LEVEL: 'debug',
     })
 
     expect(result.NODE_ENV).toBe('development')
-    expect(result.PORT).toBe(4000)
+    expect(result.API_PORT).toBe(4000)
     expect(result.CORS_ORIGIN).toBe('http://localhost:3000')
     expect(result.LOG_LEVEL).toBe('debug')
   })
@@ -20,7 +20,7 @@ describe('env validation', () => {
     const result = validate({})
 
     expect(result.NODE_ENV).toBe('development')
-    expect(result.PORT).toBe(4000)
+    expect(result.API_PORT).toBe(4000)
     expect(result.CORS_ORIGIN).toBe('http://localhost:3000')
     expect(result.LOG_LEVEL).toBe('warn')
     expect(result.DATABASE_URL).toBeUndefined()
@@ -49,8 +49,8 @@ describe('env validation', () => {
     expect(() => validate({ NODE_ENV: 'staging' })).toThrow()
   })
 
-  it('should throw on invalid PORT type', () => {
-    expect(() => validate({ PORT: 'abc' })).toThrow()
+  it('should throw on invalid API_PORT type', () => {
+    expect(() => validate({ API_PORT: 'abc' })).toThrow()
   })
 
   it('should accept DATABASE_URL when provided', () => {
@@ -58,14 +58,14 @@ describe('env validation', () => {
     expect(result.DATABASE_URL).toBe('postgres://localhost:5432/test')
   })
 
-  it('should accept a numeric PORT', () => {
-    const result = validate({ PORT: 8080 })
-    expect(result.PORT).toBe(8080)
+  it('should accept a numeric API_PORT', () => {
+    const result = validate({ API_PORT: 8080 })
+    expect(result.API_PORT).toBe(8080)
   })
 
-  it('should coerce a string PORT to number', () => {
-    const result = validate({ PORT: '9090' })
-    expect(result.PORT).toBe(9090)
+  it('should coerce a string API_PORT to number', () => {
+    const result = validate({ API_PORT: '9090' })
+    expect(result.API_PORT).toBe(9090)
   })
 
   describe('APP_URL validation', () => {

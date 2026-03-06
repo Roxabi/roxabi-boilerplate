@@ -1,8 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common'
-import { and, count, desc, eq, ilike, isNotNull, isNull, or, type SQL } from 'drizzle-orm'
+import { count, eq } from 'drizzle-orm'
 import { ClsService } from 'nestjs-cls'
 import { AuditService } from '../audit/audit.service.js'
-import { buildCursorCondition, buildCursorResponse } from '../common/utils/cursorPagination.util.js'
 import { DRIZZLE, type DrizzleDB } from '../database/drizzle.provider.js'
 import { PG_UNIQUE_VIOLATION } from '../database/pgErrorCodes.js'
 import { members, organizations, users } from '../database/schema/auth.schema.js'
@@ -12,7 +11,6 @@ import { findOrgSnapshotOrThrow } from './adminOrganizations.shared.js'
 import { OrgDepthExceededException } from './exceptions/orgDepthExceeded.exception.js'
 import { AdminOrgNotFoundException } from './exceptions/orgNotFound.exception.js'
 import { OrgSlugConflictException } from './exceptions/orgSlugConflict.exception.js'
-import { escapeIlikePattern } from './utils/escapeIlikePattern.js'
 import { logOrgAudit } from './utils/logAudit.js'
 
 /**
@@ -31,119 +29,6 @@ export class AdminOrganizationsService {
     private readonly auditService: AuditService,
     private readonly cls: ClsService
   ) {}
-
-  /**
-   * List organizations with cursor-based pagination and optional filters.
-   * Includes memberCount via correlated subquery.
-   */
-  async listOrganizations(
-    filters: { status?: string; search?: string },
-    cursor?: string,
-    limit = 20
-  ) {
-    const conditions = this.buildOrgFilterConditions(filters, cursor)
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined
-    const rows = await this.queryOrgRows(whereClause, limit)
-
-    return buildCursorResponse(
-      rows,
-      limit,
-      (row) => row.createdAt,
-      (row) => row.id
-    )
-  }
-
-  private buildOrgFilterConditions(
-    filters: { status?: string; search?: string },
-    cursor?: string
-  ): SQL[] {
-    const conditions: SQL[] = []
-
-    if (filters.status === 'active') {
-      conditions.push(isNull(organizations.deletedAt))
-    } else if (filters.status === 'archived') {
-      conditions.push(isNotNull(organizations.deletedAt))
-    }
-
-    if (filters.search) {
-      const pattern = `%${escapeIlikePattern(filters.search)}%`
-      const searchCondition = or(
-        ilike(organizations.name, pattern),
-        ilike(organizations.slug, pattern)
-      )
-      if (searchCondition) conditions.push(searchCondition)
-    }
-
-    if (cursor) {
-      conditions.push(buildCursorCondition(cursor, organizations.createdAt, organizations.id))
-    }
-
-    return conditions
-  }
-
-  private queryOrgRows(whereClause: SQL | undefined, limit: number) {
-    return this.db
-      .select({
-        id: organizations.id,
-        name: organizations.name,
-        slug: organizations.slug,
-        logo: organizations.logo,
-        metadata: organizations.metadata,
-        parentOrganizationId: organizations.parentOrganizationId,
-        deletedAt: organizations.deletedAt,
-        deleteScheduledFor: organizations.deleteScheduledFor,
-        createdAt: organizations.createdAt,
-        updatedAt: organizations.updatedAt,
-        memberCount: count(members.id),
-      })
-      .from(organizations)
-      .leftJoin(members, eq(organizations.id, members.organizationId))
-      .where(whereClause)
-      .groupBy(organizations.id)
-      .orderBy(desc(organizations.createdAt), desc(organizations.id))
-      .limit(limit + 1)
-  }
-
-  /**
-   * List all non-deleted organizations for tree view.
-   * Returns treeViewAvailable=false if > 1000 orgs.
-   */
-  async listOrganizationsForTree() {
-    // Count query
-    const [countResult] = await this.db
-      .select({ count: count() })
-      .from(organizations)
-      .where(isNull(organizations.deletedAt))
-
-    if ((countResult?.count ?? 0) > 1000) {
-      return {
-        treeViewAvailable: false,
-        data: [] as {
-          id: string
-          name: string
-          slug: string | null
-          parentOrganizationId: string | null
-          memberCount: number
-        }[],
-      }
-    }
-
-    // Fetch all non-deleted orgs with member counts
-    const rows = await this.db
-      .select({
-        id: organizations.id,
-        name: organizations.name,
-        slug: organizations.slug,
-        parentOrganizationId: organizations.parentOrganizationId,
-        memberCount: count(members.id),
-      })
-      .from(organizations)
-      .leftJoin(members, eq(organizations.id, members.organizationId))
-      .where(isNull(organizations.deletedAt))
-      .groupBy(organizations.id)
-
-    return { treeViewAvailable: true, data: rows }
-  }
 
   /**
    * Get detailed org info with members and child organizations.

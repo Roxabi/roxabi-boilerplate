@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { AuditService } from '../../audit/audit.service.js'
 import { createChainMock } from '../__test-utils__/createChainMock.js'
-import { AdminUsersService } from '../adminUsers.service.js'
+import { AdminUsersQueryService } from '../adminUsers.query.js'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -16,20 +15,10 @@ function createMockDb() {
   }
 }
 
-function createMockAuditService(): AuditService {
-  return { log: vi.fn().mockResolvedValue(undefined) } as unknown as AuditService
-}
-
-function createMockClsService(id = 'test-correlation-id') {
-  return { getId: vi.fn().mockReturnValue(id) }
-}
-
 function createService() {
   const db = createMockDb()
-  const auditService = createMockAuditService()
-  const cls = createMockClsService()
-  const service = new AdminUsersService(db as never, auditService, cls as never)
-  return { service, db, auditService, cls }
+  const service = new AdminUsersQueryService(db as never)
+  return { service, db }
 }
 
 // ---------------------------------------------------------------------------
@@ -60,8 +49,8 @@ const baseUser = {
  *   Query 3: batch lastActive by userId (MAX(timestamp) from audit_logs)
  */
 // biome-ignore lint/complexity/noExcessiveLinesPerFunction: test describe block with multiple test cases
-describe('AdminUsersService — listUsers columns (#312)', () => {
-  let service: AdminUsersService
+describe('AdminUsersQueryService — listUsers columns (#312)', () => {
+  let service: AdminUsersQueryService
   let db: ReturnType<typeof createMockDb>
 
   beforeEach(() => {

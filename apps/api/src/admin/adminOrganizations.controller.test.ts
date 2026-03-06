@@ -5,6 +5,7 @@ import { z } from 'zod'
 import type { AdminMembersService } from './adminMembers.service.js'
 import { AdminOrganizationsController } from './adminOrganizations.controller.js'
 import type { AdminOrganizationsDeletionService } from './adminOrganizations.deletion.js'
+import type { AdminOrganizationsQueryService } from './adminOrganizations.query.js'
 import type { AdminOrganizationsService } from './adminOrganizations.service.js'
 import { OrgCycleDetectedException } from './exceptions/orgCycleDetected.exception.js'
 import { OrgDepthExceededException } from './exceptions/orgDepthExceeded.exception.js'
@@ -16,12 +17,15 @@ import { OrgSlugConflictException } from './exceptions/orgSlugConflict.exception
 // ---------------------------------------------------------------------------
 
 const mockAdminOrganizationsService: AdminOrganizationsService = {
-  listOrganizations: vi.fn(),
-  listOrganizationsForTree: vi.fn(),
   getOrganizationDetail: vi.fn(),
   createOrganization: vi.fn(),
   updateOrganization: vi.fn(),
 } as unknown as AdminOrganizationsService
+
+const mockAdminOrganizationsQueryService: AdminOrganizationsQueryService = {
+  listOrganizations: vi.fn(),
+  listOrganizationsForTree: vi.fn(),
+} as unknown as AdminOrganizationsQueryService
 
 const mockAdminOrganizationsDeletionService: AdminOrganizationsDeletionService = {
   getDeletionImpact: vi.fn(),
@@ -63,6 +67,7 @@ const updateOrgSchema = z.object({
 describe('AdminOrganizationsController', () => {
   const controller = new AdminOrganizationsController(
     mockAdminOrganizationsService,
+    mockAdminOrganizationsQueryService,
     mockAdminMembersService,
     mockAdminOrganizationsDeletionService
   )
@@ -95,27 +100,27 @@ describe('AdminOrganizationsController', () => {
   // GET /api/admin/organizations
   // -----------------------------------------------------------------------
   describe('GET /api/admin/organizations', () => {
-    it('should delegate to service.listOrganizations with default pagination', async () => {
+    it('should delegate to queryService.listOrganizations with default pagination', async () => {
       // Arrange
       const expected = { data: [], cursor: { next: null, hasMore: false } }
-      vi.mocked(mockAdminOrganizationsService.listOrganizations).mockResolvedValue(expected)
+      vi.mocked(mockAdminOrganizationsQueryService.listOrganizations).mockResolvedValue(expected)
 
       // Act
       const result = await controller.listOrganizations()
 
       // Assert
       expect(result).toEqual(expected)
-      expect(mockAdminOrganizationsService.listOrganizations).toHaveBeenCalledWith(
+      expect(mockAdminOrganizationsQueryService.listOrganizations).toHaveBeenCalledWith(
         { status: undefined, search: undefined },
         undefined,
         20
       )
     })
 
-    it('should delegate to service.listOrganizationsForTree when view=tree', async () => {
+    it('should delegate to queryService.listOrganizationsForTree when view=tree', async () => {
       // Arrange
       const expected = { treeViewAvailable: true, data: [] }
-      vi.mocked(mockAdminOrganizationsService.listOrganizationsForTree).mockResolvedValue(
+      vi.mocked(mockAdminOrganizationsQueryService.listOrganizationsForTree).mockResolvedValue(
         expected as never
       )
 
@@ -130,12 +135,12 @@ describe('AdminOrganizationsController', () => {
 
       // Assert
       expect(result).toEqual(expected)
-      expect(mockAdminOrganizationsService.listOrganizationsForTree).toHaveBeenCalledTimes(1)
+      expect(mockAdminOrganizationsQueryService.listOrganizationsForTree).toHaveBeenCalledTimes(1)
     })
 
-    it('should pass filter params to service', async () => {
+    it('should pass filter params to queryService', async () => {
       // Arrange
-      vi.mocked(mockAdminOrganizationsService.listOrganizations).mockResolvedValue({
+      vi.mocked(mockAdminOrganizationsQueryService.listOrganizations).mockResolvedValue({
         data: [],
         cursor: { next: null, hasMore: false },
       })
@@ -144,7 +149,7 @@ describe('AdminOrganizationsController', () => {
       await controller.listOrganizations('cursor-abc', '10', 'active', 'acme')
 
       // Assert
-      expect(mockAdminOrganizationsService.listOrganizations).toHaveBeenCalledWith(
+      expect(mockAdminOrganizationsQueryService.listOrganizations).toHaveBeenCalledWith(
         { status: 'active', search: 'acme' },
         'cursor-abc',
         10
@@ -153,7 +158,7 @@ describe('AdminOrganizationsController', () => {
 
     it('should clamp limit to range [1, 100]', async () => {
       // Arrange
-      vi.mocked(mockAdminOrganizationsService.listOrganizations).mockResolvedValue({
+      vi.mocked(mockAdminOrganizationsQueryService.listOrganizations).mockResolvedValue({
         data: [],
         cursor: { next: null, hasMore: false },
       })
@@ -162,7 +167,7 @@ describe('AdminOrganizationsController', () => {
       await controller.listOrganizations(undefined, '500')
 
       // Assert
-      expect(mockAdminOrganizationsService.listOrganizations).toHaveBeenCalledWith(
+      expect(mockAdminOrganizationsQueryService.listOrganizations).toHaveBeenCalledWith(
         expect.anything(),
         undefined,
         100
@@ -178,7 +183,7 @@ describe('AdminOrganizationsController', () => {
 
     it('should trim search whitespace', async () => {
       // Arrange
-      vi.mocked(mockAdminOrganizationsService.listOrganizations).mockResolvedValue({
+      vi.mocked(mockAdminOrganizationsQueryService.listOrganizations).mockResolvedValue({
         data: [],
         cursor: { next: null, hasMore: false },
       })
@@ -187,7 +192,7 @@ describe('AdminOrganizationsController', () => {
       await controller.listOrganizations(undefined, undefined, undefined, '  acme  ')
 
       // Assert
-      expect(mockAdminOrganizationsService.listOrganizations).toHaveBeenCalledWith(
+      expect(mockAdminOrganizationsQueryService.listOrganizations).toHaveBeenCalledWith(
         expect.objectContaining({ search: 'acme' }),
         undefined,
         20

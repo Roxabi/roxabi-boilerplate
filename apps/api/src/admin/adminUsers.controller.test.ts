@@ -2,6 +2,7 @@ import { Reflector } from '@nestjs/core'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AdminUsersController, banUserSchema, updateUserSchema } from './adminUsers.controller.js'
 import type { AdminUsersLifecycleService } from './adminUsers.lifecycle.js'
+import type { AdminUsersQueryService } from './adminUsers.query.js'
 import type { AdminUsersService } from './adminUsers.service.js'
 import { EmailConflictException } from './exceptions/emailConflict.exception.js'
 import { UserAlreadyBannedException } from './exceptions/userAlreadyBanned.exception.js'
@@ -12,10 +13,13 @@ import { AdminUserNotFoundException } from './exceptions/userNotFound.exception.
 // ---------------------------------------------------------------------------
 
 const mockAdminUsersService: AdminUsersService = {
-  listUsers: vi.fn(),
   getUserDetail: vi.fn(),
   updateUser: vi.fn(),
 } as unknown as AdminUsersService
+
+const mockAdminUsersQueryService: AdminUsersQueryService = {
+  listUsers: vi.fn(),
+} as unknown as AdminUsersQueryService
 
 const mockAdminUsersLifecycleService: AdminUsersLifecycleService = {
   banUser: vi.fn(),
@@ -29,7 +33,11 @@ const mockAdminUsersLifecycleService: AdminUsersLifecycleService = {
 // ---------------------------------------------------------------------------
 
 describe('AdminUsersController', () => {
-  const controller = new AdminUsersController(mockAdminUsersService, mockAdminUsersLifecycleService)
+  const controller = new AdminUsersController(
+    mockAdminUsersService,
+    mockAdminUsersQueryService,
+    mockAdminUsersLifecycleService
+  )
 
   beforeEach(() => {
     vi.restoreAllMocks()
@@ -62,14 +70,14 @@ describe('AdminUsersController', () => {
     it('should delegate to service.listUsers with parsed filters and default limit', async () => {
       // Arrange
       const expected = { data: [], cursor: { next: null, hasMore: false } }
-      vi.mocked(mockAdminUsersService.listUsers).mockResolvedValue(expected)
+      vi.mocked(mockAdminUsersQueryService.listUsers).mockResolvedValue(expected)
 
       // Act
       const result = await controller.listUsers()
 
       // Assert
       expect(result).toEqual(expected)
-      expect(mockAdminUsersService.listUsers).toHaveBeenCalledWith(
+      expect(mockAdminUsersQueryService.listUsers).toHaveBeenCalledWith(
         { role: undefined, status: undefined, organizationId: undefined, search: undefined },
         undefined,
         20
@@ -78,7 +86,7 @@ describe('AdminUsersController', () => {
 
     it('should pass filter params to service', async () => {
       // Arrange
-      vi.mocked(mockAdminUsersService.listUsers).mockResolvedValue({
+      vi.mocked(mockAdminUsersQueryService.listUsers).mockResolvedValue({
         data: [],
         cursor: { next: null, hasMore: false },
       })
@@ -94,7 +102,7 @@ describe('AdminUsersController', () => {
       )
 
       // Assert
-      expect(mockAdminUsersService.listUsers).toHaveBeenCalledWith(
+      expect(mockAdminUsersQueryService.listUsers).toHaveBeenCalledWith(
         {
           role: 'superadmin',
           status: 'active',
@@ -108,7 +116,7 @@ describe('AdminUsersController', () => {
 
     it('should clamp limit to range [1, 100]', async () => {
       // Arrange
-      vi.mocked(mockAdminUsersService.listUsers).mockResolvedValue({
+      vi.mocked(mockAdminUsersQueryService.listUsers).mockResolvedValue({
         data: [],
         cursor: { next: null, hasMore: false },
       })
@@ -117,7 +125,7 @@ describe('AdminUsersController', () => {
       await controller.listUsers(undefined, '500')
 
       // Assert
-      expect(mockAdminUsersService.listUsers).toHaveBeenCalledWith(
+      expect(mockAdminUsersQueryService.listUsers).toHaveBeenCalledWith(
         expect.anything(),
         undefined,
         100
@@ -126,7 +134,7 @@ describe('AdminUsersController', () => {
 
     it('should default limit to 20 when invalid value is provided', async () => {
       // Arrange
-      vi.mocked(mockAdminUsersService.listUsers).mockResolvedValue({
+      vi.mocked(mockAdminUsersQueryService.listUsers).mockResolvedValue({
         data: [],
         cursor: { next: null, hasMore: false },
       })
@@ -135,12 +143,16 @@ describe('AdminUsersController', () => {
       await controller.listUsers(undefined, 'not-a-number')
 
       // Assert
-      expect(mockAdminUsersService.listUsers).toHaveBeenCalledWith(expect.anything(), undefined, 20)
+      expect(mockAdminUsersQueryService.listUsers).toHaveBeenCalledWith(
+        expect.anything(),
+        undefined,
+        20
+      )
     })
 
     it('should trim search whitespace', async () => {
       // Arrange
-      vi.mocked(mockAdminUsersService.listUsers).mockResolvedValue({
+      vi.mocked(mockAdminUsersQueryService.listUsers).mockResolvedValue({
         data: [],
         cursor: { next: null, hasMore: false },
       })
@@ -149,7 +161,7 @@ describe('AdminUsersController', () => {
       await controller.listUsers(undefined, undefined, undefined, undefined, undefined, '  alice  ')
 
       // Assert
-      expect(mockAdminUsersService.listUsers).toHaveBeenCalledWith(
+      expect(mockAdminUsersQueryService.listUsers).toHaveBeenCalledWith(
         expect.objectContaining({ search: 'alice' }),
         undefined,
         20

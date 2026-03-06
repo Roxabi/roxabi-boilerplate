@@ -3,7 +3,7 @@ import { and, eq, isNotNull, lt } from 'drizzle-orm'
 import { DRIZZLE, type DrizzleDB } from '../database/drizzle.provider.js'
 import { invitations, members, organizations, users } from '../database/schema/auth.schema.js'
 import { roles } from '../database/schema/rbac.schema.js'
-import { UserService } from '../user/user.service.js'
+import { UserPurgeService } from '../user/userPurge.service.js'
 
 @Injectable()
 export class PurgeService {
@@ -11,7 +11,7 @@ export class PurgeService {
 
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleDB,
-    private readonly userService: UserService
+    private readonly userPurgeService: UserPurgeService
   ) {}
 
   async runPurge() {
@@ -42,7 +42,7 @@ export class PurgeService {
       if (user.email.endsWith('@anonymized.local')) continue
 
       await this.db.transaction(async (tx) => {
-        await this.userService.anonymizeUserRecords(tx, user.id, user.email, now)
+        await this.userPurgeService.anonymizeUserRecords(tx, user.id, user.email, now)
       })
       anonymized++
     }

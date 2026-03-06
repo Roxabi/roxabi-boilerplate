@@ -19,6 +19,7 @@ import { Link } from '@tanstack/react-router'
 import { ExternalLinkIcon, MoreHorizontalIcon, RotateCcwIcon, Trash2Icon } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { adminOrgKeys } from '@/lib/admin/queryKeys'
 
 type OrgListContextMenuProps = {
   org: AdminOrganization
@@ -125,7 +126,7 @@ function OrgListMenuDialogs({
   restoreMutation,
 }: OrgListMenuDialogsProps) {
   const { data: impact } = useQuery<OrgDeletionImpact>({
-    queryKey: ['admin', 'organizations', org.id, 'deletion-impact'],
+    queryKey: adminOrgKeys.deletionImpact(org.id),
     queryFn: async () => {
       const res = await fetch(`/api/admin/organizations/${org.id}/deletion-impact`, {
         credentials: 'include',

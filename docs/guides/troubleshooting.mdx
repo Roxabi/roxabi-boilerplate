@@ -23,7 +23,7 @@ Confirm the `DATABASE_URL` in your `.env` file matches the port and credentials 
 If you copied `.env.example` but changed nothing, verify the default credentials (`roxabi:roxabi`) match what `docker-compose.yml` defines. A common mistake is editing the password in one place but not the other:
 
 ```bash
-# Verify by connecting manually
+# Verify by connecting manually (replace roxabi-postgres if POSTGRES_CONTAINER is overridden)
 docker exec -it roxabi-postgres psql -U roxabi -d roxabi -c "SELECT 1"
 ```
 
@@ -55,7 +55,7 @@ lsof -ti:4000 | xargs -r kill
 lsof -ti:3001 | xargs -r kill
 ```
 
-Alternatively, set the `PORT` environment variable to use a different port.
+Alternatively, set `APP_PORT`, `API_PORT`, `NITRO_PORT`, or `EMAIL_PORT` in `.env` to use different ports.
 
 ## Dependency Install Failures After Updates
 
@@ -221,6 +221,8 @@ queries will fail with "permission denied to set role app_user".
 
 Alternative: delete your Docker volume and recreate: `bun run db:down && docker volume rm roxabi_boilerplate_postgres_data && bun run db:up`
 
+> **Note:** If `POSTGRES_VOLUME` is set to a custom value (e.g. `myapp_data`), the Docker volume name will be `roxabi_boilerplate_myapp_data` — adjust the `docker volume rm` command accordingly.
+
 ## Pre-commit Hook Failures
 
 **Symptom:** Commit is rejected by Lefthook with Biome formatting errors or commitlint violations.
@@ -249,6 +251,26 @@ find . -name '*.tsbuildinfo' -not -path '*/node_modules/*' -delete
 
 bun run clean:cache && bun run typecheck
 ```
+
+## Docker Conflicts When Running Multiple Projects
+
+**Symptom:** `bun db:up` fails with `container name already in use` or `volume already exists` errors when another project (e.g. a fork or sibling repo) is already running its own Docker stack.
+
+**Cause:** `docker-compose.yml` defaults to fixed container names (`roxabi-postgres`, `roxabi-mailpit`) and a fixed volume name (`postgres_data`). Two projects sharing these names on the same Docker daemon will conflict.
+
+**Fix:** Override the Docker identifiers in `.env` before running `bun db:up`:
+
+```bash
+# .env (project-specific overrides)
+POSTGRES_CONTAINER=myapp-postgres
+MAILPIT_CONTAINER=myapp-mailpit
+POSTGRES_VOLUME=myapp_postgres_data
+DB_BRANCH_PREFIX=myapp
+```
+
+`DB_BRANCH_PREFIX` also controls the naming of per-worktree branch databases (`db:branch:create`). Set it to a value unique to this project so branch databases from different projects don't collide inside the shared Postgres instance.
+
+See [Configuration — Docker Overrides](../configuration#docker-overrides-local-dev--multi-project) for the full list of overridable vars.
 
 ## Turbo Cache Staleness
 

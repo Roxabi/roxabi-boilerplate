@@ -22,6 +22,7 @@ import { FilterBar } from '@/components/admin/FilterBar'
 import { LoadMoreButton } from '@/components/admin/LoadMoreButton'
 import { UserContextMenu, UserKebabButton } from '@/components/admin/UserContextMenu'
 import { useCursorPagination } from '@/hooks/useCursorPagination'
+import { adminOrgKeys, adminUserKeys } from '@/lib/admin/queryKeys'
 import { formatDate } from '@/lib/formatDate'
 import { formatRelativeTime } from '@/lib/formatRelativeTime'
 import { enforceRoutePermission } from '@/lib/routePermissions'
@@ -104,7 +105,7 @@ function EmptyState() {
 
 function useOrgFilterConfigs(): FilterConfig[] {
   const { data: orgsData } = useQuery<{ data: { id: string; name: string }[] }>({
-    queryKey: ['admin', 'organizations', 'filter-options'],
+    queryKey: adminOrgKeys.filterOptions(),
     queryFn: async () => {
       const res = await fetch('/api/admin/organizations?limit=100')
       if (!res.ok) throw new Error('Failed to fetch organizations')
@@ -145,7 +146,7 @@ function AdminUsersList() {
     isLoadingMore,
     refetch,
   } = useCursorPagination<AdminUser>({
-    queryKey: ['admin', 'users', filters],
+    queryKey: adminUserKeys.list(filters),
     fetchFn: async (cursor) => {
       const params = new URLSearchParams()
       if (cursor) params.set('cursor', cursor)

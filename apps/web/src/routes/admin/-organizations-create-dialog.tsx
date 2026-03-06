@@ -14,6 +14,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { adminOrgKeys } from '@/lib/admin/queryKeys'
 
 function slugify(text: string): string {
   return text
@@ -144,7 +145,7 @@ function useCreateOrgForm(
   const [error, setError] = useState<string | null>(null)
 
   const { data: allOrgs } = useQuery({
-    queryKey: ['admin', 'organizations', 'all-for-parent'],
+    queryKey: adminOrgKeys.allForParent(),
     queryFn: fetchAllOrgs,
     enabled: open,
   })
@@ -164,7 +165,7 @@ function useCreateOrgForm(
   const mutation = useCreateOrgMutation({
     onSuccess: (data) => {
       toast.success('Organization created successfully')
-      queryClient.invalidateQueries({ queryKey: ['admin', 'organizations'] })
+      queryClient.invalidateQueries({ queryKey: adminOrgKeys.all })
       onOpenChange(false)
       reset()
       navigate({ to: '/admin/organizations/$orgId', params: { orgId: data.id } })

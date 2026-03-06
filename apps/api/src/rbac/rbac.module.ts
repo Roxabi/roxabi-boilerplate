@@ -6,16 +6,18 @@ import { PermissionService } from './permission.service.js'
 import { RbacController } from './rbac.controller.js'
 import { RbacListener } from './rbac.listener.js'
 import { RbacService } from './rbac.service.js'
+import { RbacMemberService } from './rbacMember.service.js'
 
 @Module({
   imports: [TenantModule],
   controllers: [RbacController],
   providers: [
     RbacService,
+    RbacMemberService,
     PermissionService,
     RbacListener,
     { provide: APP_FILTER, useClass: RbacExceptionFilter },
   ],
-  exports: [RbacService, PermissionService],
+  exports: [RbacService, RbacMemberService, PermissionService],
 })
 export class RbacModule {}

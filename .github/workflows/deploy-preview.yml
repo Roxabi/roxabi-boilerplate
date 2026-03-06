@@ -25,10 +25,32 @@ env:
   NODE_VERSION: "24"
 
 jobs:
+  vercel-env-check:
+    name: Vercel Env Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: inputs.target != 'cleanup'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Check preview env vars
+        run: bun run scripts/checkVercelEnv.ts preview
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
   deploy-web:
     name: Deploy Web Preview
     runs-on: ubuntu-latest
-    if: inputs.target == 'web' || inputs.target == 'both'
+    needs: [vercel-env-check]
+    if: |
+      !cancelled() && !failure() &&
+      (inputs.target == 'web' || inputs.target == 'both')
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -84,7 +106,10 @@ jobs:
   deploy-api:
     name: Deploy API Preview
     runs-on: ubuntu-latest
-    if: inputs.target == 'api' || inputs.target == 'both'
+    needs: [vercel-env-check]
+    if: |
+      !cancelled() && !failure() &&
+      (inputs.target == 'api' || inputs.target == 'both')
     steps:
       - name: Delete existing Neon branch (if any)
         continue-on-error: true

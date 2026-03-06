@@ -22,6 +22,7 @@ import type { FilterConfig } from '@/components/admin/FilterBar'
 import { FilterBar } from '@/components/admin/FilterBar'
 import { LoadMoreButton } from '@/components/admin/LoadMoreButton'
 import { useCursorPagination } from '@/hooks/useCursorPagination'
+import { adminAuditKeys } from '@/lib/admin/queryKeys'
 import { formatTimestamp } from '@/lib/formatDate'
 import { enforceRoutePermission } from '@/lib/routePermissions'
 
@@ -164,7 +165,7 @@ function AdminAuditLogsPage() {
     isLoading,
     isLoadingMore,
   } = useCursorPagination<AuditEntry>({
-    queryKey: ['admin', 'audit-logs', filters],
+    queryKey: adminAuditKeys.list(filters),
     fetchFn: async (cursor) => {
       const params = buildAuditLogParams(cursor, filters)
       const res = await fetch(`/api/admin/audit-logs?${params}`)

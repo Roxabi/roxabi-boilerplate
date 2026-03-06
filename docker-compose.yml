@@ -1,22 +1,38 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: roxabi-postgres
+    container_name: ${POSTGRES_CONTAINER:-${APP_SLUG:-app}-postgres}
     restart: unless-stopped
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-roxabi}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-roxabi}
-      POSTGRES_DB: ${POSTGRES_DB:-roxabi}
+      POSTGRES_USER: ${POSTGRES_USER:-${APP_SLUG:-app}}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-${APP_SLUG:-app}}
+      POSTGRES_DB: ${POSTGRES_DB:-${APP_SLUG:-app}}
+      POSTGRES_APP_USER: ${POSTGRES_APP_USER:-${APP_SLUG:-app}_app}
+      POSTGRES_APP_PASSWORD: ${POSTGRES_APP_PASSWORD:-${APP_SLUG:-app}_app}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/init-app-user.sh:/docker-entrypoint-initdb.d/10-init-app-user.sh:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-roxabi}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-${APP_SLUG:-app}}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mailpit:
+    image: axllent/mailpit:v1.29.2
+    container_name: ${MAILPIT_CONTAINER:-${APP_SLUG:-app}-mailpit}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8025/api/v1/messages?limit=1"]
       interval: 5s
       timeout: 5s
       retries: 5
 
 volumes:
   postgres_data:
+    name: ${POSTGRES_VOLUME:-${APP_SLUG:-app}_postgres_data}

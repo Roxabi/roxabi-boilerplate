@@ -23,6 +23,7 @@ import { SkipOrg } from '../common/decorators/skipOrg.decorator.js'
 import { ZodValidationPipe } from '../common/pipes/zodValidation.pipe.js'
 import { AdminMembersService } from './adminMembers.service.js'
 import { AdminOrganizationsDeletionService } from './adminOrganizations.deletion.js'
+import { AdminOrganizationsQueryService } from './adminOrganizations.query.js'
 import { AdminOrganizationsService } from './adminOrganizations.service.js'
 import { AdminBadRequestFilter } from './filters/adminBadRequest.filter.js'
 import { AdminConflictFilter } from './filters/adminConflict.filter.js'
@@ -86,6 +87,7 @@ const listOrgsQuerySchema = z.object({
 export class AdminOrganizationsController {
   constructor(
     private readonly adminOrganizationsService: AdminOrganizationsService,
+    private readonly adminOrganizationsQueryService: AdminOrganizationsQueryService,
     private readonly adminMembersService: AdminMembersService,
     private readonly adminOrganizationsDeletionService: AdminOrganizationsDeletionService
   ) {}
@@ -113,11 +115,11 @@ export class AdminOrganizationsController {
     }
 
     if (parsed.data.view === 'tree') {
-      return this.adminOrganizationsService.listOrganizationsForTree()
+      return this.adminOrganizationsQueryService.listOrganizationsForTree()
     }
 
     const { limit: safeLimit, cursor: safeCursor, view: _view, ...filters } = parsed.data
-    return this.adminOrganizationsService.listOrganizations(filters, safeCursor, safeLimit)
+    return this.adminOrganizationsQueryService.listOrganizations(filters, safeCursor, safeLimit)
   }
 
   @Post()

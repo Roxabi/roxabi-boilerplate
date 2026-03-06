@@ -23,6 +23,7 @@ export type DestructiveConfirmDialogProps = {
   isLoading?: boolean
   actionLabel?: string
   loadingLabel?: string
+  cancelLabel?: string
 }
 
 /**
@@ -42,6 +43,7 @@ export function DestructiveConfirmDialog({
   isLoading,
   actionLabel,
   loadingLabel,
+  cancelLabel,
 }: DestructiveConfirmDialogProps) {
   const [input, setInput] = React.useState('')
   const safeConfirmText = confirmText ?? ''
@@ -73,7 +75,7 @@ export function DestructiveConfirmDialog({
         </div>
 
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{cancelLabel ?? 'Cancel'}</AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
             disabled={!isMatch || isLoading}

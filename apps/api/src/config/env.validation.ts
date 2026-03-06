@@ -12,7 +12,7 @@ export const DEFAULT_LOG_LEVEL = 'warn' as const
 
 export const envSchema = z.object({
   NODE_ENV: Environment.default('development'),
-  PORT: z.coerce.number().default(4000),
+  API_PORT: z.coerce.number().default(4000),
   VERCEL_ENV: z.enum(['production', 'preview', 'development']).optional(),
   DATABASE_URL: z.string().optional(),
   DATABASE_APP_URL: z.string().optional(),
@@ -28,6 +28,9 @@ export const envSchema = z.object({
   GITHUB_CLIENT_SECRET: z.string().optional(),
   RESEND_API_KEY: z.string().optional(), // Required outside development — see validateResendApiKey(). Safe to assert non-null (!) in non-dev contexts.
   EMAIL_FROM: z.string().default('noreply@yourdomain.com'),
+  SMTP_HOST: z.string().optional(), // Set to use Nodemailer (e.g. localhost for Mailpit dev relay)
+  SMTP_PORT: z.coerce.number().optional().default(1025), // SMTP port — Mailpit default is 1025
+  SMTP_SECURE: booleanFromEnv.optional().default(false), // true for TLS (remote relay); false for localhost Mailpit
   APP_URL: z.string().url().optional(),
   // Rate limiting & Upstash Redis
   KV_REST_API_URL: z.string().optional(),

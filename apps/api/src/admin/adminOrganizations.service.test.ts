@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AuditService } from '../audit/audit.service.js'
 import { createChainMock } from './__test-utils__/createChainMock.js'
+import { AdminOrganizationsQueryService } from './adminOrganizations.query.js'
 import { AdminOrganizationsService } from './adminOrganizations.service.js'
 import { OrgCycleDetectedException } from './exceptions/orgCycleDetected.exception.js'
 import { OrgDepthExceededException } from './exceptions/orgDepthExceeded.exception.js'
@@ -37,9 +38,7 @@ function createMockClsService(id = 'test-correlation-id') {
 }
 
 /**
- * Instantiate the service with fresh mocks.
- * Returns the service and its mock collaborators so tests can configure
- * per-call return values.
+ * Instantiate AdminOrganizationsService with fresh mocks.
  */
 function createService() {
   const db = createMockDb()
@@ -47,6 +46,15 @@ function createService() {
   const cls = createMockClsService()
   const service = new AdminOrganizationsService(db as never, auditService, cls as never)
   return { service, db, auditService, cls }
+}
+
+/**
+ * Instantiate AdminOrganizationsQueryService with fresh mocks.
+ */
+function createQueryService() {
+  const db = createMockDb()
+  const service = new AdminOrganizationsQueryService(db as never)
+  return { service, db }
 }
 
 // ---------------------------------------------------------------------------
@@ -77,193 +85,6 @@ describe('AdminOrganizationsService', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
     ;({ service, db, auditService } = createService())
-  })
-
-  // -----------------------------------------------------------------------
-  // listOrganizations
-  // -----------------------------------------------------------------------
-  describe('listOrganizations', () => {
-    it('should return cursor-paginated organizations', async () => {
-      // Arrange
-      const orgRow = { ...baseOrg, memberCount: 5 }
-      const orgsChain = createChainMock([orgRow])
-      db.select.mockReturnValueOnce(orgsChain)
-
-      // Act
-      const result = await service.listOrganizations({}, undefined, 20)
-
-      // Assert
-      expect(result).toBeDefined()
-      expect(result.data).toBeDefined()
-      expect(result.cursor).toBeDefined()
-    })
-
-    it('should return hasMore=true and next cursor when more rows exist', async () => {
-      // Arrange -- return limit+1 rows to signal more data
-      const limit = 2
-      const rows = [
-        { ...baseOrg, id: 'org-1', createdAt: new Date('2025-01-03'), memberCount: 3 },
-        { ...baseOrg, id: 'org-2', createdAt: new Date('2025-01-02'), memberCount: 1 },
-        { ...baseOrg, id: 'org-3', createdAt: new Date('2025-01-01'), memberCount: 0 },
-      ]
-      db.select.mockReturnValueOnce(createChainMock(rows))
-
-      // Act
-      const result = await service.listOrganizations({}, undefined, limit)
-
-      // Assert
-      expect(result.cursor.hasMore).toBe(true)
-      expect(result.cursor.next).not.toBeNull()
-      expect(result.data).toHaveLength(limit)
-    })
-
-    it('should return hasMore=false when fewer rows than limit exist', async () => {
-      // Arrange
-      const rows = [{ ...baseOrg, id: 'org-1', createdAt: new Date('2025-01-01'), memberCount: 2 }]
-      db.select.mockReturnValueOnce(createChainMock(rows))
-
-      // Act
-      const result = await service.listOrganizations({}, undefined, 20)
-
-      // Assert
-      expect(result.cursor.hasMore).toBe(false)
-      expect(result.cursor.next).toBeNull()
-    })
-
-    it('should filter by status active (deletedAt IS NULL)', async () => {
-      // Arrange
-      const orgsChain = createChainMock([])
-      db.select.mockReturnValueOnce(orgsChain)
-
-      // Act
-      await service.listOrganizations({ status: 'active' }, undefined, 20)
-
-      // Assert -- where must have been called with active filter conditions
-      expect(orgsChain.where).toHaveBeenCalled()
-    })
-
-    it('should filter by status archived (deletedAt IS NOT NULL)', async () => {
-      // Arrange
-      const archivedOrg = {
-        ...baseOrg,
-        id: 'org-archived',
-        deletedAt: new Date('2025-06-01'),
-        memberCount: 0,
-      }
-      const orgsChain = createChainMock([archivedOrg])
-      db.select.mockReturnValueOnce(orgsChain)
-
-      // Act
-      const result = await service.listOrganizations({ status: 'archived' }, undefined, 20)
-
-      // Assert
-      expect(result.data).toBeDefined()
-      expect(orgsChain.where).toHaveBeenCalled()
-    })
-
-    it('should search by name or slug using ILIKE', async () => {
-      // Arrange
-      const orgsChain = createChainMock([])
-      db.select.mockReturnValueOnce(orgsChain)
-
-      // Act
-      await service.listOrganizations({ search: 'acme' }, undefined, 20)
-
-      // Assert
-      expect(orgsChain.where).toHaveBeenCalled()
-    })
-
-    it('should apply cursor condition when cursor is provided', async () => {
-      // Arrange -- encode a valid cursor
-      const cursor = btoa(JSON.stringify({ t: '2025-01-01T00:00:00.000Z', i: 'org-abc' }))
-      const orgsChain = createChainMock([])
-      db.select.mockReturnValueOnce(orgsChain)
-
-      // Act
-      await service.listOrganizations({}, cursor, 20)
-
-      // Assert -- where should include cursor condition
-      expect(orgsChain.where).toHaveBeenCalled()
-    })
-
-    it('should return empty data when no orgs exist', async () => {
-      // Arrange
-      db.select.mockReturnValueOnce(createChainMock([]))
-
-      // Act
-      const result = await service.listOrganizations({}, undefined, 20)
-
-      // Assert
-      expect(result.data).toEqual([])
-      expect(result.cursor.hasMore).toBe(false)
-      expect(result.cursor.next).toBeNull()
-    })
-
-    it('should include memberCount in response', async () => {
-      // Arrange
-      const orgRow = { ...baseOrg, memberCount: 42 }
-      db.select.mockReturnValueOnce(createChainMock([orgRow]))
-
-      // Act
-      const result = await service.listOrganizations({}, undefined, 20)
-
-      // Assert
-      expect(result.data[0]).toBeDefined()
-      expect(result.data[0]?.memberCount).toBe(42)
-    })
-  })
-
-  // -----------------------------------------------------------------------
-  // listOrganizationsForTree
-  // -----------------------------------------------------------------------
-  describe('listOrganizationsForTree', () => {
-    it('should return all non-deleted orgs with id, name, slug, parentOrganizationId', async () => {
-      // Arrange
-      const treeOrgs = [
-        { id: 'org-1', name: 'Parent Corp', slug: 'parent-corp', parentOrganizationId: null },
-        { id: 'org-2', name: 'Child Inc', slug: 'child-inc', parentOrganizationId: 'org-1' },
-      ]
-      // First call: count query; second call: org list
-      db.select
-        .mockReturnValueOnce(createChainMock([{ count: 2 }]))
-        .mockReturnValueOnce(createChainMock(treeOrgs))
-
-      // Act
-      const result = await service.listOrganizationsForTree()
-
-      // Assert
-      expect(result.treeViewAvailable).toBe(true)
-      expect(result.data).toHaveLength(2)
-      expect(result.data[0]).toHaveProperty('id')
-      expect(result.data[0]).toHaveProperty('name')
-      expect(result.data[0]).toHaveProperty('slug')
-      expect(result.data[0]).toHaveProperty('parentOrganizationId')
-    })
-
-    it('should return treeViewAvailable=false when count exceeds 1000', async () => {
-      // Arrange -- count query returns > 1000
-      db.select.mockReturnValueOnce(createChainMock([{ count: 1500 }]))
-
-      // Act
-      const result = await service.listOrganizationsForTree()
-
-      // Assert
-      expect(result.treeViewAvailable).toBe(false)
-    })
-
-    it('should return treeViewAvailable=true when count is within 1000', async () => {
-      // Arrange -- count query returns <= 1000
-      const treeOrgs = [{ id: 'org-1', name: 'Root', slug: 'root', parentOrganizationId: null }]
-      db.select
-        .mockReturnValueOnce(createChainMock([{ count: 500 }]))
-        .mockReturnValueOnce(createChainMock(treeOrgs))
-
-      // Act
-      const result = await service.listOrganizationsForTree()
-
-      // Assert
-      expect(result.treeViewAvailable).toBe(true)
-    })
   })
 
   // -----------------------------------------------------------------------
@@ -550,6 +371,207 @@ describe('AdminOrganizationsService', () => {
 
       // Assert
       expect(auditService.log).not.toHaveBeenCalled()
+    })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// AdminOrganizationsQueryService
+// ---------------------------------------------------------------------------
+
+describe('AdminOrganizationsQueryService', () => {
+  let queryService: AdminOrganizationsQueryService
+  let db: ReturnType<typeof createMockDb>
+
+  beforeEach(() => {
+    vi.restoreAllMocks()
+    ;({ service: queryService, db } = createQueryService())
+  })
+
+  // -----------------------------------------------------------------------
+  // listOrganizations
+  // -----------------------------------------------------------------------
+  describe('listOrganizations', () => {
+    it('should return cursor-paginated organizations', async () => {
+      // Arrange
+      const orgRow = { ...baseOrg, memberCount: 5 }
+      const orgsChain = createChainMock([orgRow])
+      db.select.mockReturnValueOnce(orgsChain)
+
+      // Act
+      const result = await queryService.listOrganizations({}, undefined, 20)
+
+      // Assert
+      expect(result).toBeDefined()
+      expect(result.data).toBeDefined()
+      expect(result.cursor).toBeDefined()
+    })
+
+    it('should return hasMore=true and next cursor when more rows exist', async () => {
+      // Arrange -- return limit+1 rows to signal more data
+      const limit = 2
+      const rows = [
+        { ...baseOrg, id: 'org-1', createdAt: new Date('2025-01-03'), memberCount: 3 },
+        { ...baseOrg, id: 'org-2', createdAt: new Date('2025-01-02'), memberCount: 1 },
+        { ...baseOrg, id: 'org-3', createdAt: new Date('2025-01-01'), memberCount: 0 },
+      ]
+      db.select.mockReturnValueOnce(createChainMock(rows))
+
+      // Act
+      const result = await queryService.listOrganizations({}, undefined, limit)
+
+      // Assert
+      expect(result.cursor.hasMore).toBe(true)
+      expect(result.cursor.next).not.toBeNull()
+      expect(result.data).toHaveLength(limit)
+    })
+
+    it('should return hasMore=false when fewer rows than limit exist', async () => {
+      // Arrange
+      const rows = [{ ...baseOrg, id: 'org-1', createdAt: new Date('2025-01-01'), memberCount: 2 }]
+      db.select.mockReturnValueOnce(createChainMock(rows))
+
+      // Act
+      const result = await queryService.listOrganizations({}, undefined, 20)
+
+      // Assert
+      expect(result.cursor.hasMore).toBe(false)
+      expect(result.cursor.next).toBeNull()
+    })
+
+    it('should filter by status active (deletedAt IS NULL)', async () => {
+      // Arrange
+      const orgsChain = createChainMock([])
+      db.select.mockReturnValueOnce(orgsChain)
+
+      // Act
+      await queryService.listOrganizations({ status: 'active' }, undefined, 20)
+
+      // Assert -- where must have been called with active filter conditions
+      expect(orgsChain.where).toHaveBeenCalled()
+    })
+
+    it('should filter by status archived (deletedAt IS NOT NULL)', async () => {
+      // Arrange
+      const archivedOrg = {
+        ...baseOrg,
+        id: 'org-archived',
+        deletedAt: new Date('2025-06-01'),
+        memberCount: 0,
+      }
+      const orgsChain = createChainMock([archivedOrg])
+      db.select.mockReturnValueOnce(orgsChain)
+
+      // Act
+      const result = await queryService.listOrganizations({ status: 'archived' }, undefined, 20)
+
+      // Assert
+      expect(result.data).toBeDefined()
+      expect(orgsChain.where).toHaveBeenCalled()
+    })
+
+    it('should search by name or slug using ILIKE', async () => {
+      // Arrange
+      const orgsChain = createChainMock([])
+      db.select.mockReturnValueOnce(orgsChain)
+
+      // Act
+      await queryService.listOrganizations({ search: 'acme' }, undefined, 20)
+
+      // Assert
+      expect(orgsChain.where).toHaveBeenCalled()
+    })
+
+    it('should apply cursor condition when cursor is provided', async () => {
+      // Arrange -- encode a valid cursor
+      const cursor = btoa(JSON.stringify({ t: '2025-01-01T00:00:00.000Z', i: 'org-abc' }))
+      const orgsChain = createChainMock([])
+      db.select.mockReturnValueOnce(orgsChain)
+
+      // Act
+      await queryService.listOrganizations({}, cursor, 20)
+
+      // Assert -- where should include cursor condition
+      expect(orgsChain.where).toHaveBeenCalled()
+    })
+
+    it('should return empty data when no orgs exist', async () => {
+      // Arrange
+      db.select.mockReturnValueOnce(createChainMock([]))
+
+      // Act
+      const result = await queryService.listOrganizations({}, undefined, 20)
+
+      // Assert
+      expect(result.data).toEqual([])
+      expect(result.cursor.hasMore).toBe(false)
+      expect(result.cursor.next).toBeNull()
+    })
+
+    it('should include memberCount in response', async () => {
+      // Arrange
+      const orgRow = { ...baseOrg, memberCount: 42 }
+      db.select.mockReturnValueOnce(createChainMock([orgRow]))
+
+      // Act
+      const result = await queryService.listOrganizations({}, undefined, 20)
+
+      // Assert
+      expect(result.data[0]).toBeDefined()
+      expect(result.data[0]?.memberCount).toBe(42)
+    })
+  })
+
+  // -----------------------------------------------------------------------
+  // listOrganizationsForTree
+  // -----------------------------------------------------------------------
+  describe('listOrganizationsForTree', () => {
+    it('should return all non-deleted orgs with id, name, slug, parentOrganizationId', async () => {
+      // Arrange
+      const treeOrgs = [
+        { id: 'org-1', name: 'Parent Corp', slug: 'parent-corp', parentOrganizationId: null },
+        { id: 'org-2', name: 'Child Inc', slug: 'child-inc', parentOrganizationId: 'org-1' },
+      ]
+      // First call: count query; second call: org list
+      db.select
+        .mockReturnValueOnce(createChainMock([{ count: 2 }]))
+        .mockReturnValueOnce(createChainMock(treeOrgs))
+
+      // Act
+      const result = await queryService.listOrganizationsForTree()
+
+      // Assert
+      expect(result.treeViewAvailable).toBe(true)
+      expect(result.data).toHaveLength(2)
+      expect(result.data[0]).toHaveProperty('id')
+      expect(result.data[0]).toHaveProperty('name')
+      expect(result.data[0]).toHaveProperty('slug')
+      expect(result.data[0]).toHaveProperty('parentOrganizationId')
+    })
+
+    it('should return treeViewAvailable=false when count exceeds 1000', async () => {
+      // Arrange -- count query returns > 1000
+      db.select.mockReturnValueOnce(createChainMock([{ count: 1500 }]))
+
+      // Act
+      const result = await queryService.listOrganizationsForTree()
+
+      // Assert
+      expect(result.treeViewAvailable).toBe(false)
+    })
+
+    it('should return treeViewAvailable=true when count is within 1000', async () => {
+      // Arrange -- count query returns <= 1000
+      const treeOrgs = [{ id: 'org-1', name: 'Root', slug: 'root', parentOrganizationId: null }]
+      db.select
+        .mockReturnValueOnce(createChainMock([{ count: 500 }]))
+        .mockReturnValueOnce(createChainMock(treeOrgs))
+
+      // Act
+      const result = await queryService.listOrganizationsForTree()
+
+      // Assert
+      expect(result.treeViewAvailable).toBe(true)
     })
   })
 })

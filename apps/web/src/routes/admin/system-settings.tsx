@@ -5,6 +5,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { SettingsIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { SettingsCard } from '@/components/admin/SettingsCard'
+import { adminSettingsKeys } from '@/lib/admin/queryKeys'
 import { isErrorWithMessage } from '@/lib/errorUtils'
 import { enforceRoutePermission } from '@/lib/routePermissions'
 
@@ -53,7 +54,7 @@ function SystemSettingsPage() {
   const queryClient = useQueryClient()
 
   const { data, isLoading } = useQuery<SettingsByCategory>({
-    queryKey: ['admin', 'system-settings'],
+    queryKey: adminSettingsKeys.all,
     queryFn: async () => {
       const res = await fetch('/api/admin/settings', { credentials: 'include' })
       if (!res.ok) throw new Error('Failed to fetch system settings')

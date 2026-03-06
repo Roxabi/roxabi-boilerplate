@@ -21,6 +21,7 @@ import { LoadMoreButton } from '@/components/admin/LoadMoreButton'
 import { OrgListContextMenu, OrgListKebabButton } from '@/components/admin/OrgListContextMenu'
 import { TreeView } from '@/components/admin/TreeView'
 import { useCursorPagination } from '@/hooks/useCursorPagination'
+import { adminOrgKeys } from '@/lib/admin/queryKeys'
 import { formatDate } from '@/lib/formatDate'
 import { m } from '@/paraglide/messages'
 import type { OrgFilters } from './-organizations-types'
@@ -67,7 +68,7 @@ function FlatListView({ filters }: { filters: OrgFilters }) {
     isLoadingMore,
     refetch,
   } = useCursorPagination<AdminOrganization>({
-    queryKey: ['admin', 'organizations', 'list', filters],
+    queryKey: adminOrgKeys.list(filters),
     fetchFn: async (cursor) => {
       const params = new URLSearchParams()
       if (cursor) params.set('cursor', cursor)
@@ -177,7 +178,7 @@ function TreeModeView() {
     isLoading,
     error,
   } = useQuery<TreeApiResponse>({
-    queryKey: ['admin', 'organizations', 'tree'],
+    queryKey: adminOrgKeys.tree(),
     queryFn: async () => {
       const res = await fetch('/api/admin/organizations?view=tree')
       if (!res.ok) throw new Error('Failed to fetch organizations')

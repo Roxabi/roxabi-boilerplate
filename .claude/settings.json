@@ -7,7 +7,6 @@
     "security-guidance@claude-plugins-official": true,
     "claude-md-management@claude-plugins-official": true,
     "vercel@claude-plugins-official": true,
-    "memory-audit@roxabi-marketplace": true,
     "dev-core@roxabi-marketplace": true,
     "web-intel@roxabi-marketplace": true,
     "1b1@roxabi-marketplace": true,

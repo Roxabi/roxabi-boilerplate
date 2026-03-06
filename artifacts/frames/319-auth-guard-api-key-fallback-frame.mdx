@@ -1,0 +1,48 @@
+---
+title: "feat(auth): Auth guard API key fallback (V2)"
+issue: 319
+status: approved
+tier: F-lite
+date: 2026-03-04
+---
+
+## Problem
+
+The public developer platform (spec #194) requires that third-party API consumers authenticate via API keys rather than session cookies. Currently `AuthGuard.canActivate()` only recognises session-based auth — any `Authorization: Bearer <key>` request from a machine client is rejected. V1 (#318, now merged) created the `api_keys` table and CRUD UI; V2 closes the gap by teaching the guard to validate those keys at runtime.
+
+Without this, developers cannot call protected endpoints programmatically, making the platform unusable for integrations, CI pipelines, and third-party applications.
+
+## Who
+
+- **Primary:** External developers / API consumers — they send `Authorization: Bearer <api_key>` and expect the same `@Permissions()` semantics as session users.
+- **Secondary:** Internal services / CI jobs that use API keys to call the platform programmatically.
+- **Operator concern:** Superadmins must not gain elevated access via API keys — scope checks must always apply regardless of user role.
+
+## Constraints
+
+- Must not break existing session auth path — the fallback is additive, not a replacement.
+- Depends on #318 being merged (it is — closed ✓): `api_keys` table, hashing utilities, and CRUD must exist.
+- Scopes must be **runtime-intersected** with org's current permissions to prevent stale elevated access.
+- `lastUsedAt` update must be fire-and-forget (no request latency impact).
+- `@AllowAnonymous()` must NOT override `@RequireApiKey()`.
+- Error responses must use specific error codes: `API_KEY_INVALID` (401), `API_KEY_REVOKED` (401), `API_KEY_EXPIRED` (401), `API_KEY_SCOPE_DENIED` (403).
+- NestJS / Fastify / Drizzle stack — no new libraries expected.
+
+## Out of Scope
+
+- API key creation, rotation, or revocation UI (done in V1 / #318).
+- Rate limiting per API key (separate concern).
+- OAuth2 / client credentials flow (future V3+).
+- Multi-tenant key sharing across organisations.
+- Audit logging of API key usage (separate concern).
+
+## Complexity
+
+**Tier: F-lite** — Well-specified single-domain change extending an existing NestJS guard with a Bearer token lookup path. Spec is complete, dependencies are merged, no unknowns.
+
+Signals observed:
+- Single domain: auth module (NestJS backend)
+- ~6-8 files: `auth.guard.ts`, new `@RequireApiKey()` decorator, `api-keys.service.ts` (lookup method), shared types (`AuthenticatedSession`), unit + e2e tests
+- Known patterns: guard + decorator pattern already in use; Drizzle query pattern established
+- No unknowns — parent spec (#194) defines exact behaviour for synthetic session construction and superadmin enforcement
+- Dependency (#318) is merged

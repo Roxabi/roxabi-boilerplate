@@ -372,9 +372,21 @@ jobs:
           --health-interval=5s
           --health-timeout=5s
           --health-retries=5
+      mailpit:
+        image: axllent/mailpit:v1.29.2
+        ports:
+          - 1025:1025
+          - 8025:8025
+        options: >-
+          --health-cmd="wget -qO- http://localhost:8025/api/v1/messages?limit=1"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=5
     env:
       DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
       BETTER_AUTH_SECRET: test-secret-minimum-32-characters-long
+      SMTP_HOST: localhost
+      RATE_LIMIT_ENABLED: "false"
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -488,9 +500,21 @@ jobs:
           --health-interval=5s
           --health-timeout=5s
           --health-retries=5
+      mailpit:
+        image: axllent/mailpit:v1.29.2
+        ports:
+          - 1025:1025
+          - 8025:8025
+        options: >-
+          --health-cmd="wget -qO- http://localhost:8025/api/v1/messages?limit=1"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=5
     env:
       DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
       BETTER_AUTH_SECRET: test-secret-minimum-32-characters-long
+      SMTP_HOST: localhost
+      RATE_LIMIT_ENABLED: "false"
     strategy:
       fail-fast: false
       matrix:
@@ -573,6 +597,7 @@ jobs:
     needs: [e2e-matrix]
     if: always() && needs.e2e-matrix.result != 'skipped'
     permissions:
+      contents: read
       actions: read
     steps:
       - name: Checkout
@@ -607,6 +632,25 @@ jobs:
           name: playwright-report-merged
           path: playwright-report/
           retention-days: 7
+
+  vercel-env-check:
+    name: Vercel Env Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Check production env vars
+        run: bun run scripts/checkVercelEnv.ts production
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
   ci-success:
     name: CI Success
@@ -645,28 +689,3 @@ jobs:
           done
           echo "All CI jobs passed or were skipped."
 
-  vercel-env-check:
-    name: Vercel Env Check
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging')
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: ${{ env.BUN_VERSION }}
-
-      - name: Check production env vars
-        if: github.ref == 'refs/heads/main'
-        run: bun run scripts/checkVercelEnv.ts production
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-
-      - name: Check preview env vars
-        if: github.ref == 'refs/heads/staging'
-        run: bun run scripts/checkVercelEnv.ts preview
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}

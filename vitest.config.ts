@@ -52,6 +52,8 @@ export default defineConfig({
         '**/components/admin/**',
         // Presentation/talk section components (visual-only, no business logic)
         '**/components/presentation/dev-process/**',
+        '**/components/presentation/lyra-story/**',
+        '**/components/presentation/lyra-dev/**',
         // Pure Radix UI re-export wrappers (no business logic)
         '**/components/ContextMenu.tsx',
         '**/vite-env.d.ts',

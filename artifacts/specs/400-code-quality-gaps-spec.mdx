@@ -1,0 +1,119 @@
+---
+title: "Code quality gaps from FE/BE standards audit"
+issue: 400
+status: approved
+tier: F-lite
+date: 2026-03-05
+promoted_from: artifacts/frames/400-code-quality-gaps-frame.mdx
+---
+
+## Context
+
+Issue #400 documented 23 findings from a standards audit. Prior work (#389) resolved 21. Two remain: an esbuild CVE (affects `@repo/email` workspace) and four backend services near the SRP boundary.
+
+The admin services already have partial extractions (`adminUsers.lifecycle.ts`, `adminOrganizations.deletion.ts`, `adminOrganizations.hierarchy.ts`). The remaining services still mix query-building, data fetching, and mutation logic.
+
+## Goal
+
+Close all remaining #400 findings: patch the esbuild CVE and extract focused sub-services from the four largest backend services to improve testability and maintainability.
+
+## Users
+
+- **Backend developers** maintaining these services
+- **CI pipeline** (CVE scan pass)
+
+## Expected Behavior
+
+### Slice 1: Dependency CVE fix
+
+Run `bun update --recursive` to pull patched esbuild (>0.24.2). Verify no breaking changes in build/dev. The CVE (GHSA-67mh-4wv8-2f99) affects the `@repo/email` workspace's esbuild dependency.
+
+### Slice 2: `user.service.ts` (440 lines) — extract purge helpers
+
+Current `UserService` handles: profile CRUD, soft-delete cache, soft-delete workflow, org ownership resolution, anonymization, and purge. The purge/anonymization helpers (lines ~330-420) are a distinct concern from profile management.
+
+**Extract:** `UserPurgeService` containing:
+- `validatePurgeEligibility()`
+- `anonymizeUserRecords()`
+- `purgeOwnedOrganizations()`
+
+**`purge()` stays on `UserService`** as orchestrator — it calls `invalidateSoftDeleteCache()` (private cache on `UserService`) after the transaction. `purge()` will delegate to `UserPurgeService` methods but retain orchestration and cache invalidation.
+
+**External consumer:** `PurgeService` (in `purge/` module) currently imports `UserService` to call `anonymizeUserRecords()`. After extraction, `PurgeService` will inject `UserPurgeService` instead. Export `UserPurgeService` from `UserModule`.
+
+`UserService` keeps: profile CRUD, soft-delete cache, soft-delete/reactivate, owned orgs query, org resolution helpers, `purge()` orchestrator.
+
+### Slice 3: `adminUsers.service.ts` (424 lines) — extract query logic
+
+Current service mixes list/filter query-building with detail fetching and user updates.
+
+**Extract:** `AdminUsersQueryService` containing:
+- `listUsers()` (public entry point)
+- `buildUserFilterConditions()` (private)
+- `queryUserRows()` (private)
+- `fetchMembershipsByUserIds()` (private)
+- `fetchLastActiveByUserIds()` (private)
+
+`AdminUsersService` keeps: `getUserDetail()`, `updateUser()`, and their helpers.
+
+Controller DI wiring updates: `AdminUsersController` injects `AdminUsersQueryService` for `listUsers()`. Route signatures and HTTP contracts unchanged.
+
+### Slice 4: `adminOrganizations.service.ts` (370 lines) — extract query logic
+
+**Extract:** `AdminOrganizationsQueryService` containing:
+- `listOrganizations()` (public entry point)
+- `listOrganizationsForTree()`
+- `buildOrgFilterConditions()` (private)
+- `queryOrgRows()` (private)
+
+`AdminOrganizationsService` keeps: `getOrganizationDetail()`, `listOrgRoles()`, `fetchOrgMembers()`, `fetchChildOrgs()`, `createOrganization()`, `updateOrganization()`, and their helpers (`findOrgOrThrow`, `fetchParentOrg`, `executeOrgUpdate`).
+
+Controller DI wiring updates: `AdminOrganizationsController` injects `AdminOrganizationsQueryService` for list endpoints. Route signatures and HTTP contracts unchanged.
+
+### Slice 5: `rbac.service.ts` (387 lines) — extract ownership/member operations
+
+Current service mixes role CRUD with ownership transfer and member role changes.
+
+**Extract:** `RbacMemberService` containing:
+- `transferOwnership()`
+- `findOwnerAdminRoles()` (private)
+- `verifyCurrentOwner()` (private)
+- `verifyTargetAdmin()` (private)
+- `changeMemberRole()`
+
+`RbacService` keeps: role CRUD (`listRoles`, `createRole`, `updateRole`, `deleteRole`, `getRolePermissions`), `seedDefaultRoles()`, and `syncPermissions()`.
+
+`RbacMemberService` injects `TenantService` and `ClsService` (same deps as `RbacService`). No new module imports needed — `RbacModule` already imports `TenantModule`.
+
+## Slices
+
+| # | Slice | Files touched | Independently testable |
+|---|-------|---------------|----------------------|
+| 1 | Dependency CVE fix | `bun.lock`, `package.json` (root + workspaces) | Yes — build + dev still work |
+| 2 | Extract `UserPurgeService` | `user.service.ts`, new `userPurge.service.ts`, `user.module.ts`, `purge.service.ts`, test files | Yes — existing tests pass |
+| 3 | Extract `AdminUsersQueryService` | `adminUsers.service.ts`, new `adminUsers.query.ts`, `admin.module.ts`, controller DI, test files | Yes — existing tests pass |
+| 4 | Extract `AdminOrganizationsQueryService` | `adminOrganizations.service.ts`, new `adminOrganizations.query.ts`, `admin.module.ts`, controller DI, test files | Yes — existing tests pass |
+| 5 | Extract `RbacMemberService` | `rbac.service.ts`, new `rbacMember.service.ts`, `rbac.module.ts`, test files | Yes — existing tests pass |
+
+## Constraints
+
+- Route signatures and HTTP contracts must not change (controller DI wiring updates are OK)
+- Extracted services stay in their existing NestJS modules (no new modules)
+- Tests must pass with minimal import path updates only
+- No new features or logic changes — pure extraction refactor
+
+## Success Criteria
+
+- [ ] esbuild version > 0.24.2 (`bun why esbuild` confirms patched version)
+- [ ] `UserPurgeService` exists and contains `validatePurgeEligibility`, `anonymizeUserRecords`, `purgeOwnedOrganizations`; exported from `UserModule`
+- [ ] `AdminUsersQueryService` exists and contains `listUsers`; registered in `admin.module.ts` providers
+- [ ] `AdminOrganizationsQueryService` exists and contains `listOrganizations`, `listOrganizationsForTree`; registered in `admin.module.ts` providers
+- [ ] `RbacMemberService` exists and contains `transferOwnership`, `changeMemberRole`; registered in `rbac.module.ts` providers
+- [ ] `user.service.ts` < 360 lines
+- [ ] `adminUsers.service.ts` < 280 lines
+- [ ] `adminOrganizations.service.ts` < 280 lines
+- [ ] `rbac.service.ts` < 260 lines
+- [ ] All existing tests pass (`bun run test`)
+- [ ] Typecheck passes (`bun run typecheck`)
+- [ ] Lint passes (`bun run lint`)
+- [ ] No route/endpoint signature changes (HTTP contracts unchanged)

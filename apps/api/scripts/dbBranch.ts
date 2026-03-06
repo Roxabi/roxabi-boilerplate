@@ -20,6 +20,7 @@ import {
   CONTAINER_NAME,
   checkContainerLiveness,
   createDatabase,
+  DB_BRANCH_PREFIX,
   databaseExists,
   dropDatabase,
   log,
@@ -92,9 +93,9 @@ function extractIssueNumber(): string {
 
 async function handleCreate(): Promise<void> {
   const issueNumber = extractIssueNumber()
-  const dbName = `roxabi_${issueNumber}`
+  const dbName = `${DB_BRANCH_PREFIX}_${issueNumber}`
 
-  if (!/^roxabi_\d+$/.test(dbName)) {
+  if (!new RegExp(`^${DB_BRANCH_PREFIX}_\\d+$`).test(dbName)) {
     logError(`Invalid database name: '${dbName}'`)
     process.exit(1)
   }
@@ -157,9 +158,9 @@ async function handleCreate(): Promise<void> {
 
 function handleDrop(): void {
   const issueNumber = extractIssueNumber()
-  const dbName = `roxabi_${issueNumber}`
+  const dbName = `${DB_BRANCH_PREFIX}_${issueNumber}`
 
-  if (!/^roxabi_\d+$/.test(dbName)) {
+  if (!new RegExp(`^${DB_BRANCH_PREFIX}_\\d+$`).test(dbName)) {
     logError(`Invalid database name: '${dbName}'`)
     process.exit(1)
   }
@@ -190,7 +191,7 @@ function handleList(): void {
 
   // Query branch databases
   const dbResult = runSafe(
-    `docker exec ${CONTAINER_NAME} psql -U ${POSTGRES_USER} -tc "SELECT datname FROM pg_database WHERE datname ~ '^roxabi_[0-9]+$'"`
+    `docker exec ${CONTAINER_NAME} psql -U ${POSTGRES_USER} -tc "SELECT datname FROM pg_database WHERE datname ~ '^${DB_BRANCH_PREFIX}_[0-9]+$'"`
   )
   if (dbResult.status !== 0) {
     logError(`Failed to query databases: ${dbResult.stderr}`)
@@ -223,7 +224,7 @@ function handleList(): void {
   const rows: { db: string; wt: string; branch: string; status: string }[] = []
 
   for (const db of databases) {
-    const issueMatch = db.match(/^roxabi_(\d+)$/)
+    const issueMatch = db.match(new RegExp(`^${DB_BRANCH_PREFIX}_(\\d+)$`))
     const issueNumber = issueMatch ? issueMatch[1] : null
     const wt = issueNumber ? worktreeByIssue.get(issueNumber) : undefined
 

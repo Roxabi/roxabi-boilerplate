@@ -6,6 +6,7 @@ import { Session } from '../auth/decorators/session.decorator.js'
 import { ZodValidationPipe } from '../common/pipes/zodValidation.pipe.js'
 import { PermissionService } from './permission.service.js'
 import { RbacService } from './rbac.service.js'
+import { RbacMemberService } from './rbacMember.service.js'
 
 /** Matches "resource:action" where both segments are lowercase letters with optional hyphens (e.g. "audit-log:read"). */
 export const PERMISSION_FORMAT = /^[a-z][a-z-]*:[a-z][a-z-]*$/
@@ -41,6 +42,7 @@ type ChangeMemberRoleDto = z.infer<typeof changeMemberRoleSchema>
 export class RbacController {
   constructor(
     private readonly rbacService: RbacService,
+    private readonly rbacMemberService: RbacMemberService,
     private readonly permissionService: PermissionService
   ) {}
 
@@ -69,7 +71,7 @@ export class RbacController {
     @Session() session: { user: { id: string } },
     @Body(new ZodValidationPipe(transferOwnershipSchema)) body: TransferOwnershipDto
   ) {
-    return this.rbacService.transferOwnership(session.user.id, body.targetMemberId)
+    return this.rbacMemberService.transferOwnership(session.user.id, body.targetMemberId)
   }
 
   @Post()
@@ -123,6 +125,6 @@ export class RbacController {
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @Body(new ZodValidationPipe(changeMemberRoleSchema)) body: ChangeMemberRoleDto
   ) {
-    return this.rbacService.changeMemberRole(id, body.roleId)
+    return this.rbacMemberService.changeMemberRole(id, body.roleId)
   }
 }

@@ -1,6 +1,6 @@
 import { expect, test as setup } from '@playwright/test'
 import { AuthPage } from './auth.page'
-import { AUTH_FILE, TEST_USER } from './testHelpers'
+import { AUTH_FILE, PRIMARY_ORG_SLUG, TEST_USER } from './testHelpers'
 
 /**
  * Authenticate once and save the storage state (cookies + localStorage)
@@ -18,9 +18,9 @@ setup('authenticate', async ({ page }) => {
   await expect(page).not.toHaveURL(/\/login/)
 
   // Set the active organization so permission-based routes work.
-  // TEST_USER (dev@roxabi.local) is owner of 'roxabi-dev'. Without an active
-  // org, activeOrganizationId is null and permissions are empty, causing admin
-  // and api-keys tests to fail.
+  // TEST_USER is owner of the primary org (slug = PRIMARY_ORG_SLUG). Without an
+  // active org, activeOrganizationId is null and permissions are empty, causing
+  // admin and api-keys tests to fail.
   //
   // We call the NestJS API directly (bypassing the Nitro proxy layer) for test setup
   // reliability. page.context().request shares the browser's cookie jar: cookies sent
@@ -30,7 +30,7 @@ setup('authenticate', async ({ page }) => {
     .request.post(
       `${process.env.API_URL ?? 'http://localhost:4000'}/api/auth/organization/set-active`,
       {
-        data: { organizationSlug: 'roxabi-dev' },
+        data: { organizationSlug: PRIMARY_ORG_SLUG },
         headers: {
           'Content-Type': 'application/json',
           // Required by better-auth's CSRF origin check (trustedOrigins = [APP_URL])

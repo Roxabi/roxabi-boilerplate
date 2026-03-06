@@ -9,8 +9,10 @@
   ],
   "scripts": {
     "prepare": "bash scripts/prepare.sh",
-    "dev": "bash scripts/predev.sh && turbo dev",
-    "dev:clean": "fuser -k ${NITRO_PORT:-42069}/tcp ${PORT:-4000}/tcp ${WEB_PORT:-3000}/tcp ${EMAIL_PORT:-3001}/tcp 2>/dev/null || true",
+    "dev": "set -a; [ -f .env ] && . .env; set +a; bash scripts/predev.sh && turbo dev",
+    "dev:web": "set -a; [ -f .env ] && . .env; set +a; turbo dev --filter=@repo/web",
+    "dev:api": "set -a; [ -f .env ] && . .env; set +a; turbo dev --filter=@repo/api",
+    "dev:clean": "set -a; [ -f .env ] && . .env; set +a; fuser -k ${NITRO_PORT:-42069}/tcp ${API_PORT:-4000}/tcp ${APP_PORT:-3000}/tcp ${EMAIL_PORT:-3001}/tcp 2>/dev/null || true",
     "build": "turbo build",
     "lint": "biome check --diagnostic-level=warn .",
     "lint:fix": "biome check --write .",
@@ -27,6 +29,9 @@
     "typecheck:affected": "turbo run typecheck --filter=...[origin/main]",
     "test:affected": "turbo run test --filter=...[origin/main]",
     "license:check": "bun run tools/licenseChecker.ts",
+    "docs:links": "bun run tools/docsLinkAudit.ts",
+    "docs:frontmatter": "bun run tools/docsFrontmatterCheck.ts",
+    "docs:check": "bun run docs:links && bun run docs:frontmatter",
     "env:check": "bun run scripts/checkEnvSync.ts",
     "vercel:env:check": "bun run scripts/checkVercelEnv.ts",
     "db:up": "docker compose up -d",
@@ -70,6 +75,7 @@
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.2.8",
+    "@fontsource/press-start-2p": "^5.2.7",
     "fumadocs-mdx": "^14.2.9",
     "lucide-react": "^0.576.0",
     "shiki": "^4.0.1"

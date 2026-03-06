@@ -1,4 +1,4 @@
-import { createHmac, randomBytes } from 'node:crypto'
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
 import { BadRequestException, Inject, Injectable, Logger } from '@nestjs/common'
 import { and, eq, isNull } from 'drizzle-orm'
 import { ClsService } from 'nestjs-cls'
@@ -6,8 +6,12 @@ import { AuditService } from '../audit/audit.service.js'
 import type { AuthenticatedSession } from '../auth/types.js'
 import { DRIZZLE, type DrizzleDB } from '../database/drizzle.provider.js'
 import { apiKeys } from '../database/schema/apiKey.schema.js'
+import { users } from '../database/schema/auth.schema.js'
+import { ApiKeyExpiredException } from './exceptions/apiKeyExpired.exception.js'
 import { ApiKeyExpiryInPastException } from './exceptions/apiKeyExpiryInPast.exception.js'
+import { ApiKeyInvalidException } from './exceptions/apiKeyInvalid.exception.js'
 import { ApiKeyNotFoundException } from './exceptions/apiKeyNotFound.exception.js'
+import { ApiKeyRevokedException } from './exceptions/apiKeyRevoked.exception.js'
 import { ApiKeyScopesExceededException } from './exceptions/apiKeyScopesExceeded.exception.js'
 
 const KEY_PREFIX = 'sk_live_'
@@ -184,6 +188,67 @@ export class ApiKeyService {
     this.logAudit(userId, orgId, 'api_key.revoked', id)
 
     return { id, revokedAt: now.toISOString() }
+  }
+
+  async validateBearerToken(token: string): Promise<{
+    id: string
+    userId: string
+    tenantId: string
+    scopes: string[]
+    role: string
+  }> {
+    const lastFour = token.slice(-4)
+
+    const candidates = await this.db
+      .select({
+        id: apiKeys.id,
+        userId: apiKeys.userId,
+        tenantId: apiKeys.tenantId,
+        scopes: apiKeys.scopes,
+        keyHash: apiKeys.keyHash,
+        keySalt: apiKeys.keySalt,
+        revokedAt: apiKeys.revokedAt,
+        expiresAt: apiKeys.expiresAt,
+        role: users.role,
+      })
+      .from(apiKeys)
+      .innerJoin(users, eq(apiKeys.userId, users.id))
+      .where(eq(apiKeys.lastFour, lastFour))
+      .limit(10)
+
+    const match = (candidates ?? []).find((c) => {
+      const computed = Buffer.from(hmacHash(token, c.keySalt), 'hex')
+      const stored = Buffer.from(c.keyHash, 'hex')
+      return computed.length === stored.length && timingSafeEqual(computed, stored)
+    })
+
+    if (!match) {
+      throw new ApiKeyInvalidException()
+    }
+    if (match.revokedAt) {
+      throw new ApiKeyRevokedException()
+    }
+    if (match.expiresAt && match.expiresAt < new Date()) {
+      throw new ApiKeyExpiredException()
+    }
+
+    return {
+      id: match.id,
+      userId: match.userId,
+      tenantId: match.tenantId,
+      scopes: match.scopes,
+      role: match.role ?? 'user',
+    }
+  }
+
+  touchLastUsedAt(id: string): void {
+    this.db
+      .update(apiKeys)
+      .set({ lastUsedAt: new Date() })
+      .where(eq(apiKeys.id, id))
+      .catch((err) => {
+        this.logger.error(`[touchLastUsedAt] Failed to update lastUsedAt for key ${id}`, err)
+      })
   }
 
   async revokeAllForUser(userId: string) {

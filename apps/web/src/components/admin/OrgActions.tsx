@@ -4,6 +4,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { RotateCcwIcon, Trash2Icon } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { adminOrgKeys } from '@/lib/admin/queryKeys'
 
 type OrgActionsProps = {
   orgId: string
@@ -111,7 +112,7 @@ export function OrgActions({ orgId, orgName, isArchived, onActionComplete }: Org
   const { deleteMutation, restoreMutation } = useOrgMutations(orgId, orgName, onActionComplete)
 
   const { data: impact } = useQuery<OrgDeletionImpact>({
-    queryKey: ['admin', 'organizations', orgId, 'deletion-impact'],
+    queryKey: adminOrgKeys.deletionImpact(orgId),
     queryFn: async () => {
       const res = await fetch(`/api/admin/organizations/${orgId}/deletion-impact`)
       if (!res.ok) throw new Error('Failed to fetch deletion impact')

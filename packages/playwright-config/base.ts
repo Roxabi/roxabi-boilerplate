@@ -31,7 +31,7 @@ export const basePlaywrightConfig: PlaywrightTestConfig = {
   timeout: process.env.CI ? 60_000 : 30_000,
   reporter: process.env.CI ? [['blob'], ['list']] : 'html',
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: process.env.BASE_URL || `http://localhost:${process.env.APP_PORT || 3000}`,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     actionTimeout: process.env.CI ? 15_000 : 10_000,
@@ -115,7 +115,7 @@ export const basePlaywrightConfig: PlaywrightTestConfig = {
     {
       // Web server (frontend) — always started
       command: process.env.CI ? 'node apps/web/.output/server/index.mjs' : 'bun run dev',
-      url: 'http://localhost:3000',
+      url: `http://localhost:${process.env.APP_PORT || 3000}`,
       reuseExistingServer: !process.env.CI,
       timeout: 120000,
     },
@@ -124,7 +124,7 @@ export const basePlaywrightConfig: PlaywrightTestConfig = {
       ? [
           {
             command: process.env.CI ? 'node apps/api/dist/index.js' : 'bun run --cwd apps/api dev',
-            url: 'http://localhost:4000/health',
+            url: `http://localhost:${process.env.API_PORT || 4000}/health`,
             reuseExistingServer: !process.env.CI,
             timeout: 120000,
           },

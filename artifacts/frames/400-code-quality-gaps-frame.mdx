@@ -1,0 +1,46 @@
+---
+title: "Code quality gaps from FE/BE standards audit"
+issue: 400
+status: approved
+tier: F-lite
+date: 2026-03-05
+---
+
+## Problem
+
+Issue #400 documented 23 findings from a standards audit. Prior work (#389) resolved 21 of them. Two remain:
+
+1. **esbuild CVE (GHSA-67mh-4wv8-2f99)** — esbuild <=0.24.2 has a moderate dev-server SSRF vulnerability. Affects `@repo/email` workspace. Fix: `bun update --recursive` to pull patched version.
+
+2. **Four services near SRP boundary** — Four backend services exceed 380+ lines with multiple responsibilities:
+   - `adminUsers.service.ts` (424 lines) — user CRUD + lifecycle + search + audit
+   - `user.service.ts` (440 lines) — profile + soft-delete + anonymization + cache
+   - `adminOrganizations.service.ts` (370 lines) — org CRUD + search + deletion
+   - `rbac.service.ts` (387 lines) — role + permission + assignment + sync
+
+   Each mixes query, mutation, and cross-cutting concerns. Extracting focused sub-services improves testability and aligns with backend-patterns.mdx SRP guidance.
+
+## Who
+
+- **Primary:** Backend developers maintaining these services
+- **Secondary:** CI pipeline (CVE scan)
+
+## Constraints
+
+- SRP refactoring must not change public API (controller contracts unchanged)
+- Extracted services must stay in the same NestJS module (no new modules)
+- Tests must pass without modification (or with minimal import path updates)
+- `bun update --recursive` to avoid workspace version drift
+
+## Out of Scope
+
+- Rewriting controller logic
+- Adding new features to refactored services
+- Repository abstraction layer (#317)
+- Other resolved findings from #400
+
+## Complexity
+
+**Tier: F-lite** — Clear scope, single domain (backend), well-defined extraction boundaries.
+
+Signals: 2 remaining findings, backend-only, no new patterns, no unknowns.

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { PermissionService } from './permission.service.js'
 import { PERMISSION_FORMAT, RbacController } from './rbac.controller.js'
 import type { RbacService } from './rbac.service.js'
+import type { RbacMemberService } from './rbacMember.service.js'
 
 const mockRbacService: RbacService = {
   listRoles: vi.fn(),
@@ -9,10 +10,13 @@ const mockRbacService: RbacService = {
   updateRole: vi.fn(),
   deleteRole: vi.fn(),
   getRolePermissions: vi.fn(),
-  transferOwnership: vi.fn(),
-  changeMemberRole: vi.fn(),
   seedDefaultRoles: vi.fn(),
 } as unknown as RbacService
+
+const mockRbacMemberService: RbacMemberService = {
+  transferOwnership: vi.fn(),
+  changeMemberRole: vi.fn(),
+} as unknown as RbacMemberService
 
 const mockPermissionService: PermissionService = {
   getPermissions: vi.fn(),
@@ -21,7 +25,11 @@ const mockPermissionService: PermissionService = {
 } as unknown as PermissionService
 
 describe('RbacController', () => {
-  const controller = new RbacController(mockRbacService, mockPermissionService)
+  const controller = new RbacController(
+    mockRbacService,
+    mockRbacMemberService,
+    mockPermissionService
+  )
 
   describe('listRoles', () => {
     it('should call rbacService.listRoles', async () => {
@@ -88,27 +96,27 @@ describe('RbacController', () => {
   })
 
   describe('transferOwnership', () => {
-    it('should call rbacService.transferOwnership with correct args', async () => {
+    it('should call rbacMemberService.transferOwnership with correct args', async () => {
       const session = { user: { id: 'user-1' } }
       const body = { targetMemberId: 'member-2' }
-      vi.mocked(mockRbacService.transferOwnership).mockResolvedValue({ transferred: true })
+      vi.mocked(mockRbacMemberService.transferOwnership).mockResolvedValue({ transferred: true })
 
       const result = await controller.transferOwnership(session, body)
 
       expect(result).toEqual({ transferred: true })
-      expect(mockRbacService.transferOwnership).toHaveBeenCalledWith('user-1', 'member-2')
+      expect(mockRbacMemberService.transferOwnership).toHaveBeenCalledWith('user-1', 'member-2')
     })
   })
 
   describe('changeMemberRole', () => {
-    it('should call rbacService.changeMemberRole with correct args', async () => {
+    it('should call rbacMemberService.changeMemberRole with correct args', async () => {
       const body = { roleId: 'r-1' }
-      vi.mocked(mockRbacService.changeMemberRole).mockResolvedValue({ updated: true })
+      vi.mocked(mockRbacMemberService.changeMemberRole).mockResolvedValue({ updated: true })
 
       const result = await controller.changeMemberRole('m-1', body)
 
       expect(result).toEqual({ updated: true })
-      expect(mockRbacService.changeMemberRole).toHaveBeenCalledWith('m-1', 'r-1')
+      expect(mockRbacMemberService.changeMemberRole).toHaveBeenCalledWith('m-1', 'r-1')
     })
   })
 })

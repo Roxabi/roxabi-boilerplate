@@ -41,6 +41,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { BackLink, DetailSkeleton } from '@/components/admin/DetailShared'
 import { UserActions } from '@/components/admin/UserActions'
+import { adminUserKeys } from '@/lib/admin/queryKeys'
 import { useSession } from '@/lib/authClient'
 import { formatDate, formatTimestamp } from '@/lib/formatDate'
 import { enforceRoutePermission } from '@/lib/routePermissions'
@@ -268,7 +269,7 @@ function useEditUserMutation({
     onError: (err) => {
       setError(err instanceof Error ? err.message : 'Failed to update user')
       // Refetch user detail to update isLastActiveSuperadmin flag
-      queryClient.invalidateQueries({ queryKey: ['admin', 'users', user.id] })
+      queryClient.invalidateQueries({ queryKey: adminUserKeys.detail(user.id) })
     },
   })
 
@@ -518,7 +519,7 @@ function AdminUserDetailPage() {
   const [isEditing, setIsEditing] = useState(false)
 
   const { data, isLoading, error } = useQuery<AdminUserDetail>({
-    queryKey: ['admin', 'users', userId],
+    queryKey: adminUserKeys.detail(userId),
     queryFn: async () => {
       const res = await fetch(`/api/admin/users/${userId}`)
       if (!res.ok) throw new Error('User not found')
@@ -527,8 +528,8 @@ function AdminUserDetailPage() {
   })
 
   function handleActionComplete() {
-    queryClient.invalidateQueries({ queryKey: ['admin', 'users', userId] })
-    queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+    queryClient.invalidateQueries({ queryKey: adminUserKeys.detail(userId) })
+    queryClient.invalidateQueries({ queryKey: adminUserKeys.all })
   }
 
   function handleEditSave() {

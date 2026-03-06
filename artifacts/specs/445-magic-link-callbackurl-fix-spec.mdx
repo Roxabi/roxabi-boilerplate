@@ -1,0 +1,269 @@
+---
+title: "fix(auth): magic link verification broken — callbackURL missing at request time + no E2E coverage"
+issue: 445
+status: approved
+tier: F-full
+date: 2026-03-03
+promoted-from: "artifacts/frames/445-magic-link-callbackurl-fix-frame.mdx"
+revision: 2
+---
+
+## Context
+
+Promoted from frame `445-magic-link-callbackurl-fix-frame.mdx`. Analysis phase skipped (problem
+well-understood from issue body + code reads).
+
+**Revision 2:** Scope extended to add Mailpit as the dev SMTP relay (started via `bun run db:up`
+alongside Postgres). This makes magic link emails interceptable in dev and E2E — replacing the
+current silent console-log fallback.
+
+Prior fix commit `7bfb328` targeted the wrong layer: it made the `callbackURL` in `verify.tsx`'s
+redirect URL absolute, but Better Auth's verify endpoint reads `callbackURL` **from the token**,
+not from the query string. The real fix is in `-login-handlers.ts` where the token is created.
+
+**Note on ports:** Port 3001 is the React Email **template preview** server (`packages/email` dev
+script). Mailpit runs separately on SMTP 1025 and web UI 8025.
+
+## Goal
+
+Magic link authentication works end-to-end: user requests a link, clicks it, lands on `/dashboard`
+with an active session. Emails are deliverable and inspectable in dev via Mailpit. A regression
+test catches any future breakage.
+
+## Users
+
+- **Primary:** End users who choose passwordless (magic link) login. Currently blocked — flow
+  silently misdirects post-verify.
+- **Secondary:** Developers — can now inspect sent emails at `http://localhost:8025` in dev.
+  Also get a reliable E2E signal that the flow hasn't regressed.
+
+## Expected Behavior
+
+1. Developer runs `bun run db:up` → Postgres + Mailpit start (Docker Compose).
+2. User opens `/login`, switches to the magic link tab, enters their email, submits.
+3. `handleMagicLink()` in `-login-handlers.ts` calls:
+   ```ts
+   authClient.signIn.magicLink({
+     email: form.magicLinkEmail,
+     callbackURL: `${window.location.origin}/dashboard`,
+   })
+   ```
+   Better Auth embeds `callbackURL` in the signed token at this point.
+4. Better Auth's `sendMagicLink` handler (`auth.instance.ts`) renders the email and calls
+   `emailProvider.send()` → in dev, this goes to Mailpit via SMTP (localhost:1025). In prod,
+   it goes to Resend (when `RESEND_API_KEY` is set).
+5. User is navigated to `/magic-link-sent` (existing behavior, unchanged).
+6. User receives email (or opens Mailpit at `http://localhost:8025`), clicks the link →
+   browser opens `/magic-link/verify?token=<signed-token>`.
+7. `GuestVerifyFlow` in `verify.tsx` reads the token and navigates the browser to:
+   ```
+   /api/auth/magic-link/verify?token=<t>&errorCallbackURL=<origin>/magic-link/verify
+   ```
+   _(Note: `callbackURL` query param is removed — it was dead code ignored by Better Auth.)_
+8. Better Auth's verify handler validates the token, extracts the stored `callbackURL`
+   (`/dashboard`), sets session cookies, and issues a `302` redirect to `/dashboard`.
+9. User lands on `/dashboard` authenticated. ✓
+
+**Resend path:** From `/magic-link-sent`, clicking "Resend" also calls `signIn.magicLink` — same
+fix applies (callbackURL must be passed).
+
+**Error path:** If the token is invalid or expired, Better Auth redirects to
+`errorCallbackURL` (i.e., `/magic-link/verify?error=EXPIRED_TOKEN`). The `GuestVerifyFlow`
+detects `?error=...` and renders the appropriate error state. This path is unchanged.
+
+## Breadboard
+
+### Affordances
+
+| ID | Affordance | Handler | Data |
+|----|-----------|---------|------|
+| U1 | Magic link email `<input>` | form state | `string` email |
+| U2 | "Send magic link" `<button>` | `handleMagicLink()` | triggers N1 |
+| U3 | "Resend" button on `/magic-link-sent` | `handleResend()` | triggers N1 (same fix) |
+| N1 | `authClient.signIn.magicLink` | Better Auth client | `{ email, callbackURL }` — callbackURL baked into token |
+| N2 | `emailProvider.send()` in `auth.instance.ts` | NestJS `EMAIL_PROVIDER` | routes to Mailpit (dev) or Resend (prod) |
+| N3 | Mailpit SMTP `localhost:1025` | Docker container | accepts email, stores for web UI + REST API |
+| N4 | `/magic-link/verify?token=xxx` | `GuestVerifyFlow` | reads `token` param, navigates to N5 |
+| N5 | `/api/auth/magic-link/verify?token=xxx&errorCallbackURL=...` | Better Auth server | validates token → 302 to stored callbackURL or errorCallbackURL |
+| N6 | `/dashboard` | TanStack Router | authenticated landing, requires active session cookie |
+| N7 | Mailpit REST API `http://localhost:8025/api/v1/messages` | Mailpit web server | read latest email, extract verify URL for E2E |
+
+### Wiring
+
+```
+U1/U3 → N1 → N2 → N3 (Mailpit, dev) → [email sent]
+                  └→ Resend (prod)
+
+[user clicks link in email]
+→ N4 → N5 → N6
+         ↑
+    session cookie set by N5
+
+Error path:
+N5 → (302 errorCallbackURL) → N4 (with ?error=CODE) → ErrorState component
+
+E2E path:
+N1 → N2 → N3 → N7 (REST poll) → extract token → N4 → N5 → N6
+```
+
+## Slices
+
+| # | Slice | Files touched | Independently demo-able? |
+|---|-------|--------------|--------------------------|
+| S0 | Infra: add Mailpit to docker-compose; add `NodemailerEmailProvider`; wire dev/prod selection | `docker-compose.yml`, `apps/api/src/email/nodemailer.provider.ts` (new), `apps/api/src/email/email.module.ts`, `.env.example` | Yes — `bun run db:up` starts Mailpit; magic link email lands in `http://localhost:8025` |
+| S1 | Fix: add `callbackURL` to both `signIn.magicLink` call sites | `apps/web/src/routes/-login-handlers.ts`, `apps/web/src/routes/magic-link-sent.tsx` | Yes — request magic link, check Mailpit, click link → lands on dashboard |
+| S2 | Cleanup: remove dead `callbackURL` param from verify URL; update unit test | `apps/web/src/routes/magic-link/verify.tsx`, `apps/web/src/routes/magic-link/verify.test.tsx` | Yes — unit tests pass, verify flow still works |
+| S3 | E2E: full magic link flow test (happy path + error case) | `apps/web/e2e/auth.page.ts`, `apps/web/e2e/auth.spec.ts` | Yes — E2E suite passes |
+
+Slice dependencies: S1 before S3 (E2E fails without root fix). S0 before S3 (E2E needs Mailpit
+to intercept emails). S2 is independent (cleanup + test fix only).
+
+**Smart split evaluation:** 4 slices + 12 criteria exceed the trigger thresholds, but all slices
+form one coherent feature (dev email infra + auth fix + E2E). Splitting into two issues would
+create orphaned partial work. Keeping as-is.
+
+## Implementation Notes
+
+### S0 — Mailpit + NodemailerEmailProvider
+
+**`docker-compose.yml`** — add alongside postgres:
+```yaml
+mailpit:
+  image: axllent/mailpit:latest
+  container_name: roxabi-mailpit
+  restart: unless-stopped
+  ports:
+    - "1025:1025"   # SMTP
+    - "8025:8025"   # Web UI
+```
+
+**`apps/api/src/email/nodemailer.provider.ts`** (new file):
+```ts
+// NodemailerEmailProvider — sends via SMTP (dev, points to Mailpit at localhost:1025)
+// Provider selection in email.module.ts:
+//   RESEND_API_KEY set  → ResendEmailProvider
+//   SMTP_HOST set       → NodemailerEmailProvider  ← this one
+//   neither             → console fallback (existing ResendEmailProvider behavior)
+```
+- Install `nodemailer` (+ `@types/nodemailer`) in `apps/api`
+- Reads `SMTP_HOST` and `SMTP_PORT` from `ConfigService`
+- Implements the `EmailProvider` interface (`send()`)
+
+**`apps/api/src/email/email.module.ts`** — switch to dynamic provider selection:
+```ts
+{
+  provide: EMAIL_PROVIDER,
+  inject: [ConfigService],
+  useFactory: (config: ConfigService) => {
+    if (config.get('RESEND_API_KEY')) return new ResendEmailProvider(config)
+    if (config.get('SMTP_HOST')) return new NodemailerEmailProvider(config)
+    return new ResendEmailProvider(config)  // falls back to console-log mode
+  },
+}
+```
+
+**`.env.example`** — add after the Resend block:
+```env
+# ─── Email — Mailpit (dev SMTP relay) ────────────────────────
+# Start with: bun run db:up (runs alongside Postgres in Docker)
+# Web UI: http://localhost:8025
+SMTP_HOST=localhost
+SMTP_PORT=1025
+```
+
+### S1 — callbackURL in both signIn.magicLink call sites
+
+**Call site 1** — `-login-handlers.ts:handleMagicLink` (line 83):
+```ts
+// Before
+const { error: mlError } = await authClient.signIn.magicLink({
+  email: form.magicLinkEmail,
+})
+
+// After
+const { error: mlError } = await authClient.signIn.magicLink({
+  email: form.magicLinkEmail,
+  callbackURL: `${window.location.origin}/dashboard`,
+})
+```
+
+**Call site 2** — `magic-link-sent.tsx:handleResend` (line 66):
+```ts
+// Before
+const { error } = await authClient.signIn.magicLink({ email })
+
+// After
+const { error } = await authClient.signIn.magicLink({
+  email,
+  callbackURL: `${window.location.origin}/dashboard`,
+})
+```
+
+`window.location.origin` is safe in both cases — both are browser event handlers, never SSR.
+
+Redirect param support (deep-linking post-magic-link) is **out of scope** — issue specifies
+`/dashboard` as the target.
+
+### S2 — Remove dead callbackURL from verify.tsx
+
+`verify.tsx:GuestVerifyFlow` (lines 154–158):
+```ts
+// Before
+const params = new URLSearchParams({
+  token,
+  callbackURL: `${window.location.origin}/dashboard`,   // dead — remove
+  errorCallbackURL: `${window.location.origin}/magic-link/verify`,
+})
+
+// After
+const params = new URLSearchParams({
+  token,
+  errorCallbackURL: `${window.location.origin}/magic-link/verify`,
+})
+```
+
+`verify.test.tsx` (line 180): remove the assertion for `callbackURL`. The `errorCallbackURL`
+assertion remains.
+
+### S3 — E2E test strategy
+
+Mailpit (started via `bun run db:up`) exposes a REST API at `http://localhost:8025/api/v1/messages`.
+
+E2E flow:
+1. Request magic link via `AuthPage.requestMagicLink(email)` (new helper)
+2. Poll `GET http://localhost:8025/api/v1/messages?limit=1` (Mailpit REST API)
+3. Parse HTML body — extract href matching `/magic-link/verify?token=`
+4. Navigate to the extracted URL
+5. Assert: browser reaches `/dashboard`, session cookie is present
+
+`AuthPage` additions needed (`auth.page.ts`):
+- `loginMagicLinkEmailInput: Locator` — email input in magic link tab
+- `loginMagicLinkSubmitButton: Locator` — "Send magic link" button
+- `requestMagicLink(email: string): Promise<void>` — switches to magic link tab, fills email, submits
+
+Mailpit helper (in `testHelpers.ts` or inline):
+```ts
+async function getMagicLinkToken(request: APIRequestContext): Promise<string> {
+  // GET http://localhost:8025/api/v1/messages?limit=1
+  // Extract /magic-link/verify?token= href from HTML body
+  // Return the full path (/magic-link/verify?token=xxx)
+}
+```
+
+Test guard: `test.skip(() => !hasApi, 'Skipped: no DATABASE_URL / Mailpit in CI')` — same
+pattern as existing auth tests. `test.use({ storageState: { cookies: [], origins: [] } })`.
+
+## Success Criteria
+
+- [ ] Mailpit service added to `docker-compose.yml` (SMTP 1025, web UI 8025) — starts with `bun run db:up`
+- [ ] `NodemailerEmailProvider` created in `apps/api/src/email/` — sends to `SMTP_HOST:SMTP_PORT`
+- [ ] `email.module.ts` selects provider dynamically: `RESEND_API_KEY` → Resend, `SMTP_HOST` → Nodemailer, neither → console fallback
+- [ ] `.env.example` documents `SMTP_HOST=localhost` and `SMTP_PORT=1025` with Mailpit context
+- [ ] `authClient.signIn.magicLink` is called with `callbackURL: \`${window.location.origin}/dashboard\`` in `-login-handlers.ts:handleMagicLink`
+- [ ] `authClient.signIn.magicLink` is called with `callbackURL: \`${window.location.origin}/dashboard\`` in `magic-link-sent.tsx:handleResend`
+- [ ] `GuestVerifyFlow` in `verify.tsx` no longer passes `callbackURL` as a query param — only `token` and `errorCallbackURL` are sent
+- [ ] `verify.test.tsx` updated: `callbackURL` assertion removed; all other assertions pass
+- [ ] `AuthPage` exposes `loginMagicLinkEmailInput`, `loginMagicLinkSubmitButton`, and `requestMagicLink(email)` helpers
+- [ ] E2E happy path passes: request link → intercept token from Mailpit REST API (`:8025`) → navigate → user lands on `/dashboard` with active session
+- [ ] E2E error path passes: navigate to `/magic-link/verify?token=invalid` → `role="alert"` error visible
+- [ ] All existing `auth.spec.ts` tests remain green

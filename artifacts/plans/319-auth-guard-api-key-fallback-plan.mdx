@@ -1,0 +1,466 @@
+---
+title: "Plan: feat(auth): Auth guard API key fallback (V2)"
+issue: 319
+spec: artifacts/specs/319-auth-guard-api-key-fallback-spec.mdx
+complexity: 4/10
+tier: F-lite
+generated: 2026-03-04
+---
+
+## Summary
+
+Extend `AuthGuard.canActivate()` with a Bearer token fallback that validates API keys via HMAC lookup, constructs a synthetic `AuthenticatedSession`, and enforces `@RequireApiKey()` / superadmin scope checks. Single backend domain, no new architecture.
+
+## Agents
+
+| Agent | Tasks | Files |
+|-------|-------|-------|
+| `backend-dev` | T1–T9 | errorCodes.ts, apiKey.service.ts, auth.module.ts, auth.guard.ts, requireApiKey.decorator.ts |
+| `tester` | T10–T11 | auth.guard.test.ts, apiKey.service.test.ts |
+
+## Reference Patterns
+
+- Decorator pattern: `apps/api/src/auth/decorators/allowAnonymous.ts` — `SetMetadata('KEY', value)`
+- Guard metadata read: `this.reflector.getAllAndOverride<T>('KEY', [handler, class])`
+- Guard test harness: `apps/api/src/auth/auth.guard.test.ts` — `createGuard()` factory pattern
+- Drizzle query: `apps/api/src/api-key/apiKey.service.ts` — `this.db.select(...).from(...).where(...)`
+
+## Consistency Report
+
+| Metric | Count |
+|--------|-------|
+| Spec criteria covered | 13/13 |
+| Uncovered criteria | 0 |
+| [NEEDS CLARIFICATION] | 0 |
+| Slices | 3 |
+
+---
+
+## Slice 1 — Bearer validation + synthetic session
+
+Goal: `curl -H "Authorization: Bearer sk_live_xxx" /api/session` → returns JSON with `actorType: 'api_key'`.
+
+### T1 — Add API key error codes [P]
+
+- **File:** `apps/api/src/common/errorCodes.ts`
+- **Phase:** RED
+- **Agent:** backend-dev
+- **Parallel-safe:** Y
+- **Time:** 2 min
+- **Difficulty:** 1
+- **Spec trace:** SC-10
+
+Add after `API_KEY_EXPIRY_IN_PAST`:
+
+```ts
+API_KEY_INVALID: 'API_KEY_INVALID',
+API_KEY_REVOKED: 'API_KEY_REVOKED',
+API_KEY_EXPIRED: 'API_KEY_EXPIRED',
+API_KEY_SCOPE_DENIED: 'API_KEY_SCOPE_DENIED',
+API_KEY_REQUIRED: 'API_KEY_REQUIRED',
+```
+
+- **Verify:** `grep -c "API_KEY_INVALID\|API_KEY_REVOKED\|API_KEY_EXPIRED\|API_KEY_SCOPE_DENIED\|API_KEY_REQUIRED" apps/api/src/common/errorCodes.ts`
+- **Expected output:** `5`
+
+---
+
+### T2 — Add `validateBearerToken()` to ApiKeyService
+
+- **File:** `apps/api/src/api-key/apiKey.service.ts`
+- **Phase:** RED
+- **Agent:** backend-dev
+- **Parallel-safe:** N (depends on T1 for error codes)
+- **Time:** 8 min
+- **Difficulty:** 3
+- **Spec trace:** SC-1, SC-3, D1
+
+Add import for `users` schema and new method. The query JOINs `users` to fetch `role` atomically:
+
+```ts
+// add to imports
+import { users } from '../database/schema/auth.schema.js'
+
+async validateBearerToken(token: string): Promise<{
+  id: string
+  userId: string
+  tenantId: string
+  scopes: string[]
+  role: string
+  revokedAt: Date | null
+  expiresAt: Date | null
+}> {
+  const lastFour = token.slice(-4)
+
+  const candidates = await this.db
+    .select({
+      id: apiKeys.id,
+      userId: apiKeys.userId,
+      tenantId: apiKeys.tenantId,
+      scopes: apiKeys.scopes,
+      keyHash: apiKeys.keyHash,
+      keySalt: apiKeys.keySalt,
+      revokedAt: apiKeys.revokedAt,
+      expiresAt: apiKeys.expiresAt,
+      role: users.role,
+    })
+    .from(apiKeys)
+    .innerJoin(users, eq(apiKeys.userId, users.id))
+    .where(eq(apiKeys.lastFour, lastFour))
+    .limit(10)
+
+  const match = candidates.find((c) => hmacHash(token, c.keySalt) === c.keyHash)
+
+  if (!match) {
+    throw new UnauthorizedException({ message: 'Invalid API key', errorCode: ErrorCode.API_KEY_INVALID })
+  }
+  if (match.revokedAt) {
+    throw new UnauthorizedException({ message: 'API key has been revoked', errorCode: ErrorCode.API_KEY_REVOKED })
+  }
+  if (match.expiresAt && match.expiresAt < new Date()) {
+    throw new UnauthorizedException({ message: 'API key has expired', errorCode: ErrorCode.API_KEY_EXPIRED })
+  }
+
+  return match
+}
+```
+
+Note: `hmacHash` is already defined as a module-level function in the file.
+
+- **Verify:** `grep -n "validateBearerToken" apps/api/src/api-key/apiKey.service.ts`
+- **Expected output:** line with method signature
+
+---
+
+### T3 — Add `touchLastUsedAt()` to ApiKeyService [P]
+
+- **File:** `apps/api/src/api-key/apiKey.service.ts`
+- **Phase:** RED
+- **Agent:** backend-dev
+- **Parallel-safe:** Y (independent of T2)
+- **Time:** 3 min
+- **Difficulty:** 1
+- **Spec trace:** SC-9, D2
+
+```ts
+touchLastUsedAt(id: string): void {
+  this.db
+    .update(apiKeys)
+    .set({ lastUsedAt: new Date() })
+    .where(eq(apiKeys.id, id))
+    .catch((err) => {
+      this.logger.error(`[touchLastUsedAt] Failed to update lastUsedAt for key ${id}`, err)
+    })
+}
+```
+
+Fire-and-forget — intentionally `void` return, no `async`, catches errors internally.
+
+- **Verify:** `grep -n "touchLastUsedAt" apps/api/src/api-key/apiKey.service.ts`
+- **Expected output:** line with method signature
+
+---
+
+### T4 — Import `ApiKeyModule` + inject services in `AuthModule` / `AuthGuard`
+
+- **Files:** `apps/api/src/auth/auth.module.ts`, `apps/api/src/auth/auth.guard.ts`
+- **Phase:** RED
+- **Agent:** backend-dev
+- **Parallel-safe:** N (depends on T2, T3)
+- **Time:** 5 min
+- **Difficulty:** 2
+- **Spec trace:** SC-1, SC-9
+
+`auth.module.ts` — add `ApiKeyModule` import (no `forwardRef` needed; `ApiKeyModule` doesn't import `AuthModule`):
+
+```ts
+import { ApiKeyModule } from '../api-key/apiKey.module.js'
+
+@Module({
+  imports: [EmailModule, RbacModule, forwardRef(() => UserModule), ApiKeyModule],
+  // ...
+})
+```
+
+`auth.guard.ts` — add `ApiKeyService` and `PermissionService` constructor params (`PermissionService` already available via `RbacModule`):
+
+```ts
+import { ApiKeyService } from '../api-key/apiKey.service.js'
+import { PermissionService } from '../rbac/permission.service.js'
+
+constructor(
+  private readonly authService: AuthService,
+  private readonly reflector: Reflector,
+  @Inject(forwardRef(() => UserService))
+  private readonly userService: UserService,
+  private readonly apiKeyService: ApiKeyService,
+  private readonly permissionService: PermissionService,
+) {}
+```
+
+- **Verify:** `bun run typecheck --filter=@repo/api 2>&1 | tail -5`
+- **Expected output:** no errors
+
+---
+
+### T5 — Implement Bearer fallback in `AuthGuard.canActivate()`
+
+- **File:** `apps/api/src/auth/auth.guard.ts`
+- **Phase:** GREEN
+- **Agent:** backend-dev
+- **Parallel-safe:** N (depends on T4)
+- **Time:** 10 min
+- **Difficulty:** 4
+- **Spec trace:** SC-1–SC-9, N4
+
+Replace the `canActivate` method body:
+
+```ts
+async canActivate(context: ExecutionContext): Promise<boolean> {
+  const requireApiKey = this.reflector.getAllAndOverride<boolean>('REQUIRE_API_KEY', [
+    context.getHandler(),
+    context.getClass(),
+  ])
+
+  const isPublic = this.reflector.getAllAndOverride<boolean>('PUBLIC', [
+    context.getHandler(),
+    context.getClass(),
+  ])
+  if (isPublic && !requireApiKey) return true
+
+  const request = context.switchToHttp().getRequest<AuthenticatedRequest>()
+
+  // --- API key Bearer fallback ---
+  const authHeader = request.headers['authorization'] as string | undefined
+  const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null
+
+  let session: AuthenticatedSession | null = null
+
+  if (bearerToken?.startsWith('sk_live_')) {
+    // API key path — throws on invalid/revoked/expired
+    const keyData = await this.apiKeyService.validateBearerToken(bearerToken)
+    const orgPermissions = await this.permissionService.getPermissions(keyData.userId, keyData.tenantId)
+    const effectiveScopes = keyData.scopes.filter((s) => orgPermissions.includes(s))
+
+    session = {
+      user: { id: keyData.userId, role: (keyData.role ?? 'user') as Role },
+      session: { id: keyData.id, activeOrganizationId: keyData.tenantId },
+      permissions: effectiveScopes,
+      actorType: 'api_key',
+      apiKeyId: keyData.id,
+    }
+
+    // fire-and-forget lastUsedAt update
+    this.apiKeyService.touchLastUsedAt(keyData.id)
+  } else {
+    // Session auth path (existing behavior)
+    const raw = await this.authService.getSession(request)
+    session = isAuthenticatedSession(raw) ? raw : null
+  }
+
+  request.session = session
+  request.user = session?.user ?? null
+
+  // @RequireApiKey(): reject non-API-key auth
+  if (requireApiKey && session?.actorType !== 'api_key') {
+    throw new UnauthorizedException({ message: 'API key required', errorCode: ErrorCode.API_KEY_REQUIRED })
+  }
+
+  const isOptional = this.reflector.getAllAndOverride<boolean>('OPTIONAL_AUTH', [
+    context.getHandler(),
+    context.getClass(),
+  ])
+  if (!session && isOptional) return true
+  if (!session) throw new UnauthorizedException()
+
+  // Soft-delete check — session auth only
+  if (session.actorType !== 'api_key') {
+    await this.checkSoftDeleted(request, session)
+  }
+
+  // Roles — skip for API key auth
+  if (session.actorType !== 'api_key') {
+    this.checkRoles(context, session)
+  }
+
+  this.checkOrgRequired(context, session)
+  this.checkPermissions(context, session)
+
+  return true
+}
+```
+
+- **Verify:** `bun run typecheck --filter=@repo/api 2>&1 | tail -5`
+- **Expected output:** no errors
+
+---
+
+### RED-GATE — Slice 1 complete
+
+```bash
+bun run test --filter=@repo/api 2>&1 | grep -E "PASS|FAIL|Error" | tail -20
+```
+
+---
+
+## Slice 2 — `@RequireApiKey()` + `checkPermissions` hardening
+
+Goal: Session-auth request to `@RequireApiKey()` endpoint → `401 API_KEY_REQUIRED`. Superadmin with API key → scope-checked.
+
+### T6 — Create `@RequireApiKey()` decorator [P]
+
+- **File:** `apps/api/src/auth/decorators/requireApiKey.decorator.ts`
+- **Phase:** RED
+- **Agent:** backend-dev
+- **Parallel-safe:** Y
+- **Time:** 2 min
+- **Difficulty:** 1
+- **Spec trace:** SC-7, D4
+
+```ts
+import { SetMetadata } from '@nestjs/common'
+
+/**
+ * Restrict a controller or route to API key authentication only.
+ * Rejects session-auth requests with 401 API_KEY_REQUIRED.
+ * Note: @AllowAnonymous() does NOT override this decorator.
+ */
+export const RequireApiKey = () => SetMetadata('REQUIRE_API_KEY', true)
+```
+
+- **Verify:** `cat apps/api/src/auth/decorators/requireApiKey.decorator.ts`
+- **Expected output:** file contents with `SetMetadata('REQUIRE_API_KEY', true)`
+
+---
+
+### T7 — Suppress superadmin bypass + `API_KEY_SCOPE_DENIED` in `checkPermissions()`
+
+- **File:** `apps/api/src/auth/auth.guard.ts`
+- **Phase:** GREEN
+- **Agent:** backend-dev
+- **Parallel-safe:** N (depends on T5 which adds `actorType` to session)
+- **Time:** 5 min
+- **Difficulty:** 2
+- **Spec trace:** SC-4, SC-5, SC-10
+
+Update `checkPermissions()`:
+
+```ts
+private checkPermissions(context: ExecutionContext, session: AuthenticatedSession) {
+  const requiredPermissions = this.reflector.getAllAndOverride<string[]>('PERMISSIONS', [
+    context.getHandler(),
+    context.getClass(),
+  ])
+  if (!requiredPermissions?.length) return
+
+  const orgId = session.session.activeOrganizationId
+  if (!orgId) {
+    throw new ForbiddenException('No active organization')
+  }
+
+  // Superadmin bypass is suppressed for API key auth — scope checks always apply
+  if (session.user.role === 'superadmin' && session.actorType !== 'api_key') return
+
+  const hasAll = requiredPermissions.every((p) => session.permissions.includes(p))
+  if (!hasAll) {
+    if (session.actorType === 'api_key') {
+      throw new ForbiddenException({
+        message: 'API key does not have required scope',
+        errorCode: ErrorCode.API_KEY_SCOPE_DENIED,
+      })
+    }
+    throw new ForbiddenException('Insufficient permissions')
+  }
+}
+```
+
+- **Verify:** `grep -n "actorType.*api_key" apps/api/src/auth/auth.guard.ts | wc -l`
+- **Expected output:** `3` (canActivate ×2 + checkPermissions ×1)
+
+---
+
+### RED-GATE — Slice 2 complete
+
+```bash
+bun run test --filter=@repo/api 2>&1 | grep -E "PASS|FAIL|Error" | tail -20
+```
+
+---
+
+## Slice 3 — Tests
+
+### T8 — Unit tests for `ApiKeyService.validateBearerToken` + `touchLastUsedAt`
+
+- **File:** `apps/api/src/api-key/apiKey.service.test.ts` (create or extend)
+- **Phase:** GREEN
+- **Agent:** tester
+- **Parallel-safe:** N (depends on T2, T3)
+- **Time:** 10 min
+- **Difficulty:** 3
+- **Spec trace:** SC-1, SC-2, SC-3, SC-9
+
+Test cases:
+- `validateBearerToken`: valid key → returns row data
+- `validateBearerToken`: no lastFour match → throws `API_KEY_INVALID`
+- `validateBearerToken`: HMAC mismatch → throws `API_KEY_INVALID`
+- `validateBearerToken`: revoked key → throws `API_KEY_REVOKED`
+- `validateBearerToken`: expired key → throws `API_KEY_EXPIRED`
+- `touchLastUsedAt`: calls `db.update` with correct params; does not throw
+
+- **Verify:** `bun run test --filter=@repo/api apps/api/src/api-key/apiKey.service.test.ts 2>&1 | tail -10`
+- **Expected output:** all tests pass
+
+---
+
+### T9 — Unit tests for `AuthGuard` API key path
+
+- **File:** `apps/api/src/auth/auth.guard.test.ts`
+- **Phase:** GREEN
+- **Agent:** tester
+- **Parallel-safe:** N (depends on T5, T7)
+- **Time:** 15 min
+- **Difficulty:** 3
+- **Spec trace:** SC-1–SC-12
+
+Test cases to add:
+- Bearer `sk_live_xxx` → `apiKeyService.validateBearerToken` called; synthetic session attached with `actorType: 'api_key'`
+- Valid API key → `touchLastUsedAt` called (fire-and-forget; not awaited)
+- API key → `checkSoftDeleted` NOT called
+- API key → `checkRoles` NOT called
+- API key → `checkPermissions` called; superadmin bypass suppressed (superadmin with api_key actorType → scope-checked)
+- API key → insufficient scope → throws `ForbiddenException` with `API_KEY_SCOPE_DENIED`
+- `@RequireApiKey()` + session auth → throws `UnauthorizedException` with `API_KEY_REQUIRED`
+- `@RequireApiKey()` + `@AllowAnonymous()` → `@AllowAnonymous()` has no effect; API key required
+- Non-`sk_live_` Bearer token → falls through to session auth path
+- Revoked key → `UnauthorizedException` with `API_KEY_REVOKED` propagates from service
+
+Guard test factory extension — add `apiKeyService` and `permissionService` mocks to `createGuard()`:
+
+```ts
+function createMockApiKeyService(result: Record<string, unknown> | null = null, throws?: Error) {
+  return {
+    validateBearerToken: throws
+      ? vi.fn().mockRejectedValue(throws)
+      : vi.fn().mockResolvedValue(result),
+    touchLastUsedAt: vi.fn(),
+  }
+}
+
+function createMockPermissionService(permissions: string[] = []) {
+  return {
+    getPermissions: vi.fn().mockResolvedValue(permissions),
+  }
+}
+```
+
+- **Verify:** `bun run test --filter=@repo/api apps/api/src/auth/auth.guard.test.ts 2>&1 | tail -10`
+- **Expected output:** all tests pass
+
+---
+
+### RED-GATE — All tests green
+
+```bash
+bun run test --filter=@repo/api 2>&1 | grep -E "Tests|PASS|FAIL" | tail -5
+bun run typecheck --filter=@repo/api 2>&1 | tail -5
+```

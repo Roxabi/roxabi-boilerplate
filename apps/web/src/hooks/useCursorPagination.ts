@@ -9,7 +9,7 @@ import { useInfiniteQuery } from '@tanstack/react-query'
  */
 
 type UseCursorPaginationOptions<T> = {
-  queryKey: unknown[]
+  queryKey: ReadonlyArray<unknown>
   fetchFn: (cursor?: string) => Promise<CursorPaginatedResponse<T>>
   enabled?: boolean
 }

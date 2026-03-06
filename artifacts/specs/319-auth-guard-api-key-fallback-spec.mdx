@@ -1,0 +1,183 @@
+---
+title: "feat(auth): Auth guard API key fallback (V2)"
+issue: 319
+status: approved
+tier: F-lite
+date: 2026-03-04
+promoted-from: artifacts/frames/319-auth-guard-api-key-fallback-frame.mdx
+parent-spec: artifacts/specs/194-public-api-developer-platform.mdx
+---
+
+## Context
+
+Slice V2 of the public developer platform (#194). V1 (#318, merged) created the `api_keys` table and CRUD UI. V2 teaches `AuthGuard` to validate Bearer tokens against that table and construct a synthetic `AuthenticatedSession` for API consumers.
+
+Promoted from: `artifacts/frames/319-auth-guard-api-key-fallback-frame.mdx`
+Parent spec: N4, S1 from `artifacts/specs/194-public-api-developer-platform.mdx`
+
+## Goal
+
+Extend `AuthGuard.canActivate()` with an API key Bearer token fallback so that external clients can authenticate programmatically using `Authorization: Bearer sk_live_xxx`, with the same `@Permissions()` semantics as session users.
+
+## Users
+
+- **External developers / API consumers** — send `Authorization: Bearer <api_key>` and expect `@Permissions()` to work identically.
+- **Internal CI/scripts** — use API keys for machine-to-machine calls.
+- **Operators** — superadmins must NOT bypass scope checks via API key auth (existing superadmin session bypass is explicitly suppressed).
+
+## Expected Behavior
+
+### Happy path — API key auth
+
+1. Client sends `Authorization: Bearer sk_live_<random>` to any protected endpoint.
+2. Guard extracts the token; recognises `sk_live_` prefix → enters API key path.
+3. Guard calls `ApiKeyService.validateBearerToken(token)` which:
+   a. Reads `keyHash` and `keySalt` from all non-revoked rows (scoped query by partial prefix for efficiency if feasible, otherwise full scan with early exit).
+   b. Computes `hmacHash(token, row.keySalt)` for each candidate; compares to `row.keyHash`.
+   c. Returns the matching row or throws `API_KEY_INVALID`.
+4. Guard verifies:
+   - Not revoked (`revokedAt IS NULL`) → else throws `API_KEY_REVOKED` (401).
+   - Not expired (`expiresAt IS NULL OR expiresAt > now`) → else throws `API_KEY_EXPIRED` (401).
+5. Guard fetches org's current permissions via `PermissionService.getPermissions(row.userId, row.tenantId)`.
+6. Guard computes `effectiveScopes = row.scopes ∩ orgPermissions` (runtime intersection prevents stale elevated access).
+7. Guard constructs synthetic `AuthenticatedSession`:
+   ```ts
+   {
+     user: { id: row.userId, role: <fetched from DB> },
+     session: { id: row.id, activeOrganizationId: row.tenantId },
+     permissions: effectiveScopes,
+     actorType: 'api_key',
+     apiKeyId: row.id,
+   }
+   ```
+8. Guard fires `ApiKeyService.touchLastUsedAt(row.id)` — **fire-and-forget**, no `await`.
+9. Existing `checkPermissions()` runs against `effectiveScopes`; `checkRoles()` is **bypassed** for API key auth.
+10. Superadmin enforcement: `checkPermissions()` skips its early-return for superadmins when `session.actorType === 'api_key'` → scope check always applies.
+11. Request proceeds.
+
+### `@RequireApiKey()` at controller level
+
+Routes decorated with `@RequireApiKey()`:
+- `@AllowAnonymous()` has NO effect — the guard still requires authentication.
+- Session auth (actorType `'user'`) is rejected with `401 API_KEY_REQUIRED`.
+- Only API key auth (`actorType === 'api_key'`) proceeds.
+
+### Fallback ordering
+
+```
+canActivate():
+  1. isRequireApiKey?        → if yes, skip @PUBLIC check
+  2. isPublic?               → return true (only if !requireApiKey)
+  3. hasBearerToken?         → Authorization: Bearer header present?
+     a. hasApiKeyPrefix?     → token starts with 'sk_live_'
+        → ApiKeyService.validateBearerToken() → synthetic session OR throw API_KEY_*
+     b. else (unknown Bearer format)
+        → fall through to session path
+  4. else (no Bearer token)  → try session path (existing behavior)
+  5. isOptional?             → if !session, return true
+  6. !session                → throw UnauthorizedException
+  7. checkSoftDeleted        → session auth only (skip for api_key actorType)
+  8. checkRoles              → skip for api_key actorType
+  9. checkOrgRequired        → run for all
+  10. checkPermissions       → run for all; superadmin bypass suppressed for api_key
+```
+
+Non-`sk_live_` Bearer tokens (e.g. JWTs) fall through to the session auth path, which rejects them as invalid — correct outcome, no extra handling needed.
+
+### Error responses
+
+| Condition | HTTP | ErrorCode |
+|-----------|------|-----------|
+| Token not found / hash mismatch / no `lastFour` match | 401 | `API_KEY_INVALID` |
+| Token found but revoked | 401 | `API_KEY_REVOKED` |
+| Token found but expired | 401 | `API_KEY_EXPIRED` |
+| Scope check fails | 403 | `API_KEY_SCOPE_DENIED` |
+| `@RequireApiKey()` + session auth | 401 | `API_KEY_REQUIRED` |
+| Key owner user deleted (shouldn't happen — cascade revokes on delete) | 401 | `API_KEY_INVALID` |
+
+## Breadboard
+
+### Affordances
+
+| ID | Element | Flow | Notes |
+|----|---------|------|-------|
+| N4 | `AuthGuard.canActivate()` — Bearer fallback | Client request → N4 → S1 | Core change; hash token, lookup, verify, synthetic session |
+| D1 | `ApiKeyService.validateBearerToken(token)` | N4 → D1 → S1 | New method: HMAC lookup, revoked/expired validation |
+| D2 | `ApiKeyService.touchLastUsedAt(id)` | N4 → D2 → S1 | Fire-and-forget; separate DB update |
+| D3 | `PermissionService.getPermissions(userId, orgId)` | N4 → D3 | Existing method; returns org's current permission set |
+| D4 | `@RequireApiKey()` decorator | Controller → N4 | New decorator; sets `REQUIRE_API_KEY` metadata |
+| D5 | `userRole` fetch in synthetic session | N4 → D5 → users table | Need user.role for `AuthenticatedSession.user.role` |
+
+### Data stores
+
+| ID | Store | Accessed by |
+|----|-------|-------------|
+| S1 | `api_keys` table | D1, D2 |
+| S2 | `users` table | D5 (role fetch) |
+| S3 | `org_permissions` (via `PermissionService`) | D3 |
+
+### Wiring
+
+```
+Request[Authorization: Bearer sk_live_xxx]
+  → AuthGuard.canActivate()
+    → D1: ApiKeyService.validateBearerToken()
+        → S1: SELECT * FROM api_keys WHERE keyHash = hmac(token, salt)
+        → validate revoked, expired
+    → D3: PermissionService.getPermissions(userId, tenantId)
+    → D5: fetch user.role
+    → construct AuthenticatedSession { actorType: 'api_key' }
+    → D2: ApiKeyService.touchLastUsedAt(id)  [fire-and-forget]
+    → checkPermissions() [superadmin bypass suppressed]
+  → request.session = syntheticSession
+```
+
+## Slices
+
+| # | Slice | Affordances | Demo |
+|---|-------|-------------|------|
+| 1 | **Bearer validation + synthetic session** | D1, D2, D3, D5, N4 (partial) | `curl -H "Authorization: Bearer sk_live_xxx" /api/session` returns the key owner's session JSON with `actorType: 'api_key'`. |
+| 2 | **`@RequireApiKey()` + `checkPermissions` hardening** | D4, N4 (complete) | Session-auth request to `@RequireApiKey()` endpoint returns `401 API_KEY_REQUIRED`. Superadmin with API key gets scope-checked. *Depends on Slice 1.* |
+| 3 | **Error codes + error responses** | errorCodes.ts additions | `curl` with revoked key → `401 API_KEY_REVOKED`; expired key → `401 API_KEY_EXPIRED`; missing/invalid → `401 API_KEY_INVALID`; insufficient scope → `403 API_KEY_SCOPE_DENIED`. |
+
+## Success Criteria
+
+- [ ] `Authorization: Bearer sk_live_xxx` authenticates successfully on any protected endpoint when the key is valid, not revoked, not expired, and the org is active.
+- [ ] `AuthenticatedSession` constructed for API key auth has `actorType: 'api_key'`, `apiKeyId`, `user.id` = key owner, `session.activeOrganizationId` = key's tenant, `permissions` = `scopes ∩ orgPermissions`.
+- [ ] `@Permissions()` decorator works identically for session and API key auth.
+- [ ] Scopes are runtime-intersected with org's current permissions (key with stale scopes gets effective subset).
+- [ ] Superadmin-owned API keys do NOT bypass `checkPermissions()` — scope check always applies.
+- [ ] `@RequireApiKey()` at controller level rejects session auth with `401`.
+- [ ] `@AllowAnonymous()` does NOT override `@RequireApiKey()`.
+- [ ] `@Roles()` check is bypassed for API key auth.
+- [ ] `lastUsedAt` is updated fire-and-forget on each successful API key authentication.
+- [ ] Error codes are returned: `API_KEY_INVALID` (401), `API_KEY_REVOKED` (401), `API_KEY_EXPIRED` (401), `API_KEY_SCOPE_DENIED` (403), `API_KEY_REQUIRED` (401).
+- [ ] Existing session auth path is unaffected by this change.
+- [ ] Unit tests cover: valid key auth, revoked key, expired key, invalid token, scope intersection, superadmin enforcement, `@RequireApiKey()` enforcement.
+- [ ] Integration test (E2E optional): end-to-end Bearer request authenticates correctly.
+
+## Implementation Notes
+
+### Files expected to change
+
+| File | Change |
+|------|--------|
+| `apps/api/src/auth/auth.guard.ts` | Add Bearer fallback, superadmin suppression, `@RequireApiKey()` check, skip soft-delete/roles for API key auth |
+| `apps/api/src/api-key/apiKey.service.ts` | Add `validateBearerToken()` + `touchLastUsedAt()` methods |
+| `apps/api/src/auth/decorators/requireApiKey.decorator.ts` | New file — `@RequireApiKey()` decorator |
+| `apps/api/src/auth/decorators/index.ts` _(if exists)_ | Export new decorator |
+| `apps/api/src/common/errorCodes.ts` | Add `API_KEY_INVALID`, `API_KEY_REVOKED`, `API_KEY_EXPIRED`, `API_KEY_SCOPE_DENIED`, `API_KEY_REQUIRED` |
+| `apps/api/src/auth/auth.guard.test.ts` | Extend with API key auth test cases |
+| `apps/api/src/api-key/apiKey.service.test.ts` _(or new)_ | Tests for `validateBearerToken`, `touchLastUsedAt` |
+
+### Key design decisions
+
+1. **Hash lookup strategy** — `keyHash = HMAC(token, salt)`, so we can't query by hash without knowing the salt. Approach: extract the last 4 chars of the bearer token and query `WHERE lastFour = ? AND revokedAt IS NULL AND (expiresAt IS NULL OR expiresAt > now)`. This narrows to a small candidate set. Then HMAC-verify `hmacHash(token, candidate.keySalt)` against each `candidate.keyHash`. First match wins; no match → `API_KEY_INVALID`. Hash collisions on `lastFour` are rare but possible (4 chars ≈ 1.7M combinations) — iteration handles them correctly. If somehow two rows produce the same HMAC (cryptographic collision, < 2^-256 probability), log the anomaly and use the first match.
+
+2. **No auth dependencies in `ApiKeyService`** — `validateBearerToken()` is a pure lookup/hashing method. All auth-aware logic (permission intersection, synthetic session construction, superadmin enforcement) lives in `AuthGuard`. This prevents circular dependencies and keeps the service reusable (rate limiter, CLI auth, etc.). If a circular dep is ever unavoidable, use `forwardRef()` — but the current design avoids it.
+
+3. **User role fetch** — `AuthenticatedSession.user.role` is required. The `apiKeys` table doesn't store it. Use a JOIN on `users` in the validation query for atomicity. If the user row is missing (deleted + cascade not yet fired), return `API_KEY_INVALID`.
+
+4. **`actorType` in `AuthenticatedSession`** — the field already exists in `types.ts` as optional. No type change needed; guard just sets it.
+
+5. **Slice 2 depends on Slice 1** — `@RequireApiKey()` enforcement requires the synthetic session path (Slice 1) to be functional. Implement in order.

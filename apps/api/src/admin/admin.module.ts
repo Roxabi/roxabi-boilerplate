@@ -12,10 +12,12 @@ import { AdminMembersController } from './adminMembers.controller.js'
 import { AdminMembersService } from './adminMembers.service.js'
 import { AdminOrganizationsController } from './adminOrganizations.controller.js'
 import { AdminOrganizationsDeletionService } from './adminOrganizations.deletion.js'
+import { AdminOrganizationsQueryService } from './adminOrganizations.query.js'
 import { AdminOrganizationsService } from './adminOrganizations.service.js'
 import { AdminSettingsController } from './adminSettings.controller.js'
 import { AdminUsersController } from './adminUsers.controller.js'
 import { AdminUsersLifecycleService } from './adminUsers.lifecycle.js'
+import { AdminUsersQueryService } from './adminUsers.query.js'
 import { AdminUsersService } from './adminUsers.service.js'
 
 @Module({
@@ -33,8 +35,10 @@ import { AdminUsersService } from './adminUsers.service.js'
     AdminMembersService,
     AdminInvitationsService,
     AdminUsersService,
+    AdminUsersQueryService,
     AdminUsersLifecycleService,
     AdminOrganizationsService,
+    AdminOrganizationsQueryService,
     AdminOrganizationsDeletionService,
     AdminAuditLogsService,
   ],
@@ -42,8 +46,10 @@ import { AdminUsersService } from './adminUsers.service.js'
     AdminMembersService,
     AdminInvitationsService,
     AdminUsersService,
+    AdminUsersQueryService,
     AdminUsersLifecycleService,
     AdminOrganizationsService,
+    AdminOrganizationsQueryService,
     AdminOrganizationsDeletionService,
     AdminAuditLogsService,
   ],

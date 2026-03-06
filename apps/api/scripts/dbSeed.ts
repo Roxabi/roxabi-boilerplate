@@ -5,8 +5,8 @@
  * For re-seeding, drop and recreate the database (db:branch:create --force).
  *
  * Presets:
- *   minimal (default) — 3 users, 2 orgs, basic RBAC
- *   full              — 12 users, 4 orgs, invitations, cross-org members
+ *   minimal — 3 users, 2 orgs, basic RBAC
+ *   full (default) — 12 users, 4 orgs, invitations, cross-org members
  *
  * Usage:
  *   DATABASE_URL=postgresql://... tsx scripts/dbSeed.ts
@@ -25,7 +25,7 @@ export const VALID_PRESETS: Preset[] = ['minimal', 'full']
 
 export function parsePreset(argv: string[] = process.argv): Preset {
   const presetArg = argv.find((a) => a.startsWith('--preset='))
-  const preset = presetArg ? presetArg.split('=')[1] : 'minimal'
+  const preset = presetArg ? presetArg.split('=')[1] : 'full'
   if (!VALID_PRESETS.includes(preset as Preset)) {
     console.error(`db-seed: unknown preset "${preset}". Available: ${VALID_PRESETS.join(', ')}`)
     process.exit(1)

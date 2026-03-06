@@ -22,6 +22,7 @@ import type { AuthenticatedSession } from '../auth/types.js'
 import { SkipOrg } from '../common/decorators/skipOrg.decorator.js'
 import { ZodValidationPipe } from '../common/pipes/zodValidation.pipe.js'
 import { AdminUsersLifecycleService } from './adminUsers.lifecycle.js'
+import { AdminUsersQueryService } from './adminUsers.query.js'
 import { AdminUsersService } from './adminUsers.service.js'
 import { AdminBadRequestFilter } from './filters/adminBadRequest.filter.js'
 import { AdminConflictFilter } from './filters/adminConflict.filter.js'
@@ -70,6 +71,7 @@ type BanUserDto = z.infer<typeof banUserSchema>
 export class AdminUsersController {
   constructor(
     private readonly adminUsersService: AdminUsersService,
+    private readonly adminUsersQueryService: AdminUsersQueryService,
     private readonly adminUsersLifecycleService: AdminUsersLifecycleService
   ) {}
 
@@ -98,7 +100,7 @@ export class AdminUsersController {
     }
 
     const { limit: safeLimit, cursor: safeCursor, ...filters } = parsed.data
-    return this.adminUsersService.listUsers(filters, safeCursor, safeLimit)
+    return this.adminUsersQueryService.listUsers(filters, safeCursor, safeLimit)
   }
 
   @Get(':userId')

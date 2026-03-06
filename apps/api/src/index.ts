@@ -138,7 +138,8 @@ async function bootstrap() {
   configureCors(app, configService, logger, nodeEnv)
   configureSwagger(app, logger, swaggerEnabled)
 
-  const port = configService.get<number>('PORT', 4000)
+  // API_PORT for local dev; fall back to Vercel-injected PORT at runtime
+  const port = parseInt(process.env.PORT || '') || configService.get<number>('API_PORT', 4000)
   await app.listen(port, '0.0.0.0')
   logger.log(`Application is running on: http://localhost:${port}`)
 }
