@@ -1,0 +1,89 @@
+---
+title: "feat(talks): Lyra origin story — Product/Startup audience (52 Days)"
+issue: 451
+status: approved
+tier: F-lite
+date: 2026-03-06
+---
+
+## Problem
+
+The Lyra Origin Talks trilogy (#450 dev/tech, #451 product/startup, #TBD general) needs its
+second presentation. `/talks/lyra-dev` covers the journey through an MMORPG lens for a developer
+audience. This talk retells the same 52-day journey — from a single Python script to a 6-repo
+ecosystem — but through a **product/startup/indie-hacker lens**: decision-making speed, knowing
+when to kill your darlings, the compounding value of shared infrastructure, and how an ecosystem
+emerges from one person moving fast with clear principles.
+
+The source material (`histoire-2ndbrain-lyra.md`) is dense and complete. The challenge is
+distillation: ~600 lines of events into 18 scroll-snap sections with a coherent arc that resonates
+with people who care about iteration velocity, product decisions, and building things that outlast
+the first version.
+
+## Who
+
+- **Primary:** Startup founders, indie hackers, product-minded developers — people who build
+  products, not just features. Attend product meetups, follow makers on X.
+- **Secondary:** Anyone who's pivoted, killed a feature they loved, or watched a side project
+  evolve into something they didn't plan.
+
+## Arc
+
+**decisions (wrong bet → speed → kill darlings → pivot → ecosystem → identity)**
+
+18 sections targeting `/talks/lyra-product`:
+
+| # | Section ID | Beat |
+|---|-----------|------|
+| 1 | `title` | Hook: "52 days, 6 repos, 1 ecosystem — started with a wrong bet" |
+| 2 | `wrong-bet` | MCP: the "right way" cost 5 days — kill it without sunk cost |
+| 3 | `pivot-speed` | Python direct: when you kill the wrong bet, move fast |
+| 4 | `kill-darlings` | linkedin-jobs: deleted in one commit, no regret |
+| 5 | `shared-foundation` | _shared/ modules: first compound investment — 240→10 lines |
+| 6 | `knowledge-radar` | Day 22: knowledge base — intelligence that compounds |
+| 7 | `telegram-anywhere` | Bot Telegram: breaking the desk constraint |
+| 8 | `industrial-turn` | Day 26-31: spec-first discipline — from code-first to ROX-xxx |
+| 9 | `patch-notes` | Linear→GitHub migration: what you remove defines what you are |
+| 10 | `the-day` | Feb 28: voiceCLI + roxabi-plugins + claude-config born in one day |
+| 11 | `voice` | VoiceCLI: a new modality, 15s → 2s latency, unlocked in one commit |
+| 12 | `the-night` | March 1st, 00:14→22:24: 266 messages, 38 sessions, designing identity |
+| 13 | `lyra-not-solene` | Why names matter: Solene was a test, Lyra was the answer |
+| 14 | `the-ecosystem` | 6 repos, all feeding each other — this is what emergence looks like |
+| 15 | `the-numbers` | 52d · 462 commits · 389 saves · 3 migrations · 1 lab |
+| 16 | `lyra-in-4-days` | 52 days of learnings → Lyra hub E2E in 4 days |
+| 17 | `the-lesson` | 2ndBrain was a laboratory. Everything else is the engine. |
+| 18 | `closing` | Where it goes from here — and why you should build your lab |
+
+## Constraints
+
+- Route: `/talks/lyra-product` (new route, separate from existing `/lyra-dev` and `/lyra-story`)
+- Pattern: follow `lyra-dev` architecture exactly — `SectionContainer` + `SectionChrome` +
+  `PresentationNav` + scroll-snap + `LyraCompanion` avatar companion
+- i18n: FR + EN, all copy in `apps/web/messages/{locale}.json`, keys prefixed `talk_lp_*`
+- Visual identity: product/startup aesthetic — warmer, more human than lyra-dev's terminal green.
+  Use amber/orange accent (decision-making urgency) on a near-dark background. Think "deck
+  slides meets maker diary" rather than MMORPG terminal.
+- No mode toggle (unlike lyra-story) — single mode, product narrative throughout
+- Companion stage: raw `currentSectionIndex` (like lyra-dev, simpler than lyra-story)
+- ~18 sections, no divider (uniform sections, unlike lyra-story's AwakeningDivider)
+- Source: `histoire-2ndbrain-lyra.md` for content
+
+## Out of Scope
+
+- Voice/audio features
+- Backend changes
+- Modifying existing `/lyra-dev` or `/lyra-story` presentations
+- The shared `lyra-origin-talks-frame.mdx` (referenced in issue but not needed — each talk
+  has its own frame/spec)
+
+## Complexity
+
+**Tier: F-lite** — Clear scope, single domain (frontend), pattern fully established from
+`/lyra-dev`. Work is content-heavy (18 section components + i18n) but technically low-risk.
+
+Signals:
+- 18+ new component files → files score elevated
+- Pattern proven: `lyra-dev/` is a direct reference
+- Single domain: frontend only, no backend
+- Content/copy decisions needed for each section (FR+EN)
+- Visual palette TBD (amber/warm dark — needs iteration)
