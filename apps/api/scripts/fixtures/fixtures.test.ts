@@ -380,12 +380,12 @@ describe('parsePreset', () => {
     expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('unknown preset'))
   })
 
-  it('should return minimal when --preset= flag is absent', () => {
+  it('should return full when --preset= flag is absent', () => {
     // Act
     const result = parsePreset(['node', 'db-seed.ts', '--verbose'])
 
     // Assert
-    expect(result).toBe('minimal')
+    expect(result).toBe('full')
   })
 })
 
