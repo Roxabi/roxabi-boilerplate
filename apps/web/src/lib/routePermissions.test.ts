@@ -1,5 +1,5 @@
 import { renderHook } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -31,8 +31,12 @@ vi.mock('@tanstack/react-start/server', () => ({
   getRequestHeader: (...args: unknown[]) => mockGetRequestHeader(...args),
 }))
 
-vi.mock('./env.server.js', () => ({
-  env: { API_URL: 'http://localhost:4000' },
+vi.mock('@/lib/env.server', () => ({
+  env: {
+    get API_PORT() {
+      return process.env.API_PORT ? parseInt(process.env.API_PORT, 10) : 4000
+    },
+  },
 }))
 
 // Import after mocks are set up
@@ -100,6 +104,10 @@ describe('getServerEnrichedSession', () => {
     mockGetRequestHeader.mockReset()
   })
 
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
   it('should return null when no cookie header is present', async () => {
     mockGetRequestHeader.mockReturnValue(undefined)
     const result = await getServerEnrichedSession()
@@ -145,6 +153,50 @@ describe('getServerEnrichedSession', () => {
     const result = await getServerEnrichedSession()
     expect(result).toEqual(session)
     expect(mockFetch).toHaveBeenCalledWith('http://localhost:4000/api/session', {
+      headers: { cookie: 'session=abc' },
+    })
+  })
+
+  it('should use API_PORT when API_URL is not set', async () => {
+    // Arrange
+    vi.stubEnv('API_URL', undefined)
+    vi.stubEnv('API_PORT', '5000')
+    const session = {
+      user: { id: '1', email: 'test@example.com', role: 'member' },
+      session: {},
+      permissions: ['members:read'],
+    }
+    mockGetRequestHeader.mockReturnValue('session=abc')
+    mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve(session) })
+
+    // Act
+    const result = await getServerEnrichedSession()
+
+    // Assert
+    expect(result).toEqual(session)
+    expect(mockFetch).toHaveBeenCalledWith('http://localhost:5000/api/session', {
+      headers: { cookie: 'session=abc' },
+    })
+  })
+
+  it('should prefer API_URL over API_PORT when both are set', async () => {
+    // Arrange
+    vi.stubEnv('API_URL', 'http://internal-api:8080')
+    vi.stubEnv('API_PORT', '9999')
+    const session = {
+      user: { id: '1', email: 'test@example.com', role: 'member' },
+      session: {},
+      permissions: ['members:read'],
+    }
+    mockGetRequestHeader.mockReturnValue('session=abc')
+    mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve(session) })
+
+    // Act
+    const result = await getServerEnrichedSession()
+
+    // Assert
+    expect(result).toEqual(session)
+    expect(mockFetch).toHaveBeenCalledWith('http://internal-api:8080/api/session', {
       headers: { cookie: 'session=abc' },
     })
   })

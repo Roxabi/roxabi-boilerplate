@@ -47,7 +47,11 @@ function isEnrichedSession(data: unknown): data is EnrichedSession {
   if (data == null || typeof data !== 'object') return false
   const obj = data as Record<string, unknown>
   if (obj.user == null || typeof obj.user !== 'object') return false
+  const user = obj.user as Record<string, unknown>
+  if (typeof user.id !== 'string') return false
+  if (typeof user.email !== 'string') return false
   if (!Array.isArray(obj.permissions)) return false
+  if (!(obj.permissions as unknown[]).every((p) => typeof p === 'string')) return false
   return true
 }
 
@@ -59,7 +63,8 @@ function isEnrichedSession(data: unknown): data is EnrichedSession {
 export const getServerEnrichedSession = createServerFn({ method: 'GET' }).handler(
   async (): Promise<EnrichedSession | null> => {
     const { getRequestHeader } = await import('@tanstack/react-start/server')
-    const apiUrl = process.env.API_URL ?? `http://localhost:${process.env.API_PORT ?? 4000}`
+    const { env } = await import('@/lib/env.server')
+    const apiUrl = process.env.API_URL ?? `http://localhost:${env.API_PORT}`
     try {
       const cookie = getRequestHeader('cookie')
       if (!cookie) return null
