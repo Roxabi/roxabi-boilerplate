@@ -275,6 +275,14 @@ function LyraStoryContent() {
               </button>
             ))}
           </div>
+          {/* Keyboard shortcut hints */}
+          <div className="flex items-center gap-2 rounded-lg bg-black/40 backdrop-blur-sm px-2 py-1">
+            {(['V variant', '[ smaller', '] larger', 'P position'] as const).map((hint) => (
+              <span key={hint} className="text-[9px] font-mono text-white/30">
+                <span className="text-white/50">{hint.split(' ')[0]}</span> {hint.split(' ')[1]}
+              </span>
+            ))}
+          </div>
         </div>
       </div>
 
