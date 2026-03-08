@@ -2,16 +2,14 @@ import type { createBundledHighlighter as CreateBundledHighlighterFn } from 'shi
 
 /**
  * Custom Shiki config that uses a mini bundled highlighter instead of the full
- * `shiki` package. The default Fumadocs config does `await import("shiki")`
- * which pulls 200+ grammars and 60+ themes (~9 MB) into the Nitro SSR bundle,
- * causing OOM on CI runners with limited memory.
+ * `shiki` package. Importing `shiki` directly pulls 200+ grammars and 60+
+ * themes (~9 MB) into the Nitro SSR bundle, causing OOM on CI runners with
+ * limited memory.
  *
  * Using `createBundledHighlighter` from `shiki/core` with only our needed
  * languages gives us lazy grammar dependency resolution (unlike
  * `createHighlighterCore` which crashes on cross-grammar references) while
  * keeping the bundle small.
- *
- * @see https://github.com/fuma-nama/fumadocs/issues/2910
  */
 
 const bundledLangs = {
