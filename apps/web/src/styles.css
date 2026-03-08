@@ -1,6 +1,4 @@
 @import 'tailwindcss';
-@import 'fumadocs-ui/css/neutral.css';
-@import 'fumadocs-ui/css/preset.css';
 @import '@repo/ui/theme.css';
 @import '@fontsource-variable/plus-jakarta-sans';
 @import '@fontsource-variable/inter';

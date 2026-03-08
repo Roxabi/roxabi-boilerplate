@@ -8,7 +8,6 @@
   "learn_router": "Learn Paraglide JS",
   "nav_home": "Home",
   "nav_demos": "Demos",
-  "nav_docs": "Docs",
   "theme_toggle": "Toggle theme",
   "github_label": "GitHub",
   "nav_sign_in": "Sign In",
@@ -1893,7 +1892,6 @@
   "talk_ld_closing_title": "Thanks",
   "talk_ld_closing_links_label": "Find me here:",
   "talk_ld_closing_continue": "Continue? [Y/N]",
-
   "talk_lp_nav_title": "52 Days",
   "talk_lp_nav_wrong_bet": "Wrong Bet",
   "talk_lp_nav_pivot": "Pivot",
@@ -1912,7 +1910,6 @@
   "talk_lp_nav_four_days": "4 Days",
   "talk_lp_nav_lesson": "Lesson",
   "talk_lp_nav_closing": "Closing",
-
   "talk_lp_title_badge": "Lyra Origin Talks",
   "talk_lp_title_title": "52 Days from Zero to Ecosystem",
   "talk_lp_title_subtitle": "Iteration speed · Kill your darlings · Ecosystem emergence",
@@ -1921,7 +1918,6 @@
   "talk_lp_title_stat1": "52 days",
   "talk_lp_title_stat2": "6 repos",
   "talk_lp_title_stat3": "1 ecosystem",
-
   "talk_lp_wrong_date": "D01-05 · January 12-17",
   "talk_lp_wrong_title": "The Wrong Bet",
   "talk_lp_wrong_label": "MCP Google Workspace · 5 days",
@@ -1929,13 +1925,11 @@
   "talk_lp_wrong_lesson_label": "LESSON #1",
   "talk_lp_wrong_lesson": "The right way for others isn't always the right way for your problem.",
   "talk_lp_wrong_cost": "Cost: 5 days",
-
   "talk_lp_pivot_date": "D05 · January 17",
   "talk_lp_pivot_title": "Kill It. Move Fast.",
   "talk_lp_pivot_body": "Decision in one commit. Complete migration to Python direct. Everything accelerates immediately — first new skills in 2 days.",
   "talk_lp_pivot_stat": "Day 5 → Python direct → 3 new skills in 4 days",
   "talk_lp_pivot_insight": "The moment you kill the wrong bet, the timeline resets.",
-
   "talk_lp_kill_date": "D12 · Mid-January",
   "talk_lp_kill_title": "Kill Your Darlings",
   "talk_lp_kill_commit": "cfa0ce3: Remove linkedin-jobs skill — not used and ineffective",
@@ -1943,7 +1937,6 @@
   "talk_lp_kill_lesson_label": "LESSON #3",
   "talk_lp_kill_lesson": "No sunk cost fallacy. A feature that doesn't work → delete it.",
   "talk_lp_kill_badge": "DELETED",
-
   "talk_lp_foundation_date": "D09-12 · Late January",
   "talk_lp_foundation_title": "The First Compound Investment",
   "talk_lp_foundation_before": "240 lines / script",
@@ -1954,7 +1947,6 @@
   "talk_lp_foundation_before_label": "BEFORE",
   "talk_lp_foundation_after_label": "AFTER",
   "talk_lp_foundation_lesson": "Mutualize at the second duplication. Not the third.",
-
   "talk_lp_radar_date": "D22 · January 22",
   "talk_lp_radar_title": "Build Your Radar",
   "talk_lp_radar_subtitle": "389 entries · 52 days of active intelligence",
@@ -1966,7 +1958,6 @@
   "talk_lp_radar_stat3_label": "Total entries",
   "talk_lp_radar_stat3": "389",
   "talk_lp_radar_insight": "Your competitive advantage is how fast you learn, not how fast you code.",
-
   "talk_lp_telegram_date": "D22-24 · January 22-24",
   "talk_lp_telegram_title": "Ship It. Off the Desk.",
   "talk_lp_telegram_body": "Telegram bot live. Your assistant is no longer tied to a chair. Mobile, in bed, at 6:34am before the first coffee.",
@@ -1974,7 +1965,6 @@
   "talk_lp_telegram_insight": "Constraint removal > feature addition.",
   "talk_lp_telegram_label": "FIRST SESSION",
   "talk_lp_telegram_time": "6:34 AM",
-
   "talk_lp_process_date": "D26-31 · January 26-31",
   "talk_lp_process_title": "Spec First, Code After",
   "talk_lp_process_body": "259 commits in 17 days. But more importantly: the shift from 'code first, regrets later' to 'spec first, code after'. linkedin-jobs would have been avoided. The 4 bot refactors would have been 1.",
@@ -1984,7 +1974,6 @@
   "talk_lp_process_rule2_label": "AFTER",
   "talk_lp_process_rule2": "Spec first. Code after.",
   "talk_lp_process_milestone": "The system is stable. It can now handle complex requests without breaking.",
-
   "talk_lp_patch_title": "What You Remove Defines You",
   "talk_lp_patch_version": "PATCH 1.4.0 — January 31",
   "talk_lp_patch_removed1": "Linear (too heavy for solo builder)",
@@ -1995,7 +1984,6 @@
   "talk_lp_patch_removed_label": "REMOVED",
   "talk_lp_patch_added_label": "ADDED",
   "talk_lp_patch_insight": "Every deletion is a statement about what matters.",
-
   "talk_lp_day_date": "D47 · February 28",
   "talk_lp_day_title": "One Day. Three Repos.",
   "talk_lp_day_body": "February 28 — the most intense non-debugging day. Three new systems born in parallel, all from real needs identified during 2ndBrain.",
@@ -2006,7 +1994,6 @@
   "talk_lp_day_item3_label": "roxabi-claude-config",
   "talk_lp_day_item3": "Shared config + alias lyra='ssh user@machine'",
   "talk_lp_day_insight": "Ecosystems don't emerge from planning. They emerge from compounding.",
-
   "talk_lp_voice_date": "D47 · February 28",
   "talk_lp_voice_title": "A New Modality",
   "talk_lp_voice_before_label": "BEFORE",
@@ -2016,7 +2003,6 @@
   "talk_lp_voice_stat": "Qwen-fast + CUDA graphs = 5-9× faster",
   "talk_lp_voice_body": "First commit: fix PyTorch for RTX 5070 Ti (Blackwell). By end of day: voice generation viable for real-time Telegram conversation.",
   "talk_lp_voice_insight": "The right hardware investment pays off in one day.",
-
   "talk_lp_night_date": "D50 · March 1",
   "talk_lp_night_title": "The Night Everything Changed",
   "talk_lp_night_t1": "00:14 — Generate a rich emotional vocal",
@@ -2026,7 +2012,6 @@
   "talk_lp_night_t5": "22:24 — Make me a 5-minute vocal on how to build your new engine",
   "talk_lp_night_stat": "38 sessions · 266 messages · 1 day",
   "talk_lp_night_insight": "The first time you ask your creation to explain itself — that's when it becomes real.",
-
   "talk_lp_identity_title": "Names Matter",
   "talk_lp_identity_label": "The Identity Test",
   "talk_lp_identity_body": "Solene appeared in a midnight voice brainstorm. She lasted a few hours. Lyra was the answer that had been there all along.",
@@ -2036,7 +2021,6 @@
   "talk_lp_identity_right": "Lyra",
   "talk_lp_identity_right_body": "The free electron — non liée à un atome fixe.",
   "talk_lp_identity_insight": "The name is the concept. Get the concept right.",
-
   "talk_lp_ecosystem_title": "Emergence, Not Planning",
   "talk_lp_ecosystem_body": "6 repos. All feeding each other. None of it was planned.",
   "talk_lp_ecosystem_label": "6 REPOS · 1 ECOSYSTEM",
@@ -2044,7 +2028,6 @@
   "talk_lp_ecosystem_repo1": "2ndBrain → dev process, architecture decisions",
   "talk_lp_ecosystem_repo2": "roxabi_boilerplate → consumes dev-core from day 1",
   "talk_lp_ecosystem_repo3": "voiceCLI + roxabi-plugins + claude-config → 1 day",
-
   "talk_lp_numbers_title": "52 Days",
   "talk_lp_numbers_stat1_label": "Commits (2ndBrain)",
   "talk_lp_numbers_stat1": "462",
@@ -2059,7 +2042,6 @@
   "talk_lp_numbers_stat6_label": "Active repos",
   "talk_lp_numbers_stat6": "6",
   "talk_lp_numbers_insight": "Each number is a decision made, not a feature shipped.",
-
   "talk_lp_outcome_date": "D52-55 · March 1-4",
   "talk_lp_outcome_title": "52 Days → 4 Days",
   "talk_lp_outcome_body": "March 1: first commit. March 4: SimpleLyraAgent receives first end-to-end message. Hub, 2 channel adapters, CI, 8 ADRs, full documentation.",
@@ -2068,7 +2050,6 @@
   "talk_lp_outcome_j3": "J+3: CI, pre-commit, 8 ADRs documented from day 1",
   "talk_lp_outcome_j4": "J+4: SimpleLyraAgent — first E2E message",
   "talk_lp_outcome_insight": "52 days of learnings compressed into 4 days of build. That's what a laboratory is for.",
-
   "talk_lp_lesson_title": "The Laboratory",
   "talk_lp_lesson_epigraph": "2ndBrain was a laboratory. Everything else is the engine.",
   "talk_lp_lesson_body": "Every 'mistake' was information. Every refactor was a discovery. The debt wasn't failure — it was the price of fast learning.",
@@ -2076,17 +2057,14 @@
   "talk_lp_lesson_p2": "Kill darlings without regret",
   "talk_lp_lesson_p3": "Compound early — invest in shared foundation",
   "talk_lp_lesson_p4": "Your lab is your competitive advantage",
-
   "talk_lp_closing_title": "Build Your Lab",
   "talk_lp_closing_body": "The ecosystem you see today didn't start as an ecosystem. It started with one wrong bet — and the discipline to kill it in 5 days.",
   "talk_lp_closing_cta": "What's your laboratory?",
   "talk_lp_closing_links_label": "FIND LYRA",
   "talk_lp_closing_contact": "Links & contact",
-
   "talk_avatar_companion_label": "Open avatar playground",
   "talk_avatar_switch_variant": "Switch variant",
   "talk_avatar_set_size": "Set size",
-
   "talk_index_lyraproduct_title": "52 Days",
   "talk_index_lyraproduct_subtitle": "Product decisions, iteration speed & ecosystem emergence"
 }

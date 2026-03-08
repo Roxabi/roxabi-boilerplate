@@ -24,14 +24,10 @@
     "test:e2e": "playwright test",
     "clean": "turbo clean && rm -rf node_modules",
     "clean:cache": "rm -rf apps/web/node_modules/.vite .turbo apps/*/.turbo packages/*/.turbo",
-    "docs": "turbo dev --filter=@repo/web",
     "i18n:check": "bun run scripts/validateTranslations.ts",
     "typecheck:affected": "turbo run typecheck --filter=...[origin/main]",
     "test:affected": "turbo run test --filter=...[origin/main]",
     "license:check": "bun run tools/licenseChecker.ts",
-    "docs:links": "bun run tools/docsLinkAudit.ts",
-    "docs:frontmatter": "bun run tools/docsFrontmatterCheck.ts",
-    "docs:check": "bun run docs:links && bun run docs:frontmatter",
     "env:check": "bun run scripts/checkEnvSync.ts",
     "vercel:env:check": "bun run scripts/checkVercelEnv.ts",
     "db:up": "docker compose up -d",
@@ -86,7 +82,6 @@
   "dependencies": {
     "@fontsource-variable/inter": "^5.2.8",
     "@fontsource/press-start-2p": "^5.2.7",
-    "fumadocs-mdx": "^14.2.9",
     "lucide-react": "^0.576.0",
     "shiki": "^4.0.1"
   },

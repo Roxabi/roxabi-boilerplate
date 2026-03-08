@@ -1,4 +1,3 @@
-import { defineShikiConfig } from 'fumadocs-core/highlight/config'
 import type { createBundledHighlighter as CreateBundledHighlighterFn } from 'shiki/core'
 
 /**
@@ -64,19 +63,6 @@ async function getCreateHighlighter() {
     engine: () => createJavaScriptRegexEngine(),
   })
 }
-
-export const shikiConfig = defineShikiConfig({
-  defaultThemes: {
-    themes: {
-      light: 'github-light',
-      dark: 'github-dark',
-    },
-  },
-  async createHighlighter() {
-    const createHighlighter = await getCreateHighlighter()
-    return createHighlighter({ langs: [], themes: [] })
-  },
-})
 
 /** Lightweight codeToHtml — uses the fine-grained bundle, not full `shiki`. */
 export async function codeToHtml(

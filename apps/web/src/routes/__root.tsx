@@ -10,7 +10,7 @@ import {
   useRouterState,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
-import { RootProvider } from 'fumadocs-ui/provider/tanstack'
+import { ThemeProvider } from 'next-themes'
 import { ErrorBoundary } from 'react-error-boundary'
 import { m } from '@/paraglide/messages'
 import { getLocale } from '@/paraglide/runtime'
@@ -61,7 +61,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
     if (typeof document !== 'undefined') {
       document.documentElement.setAttribute('lang', getLocale())
     }
-    // Skip session fetch on chromeless public routes (/docs, /talks) — they
+    // Skip session fetch on chromeless public routes (/talks) — they
     // have no header and no permission guards, so a 401 from the API would
     // just be log noise with no functional impact.
     const isPublic = CHROMELESS_PREFIXES.some((p) => ctx.location.pathname.startsWith(p))
@@ -117,7 +117,7 @@ function NotFound() {
 
 // Routes under these prefixes skip the app shell (nav, consent banner, etc.) and session enforcement.
 // Invariant: no route under these prefixes may call enforceRoutePermission — they are public by design.
-const CHROMELESS_PREFIXES = ['/docs', '/talks'] as const
+const CHROMELESS_PREFIXES = ['/talks'] as const
 
 function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
@@ -129,7 +129,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const { serverConsent = null } = Route.useRouteContext()
 
   return (
-    <RootProvider>
+    <ThemeProvider attribute="class" defaultTheme="system" disableTransitionOnChange>
       <ConsentProvider initialConsent={serverConsent}>
         <div className="flex min-h-screen flex-col">
           {!isChromeless && <Header />}
@@ -140,7 +140,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
         </div>
         <Toaster richColors position="bottom-right" offset="4rem" />
       </ConsentProvider>
-    </RootProvider>
+    </ThemeProvider>
   )
 }
 

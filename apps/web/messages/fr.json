@@ -8,7 +8,6 @@
   "learn_router": "Découvrir Paraglide JS",
   "nav_home": "Accueil",
   "nav_demos": "Démos",
-  "nav_docs": "Docs",
   "theme_toggle": "Changer le thème",
   "github_label": "GitHub",
   "nav_sign_in": "Connexion",
@@ -1893,7 +1892,6 @@
   "talk_ld_closing_title": "Merci",
   "talk_ld_closing_links_label": "Me retrouver ici :",
   "talk_ld_closing_continue": "Continuer ? [O/N]",
-
   "talk_lp_nav_title": "52 Jours",
   "talk_lp_nav_wrong_bet": "Mauvais Pari",
   "talk_lp_nav_pivot": "Pivot",
@@ -1912,7 +1910,6 @@
   "talk_lp_nav_four_days": "4 Jours",
   "talk_lp_nav_lesson": "Leçon",
   "talk_lp_nav_closing": "Conclusion",
-
   "talk_lp_title_badge": "Lyra Origin Talks",
   "talk_lp_title_title": "52 Jours de Zéro à l'Écosystème",
   "talk_lp_title_subtitle": "Vitesse d'itération · Tuer ses chéris · Émergence d'écosystème",
@@ -1921,7 +1918,6 @@
   "talk_lp_title_stat1": "52 jours",
   "talk_lp_title_stat2": "6 repos",
   "talk_lp_title_stat3": "1 écosystème",
-
   "talk_lp_wrong_date": "D01-05 · 12-17 janvier",
   "talk_lp_wrong_title": "Le Mauvais Pari",
   "talk_lp_wrong_label": "MCP Google Workspace · 5 jours",
@@ -1929,13 +1925,11 @@
   "talk_lp_wrong_lesson_label": "LEÇON #1",
   "talk_lp_wrong_lesson": "La bonne façon des autres n'est pas toujours la bonne façon pour ton problème.",
   "talk_lp_wrong_cost": "Coût : 5 jours",
-
   "talk_lp_pivot_date": "D05 · 17 janvier",
   "talk_lp_pivot_title": "Tue-le. Avance Vite.",
   "talk_lp_pivot_body": "Décision en un commit. Migration complète vers Python direct. Tout s'accélère immédiatement — premiers nouveaux skills en 2 jours.",
   "talk_lp_pivot_stat": "Jour 5 → Python direct → 3 nouveaux skills en 4 jours",
   "talk_lp_pivot_insight": "Le moment où tu tues le mauvais pari, le compteur repart.",
-
   "talk_lp_kill_date": "D12 · Mi-Janvier",
   "talk_lp_kill_title": "Tuez vos Chéris",
   "talk_lp_kill_commit": "cfa0ce3 : Remove linkedin-jobs skill — not used and ineffective",
@@ -1943,7 +1937,6 @@
   "talk_lp_kill_lesson_label": "LEÇON #3",
   "talk_lp_kill_lesson": "Pas de sunk cost fallacy. Un skill qui ne fonctionne pas → supprimez-le.",
   "talk_lp_kill_badge": "SUPPRIMÉ",
-
   "talk_lp_foundation_date": "D09-12 · Fin Janvier",
   "talk_lp_foundation_title": "Le Premier Investissement Composé",
   "talk_lp_foundation_before": "240 lignes / script",
@@ -1954,7 +1947,6 @@
   "talk_lp_foundation_before_label": "AVANT",
   "talk_lp_foundation_after_label": "APRÈS",
   "talk_lp_foundation_lesson": "Mutualisez à la deuxième duplication. Pas à la troisième.",
-
   "talk_lp_radar_date": "D22 · 22 janvier",
   "talk_lp_radar_title": "Construisez votre Radar",
   "talk_lp_radar_subtitle": "389 entrées · 52 jours d'intelligence active",
@@ -1966,7 +1958,6 @@
   "talk_lp_radar_stat3_label": "Entrées totales",
   "talk_lp_radar_stat3": "389",
   "talk_lp_radar_insight": "Votre avantage concurrentiel est votre vitesse d'apprentissage, pas votre vitesse de code.",
-
   "talk_lp_telegram_date": "D22-24 · 22-24 janvier",
   "talk_lp_telegram_title": "Shippez. Lâchez le Bureau.",
   "talk_lp_telegram_body": "Bot Telegram en prod. Votre assistant n'est plus attaché à une chaise. Mobile, au lit, à 6h34 avant le premier café.",
@@ -1974,7 +1965,6 @@
   "talk_lp_telegram_insight": "Supprimer une contrainte > ajouter une feature.",
   "talk_lp_telegram_label": "PREMIÈRE SESSION",
   "talk_lp_telegram_time": "6h34",
-
   "talk_lp_process_date": "D26-31 · 26-31 janvier",
   "talk_lp_process_title": "Spec d'Abord, Code Ensuite",
   "talk_lp_process_body": "259 commits en 17 jours. Mais surtout : le passage de 'code first, regrets later' à 'spec first, code after'. linkedin-jobs aurait été évité. Les 4 refactors du bot auraient été 1.",
@@ -1984,7 +1974,6 @@
   "talk_lp_process_rule2_label": "APRÈS",
   "talk_lp_process_rule2": "Spec first. Code after.",
   "talk_lp_process_milestone": "Le système est stable. Il peut maintenant traiter des requêtes complexes sans planter.",
-
   "talk_lp_patch_title": "Ce que vous Supprimez vous Définit",
   "talk_lp_patch_version": "PATCH 1.4.0 — 31 janvier",
   "talk_lp_patch_removed1": "Linear (trop lourd pour un solo builder)",
@@ -1995,7 +1984,6 @@
   "talk_lp_patch_removed_label": "RETIRÉ",
   "talk_lp_patch_added_label": "AJOUTÉ",
   "talk_lp_patch_insight": "Chaque suppression est une déclaration sur ce qui compte.",
-
   "talk_lp_day_date": "D47 · 28 février",
   "talk_lp_day_title": "Un Jour. Trois Repos.",
   "talk_lp_day_body": "28 février — la journée la plus intense hors debug. Trois nouveaux systèmes nés en parallèle, tous issus de besoins réels identifiés dans 2ndBrain.",
@@ -2006,7 +1994,6 @@
   "talk_lp_day_item3_label": "roxabi-claude-config",
   "talk_lp_day_item3": "Config partagée + alias lyra='ssh user@machine'",
   "talk_lp_day_insight": "Les écosystèmes n'émergent pas de la planification. Ils émergent du compounding.",
-
   "talk_lp_voice_date": "D47 · 28 février",
   "talk_lp_voice_title": "Une Nouvelle Modalité",
   "talk_lp_voice_before_label": "AVANT",
@@ -2016,7 +2003,6 @@
   "talk_lp_voice_stat": "Qwen-fast + CUDA graphs = 5-9× plus rapide",
   "talk_lp_voice_body": "Premier commit : fix PyTorch pour RTX 5070 Ti (Blackwell). En fin de journée : génération vocale viable pour Telegram en temps réel.",
   "talk_lp_voice_insight": "Le bon investissement hardware se rembourse en une journée.",
-
   "talk_lp_night_date": "D50 · 1er mars",
   "talk_lp_night_title": "La Nuit où Tout a Changé",
   "talk_lp_night_t1": "00:14 — Génère un vocal riche d'émotion",
@@ -2026,7 +2012,6 @@
   "talk_lp_night_t5": "22:24 — Fait moi un vocal d'au moins 5min sur comment construire ton nouveau moteur",
   "talk_lp_night_stat": "38 sessions · 266 messages · 1 jour",
   "talk_lp_night_insight": "La première fois que vous demandez à votre création de s'expliquer — c'est à ce moment qu'elle devient réelle.",
-
   "talk_lp_identity_title": "Les Noms Comptent",
   "talk_lp_identity_label": "Le Test d'Identité",
   "talk_lp_identity_body": "Solene est apparue dans un brainstorm vocal nocturne. Elle a duré quelques heures. Lyra était la réponse qui avait toujours été là.",
@@ -2036,7 +2021,6 @@
   "talk_lp_identity_right": "Lyra",
   "talk_lp_identity_right_body": "L'électron libre — non liée à un atome fixe.",
   "talk_lp_identity_insight": "Le nom est le concept. Trouvez le bon concept.",
-
   "talk_lp_ecosystem_title": "Émergence, Pas Planification",
   "talk_lp_ecosystem_body": "6 repos. Tous qui se nourrissent mutuellement. Rien de tout ça n'était planifié.",
   "talk_lp_ecosystem_label": "6 REPOS · 1 ÉCOSYSTÈME",
@@ -2044,7 +2028,6 @@
   "talk_lp_ecosystem_repo1": "2ndBrain → process de dev, décisions d'architecture",
   "talk_lp_ecosystem_repo2": "roxabi_boilerplate → consomme dev-core dès le jour 1",
   "talk_lp_ecosystem_repo3": "voiceCLI + roxabi-plugins + claude-config → 1 jour",
-
   "talk_lp_numbers_title": "52 Jours",
   "talk_lp_numbers_stat1_label": "Commits (2ndBrain)",
   "talk_lp_numbers_stat1": "462",
@@ -2059,7 +2042,6 @@
   "talk_lp_numbers_stat6_label": "Repos actifs",
   "talk_lp_numbers_stat6": "6",
   "talk_lp_numbers_insight": "Chaque chiffre est une décision prise, pas une feature livrée.",
-
   "talk_lp_outcome_date": "D52-55 · 1-4 mars",
   "talk_lp_outcome_title": "52 Jours → 4 Jours",
   "talk_lp_outcome_body": "1er mars : premier commit. 4 mars : SimpleLyraAgent reçoit le premier message end-to-end. Hub, 2 adaptateurs, CI, 8 ADRs, documentation complète.",
@@ -2068,7 +2050,6 @@
   "talk_lp_outcome_j3": "J+3 : CI, pre-commit, 8 ADRs documentés dès le départ",
   "talk_lp_outcome_j4": "J+4 : SimpleLyraAgent — premier message E2E",
   "talk_lp_outcome_insight": "52 jours d'apprentissages compressés en 4 jours de construction. C'est à ça que sert un laboratoire.",
-
   "talk_lp_lesson_title": "Le Laboratoire",
   "talk_lp_lesson_epigraph": "2ndBrain était un laboratoire. Tout le reste est le moteur.",
   "talk_lp_lesson_body": "Chaque 'erreur' était une information. Chaque refactor était une découverte. La dette n'était pas un échec — c'était le prix de l'apprentissage rapide.",
@@ -2076,17 +2057,14 @@
   "talk_lp_lesson_p2": "Tuer ses chéris sans regret",
   "talk_lp_lesson_p3": "Capitaliser tôt — investir dans les fondations partagées",
   "talk_lp_lesson_p4": "Votre labo est votre avantage concurrentiel",
-
   "talk_lp_closing_title": "Construisez votre Labo",
   "talk_lp_closing_body": "L'écosystème que vous voyez aujourd'hui n'a pas commencé comme un écosystème. Il a commencé par un mauvais pari — et la discipline de le tuer en 5 jours.",
   "talk_lp_closing_cta": "C'est quoi votre laboratoire ?",
   "talk_lp_closing_links_label": "TROUVER LYRA",
   "talk_lp_closing_contact": "Liens & contact",
-
   "talk_avatar_companion_label": "Ouvrir le terrain de jeu",
   "talk_avatar_switch_variant": "Changer la variante",
   "talk_avatar_set_size": "Définir la taille",
-
   "talk_index_lyraproduct_title": "52 Jours",
   "talk_index_lyraproduct_subtitle": "Décisions produit, vitesse d'itération & émergence d'écosystème"
 }

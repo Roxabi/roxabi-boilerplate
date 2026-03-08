@@ -1,6 +1,6 @@
 import { Button } from '@repo/ui'
 import { Link } from '@tanstack/react-router'
-import { BookOpenIcon, Menu, X } from 'lucide-react'
+import { Menu, X } from 'lucide-react'
 import { Collapsible } from 'radix-ui'
 import { useEffect, useRef, useState } from 'react'
 import { useSession } from '@/lib/authClient'
@@ -60,12 +60,6 @@ function DesktopNavLinks() {
       <Button variant="ghost" size="sm" asChild>
         <Link to="/talks">{m.nav_talks()}</Link>
       </Button>
-      <Button variant="ghost" size="sm" asChild>
-        <Link to="/docs/$" params={{ _splat: '' }}>
-          <BookOpenIcon className="size-4" />
-          {m.nav_docs()}
-        </Link>
-      </Button>
     </div>
   )
 }
@@ -107,12 +101,6 @@ function MobileNavPanel({
         <Button variant="ghost" size="sm" className="justify-start" asChild>
           <Link to="/talks/claude-code" onClick={onClose}>
             {m.nav_talks()}
-          </Link>
-        </Button>
-        <Button variant="ghost" size="sm" className="justify-start" asChild>
-          <Link to="/docs/$" params={{ _splat: '' }} onClick={onClose}>
-            <BookOpenIcon className="size-4" />
-            {m.nav_docs()}
           </Link>
         </Button>
         {!session && (

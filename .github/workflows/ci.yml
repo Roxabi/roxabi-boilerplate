@@ -459,22 +459,6 @@ jobs:
           path: playwright-report/
           retention-days: 7
 
-  docs-links:
-    name: Docs Link Audit
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: ${{ env.BUN_VERSION }}
-
-      - name: Check internal documentation links
-        run: bun run tools/docsLinkAudit.ts
-
   # Intentionally runs on every push to main/staging regardless of changed paths.
   # Full browser coverage is required on protected branches before release.
   e2e-matrix:
@@ -656,7 +640,7 @@ jobs:
     name: CI Success
     runs-on: ubuntu-latest
     if: always()
-    needs: [secrets, lint, typecheck, test, build, e2e, e2e-matrix, merge-reports, docs-links]
+    needs: [secrets, lint, typecheck, test, build, e2e, e2e-matrix, merge-reports]
     steps:
       - name: Check job outcomes
         env:
@@ -668,7 +652,6 @@ jobs:
           E2E_RESULT: ${{ needs.e2e.result }}
           E2E_MATRIX_RESULT: ${{ needs.e2e-matrix.result }}
           MERGE_REPORTS_RESULT: ${{ needs.merge-reports.result }}
-          DOCS_LINKS_RESULT: ${{ needs.docs-links.result }}
         run: |
           results=( \
             "$SECRETS_RESULT" \
@@ -679,7 +662,6 @@ jobs:
             "$E2E_RESULT" \
             "$E2E_MATRIX_RESULT" \
             "$MERGE_REPORTS_RESULT" \
-            "$DOCS_LINKS_RESULT" \
           )
           for result in "${results[@]}"; do
             if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
