@@ -57,9 +57,6 @@ function DesktopNavLinks() {
           {m.nav_design_system()}
         </Link>
       </Button>
-      <Button variant="ghost" size="sm" asChild>
-        <Link to="/talks">{m.nav_talks()}</Link>
-      </Button>
     </div>
   )
 }
@@ -96,11 +93,6 @@ function MobileNavPanel({
             onClick={onClose}
           >
             {m.nav_design_system()}
-          </Link>
-        </Button>
-        <Button variant="ghost" size="sm" className="justify-start" asChild>
-          <Link to="/talks/claude-code" onClick={onClose}>
-            {m.nav_talks()}
           </Link>
         </Button>
         {!session && (

@@ -356,21 +356,6 @@ export const useInView = () => ({ ref: { current: null }, inView: true })
 
 export const useReducedMotion = () => false
 
-export const PresentationNav = ({
-  sections,
-}: {
-  sections?: ReadonlyArray<{ id: string; label: string }>
-  onEscape?: () => void
-}) => (
-  <nav data-testid="presentation-nav">
-    {sections?.map((s) => (
-      <button key={s.id} type="button">
-        {s.label}
-      </button>
-    ))}
-  </nav>
-)
-
 export const StatCounter = ({
   value,
   label,

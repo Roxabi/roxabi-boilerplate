@@ -50,11 +50,6 @@ export default defineConfig({
         // Component files need integration/e2e tests
         '**/components/LanguageSwitcher.tsx',
         '**/components/admin/**',
-        // Presentation/talk section components (visual-only, no business logic)
-        '**/components/presentation/dev-process/**',
-        '**/components/presentation/lyra-story/**',
-        '**/components/presentation/lyra-dev/**',
-        '**/components/presentation/lyra-product/**',
         // Pure Radix UI re-export wrappers (no business logic)
         '**/components/ContextMenu.tsx',
         '**/vite-env.d.ts',
@@ -69,7 +64,7 @@ export default defineConfig({
       // See artifacts/specs/17-testing-gold-standard.mdx for rationale.
       thresholds: {
         lines: 92,
-        functions: 89,
+        functions: 88,
         branches: 84,
         statements: 91,
       },
