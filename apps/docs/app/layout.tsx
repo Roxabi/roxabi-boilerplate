@@ -2,7 +2,9 @@ import { RootProvider } from 'fumadocs-ui/provider'
 import type { ReactNode } from 'react'
 import '../globals.css'
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL
+const rawAppUrl = process.env.NEXT_PUBLIC_APP_URL
+const appUrl =
+  rawAppUrl?.startsWith('https://') || rawAppUrl?.startsWith('http://') ? rawAppUrl : undefined
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (

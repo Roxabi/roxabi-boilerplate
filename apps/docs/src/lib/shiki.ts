@@ -33,5 +33,7 @@ export const shikiOptions = {
     'diff',
     'docker',
     'ini',
+    'graphql',
+    'prisma',
   ],
 } satisfies RehypeCodeOptions

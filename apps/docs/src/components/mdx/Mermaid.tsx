@@ -69,6 +69,7 @@ function Mermaid({ chart }: MermaidProps) {
     return () => {
       cancelled = true
     }
+    // containerId is stable (derived from useId) — listed for exhaustive-deps
   }, [chart, containerId, resolvedTheme])
 
   if (error) {
@@ -85,12 +86,14 @@ function Mermaid({ chart }: MermaidProps) {
 
   if (!svg) {
     return (
-      <output
+      // biome-ignore lint/a11y/useSemanticElements: <output> is not appropriate for a loading placeholder; role="status" is intentional
+      <div
+        role="status"
         aria-label="Loading diagram"
         className="my-4 flex items-center justify-center rounded-lg border p-8 text-sm text-muted-foreground"
       >
         Loading diagram...
-      </output>
+      </div>
     )
   }
 
