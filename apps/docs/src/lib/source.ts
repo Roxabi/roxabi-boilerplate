@@ -3,5 +3,5 @@ import { docs } from '@/.source'
 
 export const source = loader({
   baseUrl: '/docs',
-  source: docs,
+  source: docs.toFumadocsSource(),
 })
