@@ -4,6 +4,7 @@ import { Menu, X } from 'lucide-react'
 import { Collapsible } from 'radix-ui'
 import { useEffect, useRef, useState } from 'react'
 import { useSession } from '@/lib/authClient'
+import { clientEnv } from '@/lib/env.shared'
 import { useOrganizations } from '@/lib/useOrganizations'
 import { m } from '@/paraglide/messages'
 import { GithubIcon } from './GithubIcon'
@@ -57,6 +58,13 @@ function DesktopNavLinks() {
           {m.nav_design_system()}
         </Link>
       </Button>
+      {clientEnv.VITE_TALKS_URL && (
+        <Button variant="ghost" size="sm" asChild>
+          <a href={clientEnv.VITE_TALKS_URL} target="_blank" rel="noopener noreferrer">
+            {m.nav_talks()}
+          </a>
+        </Button>
+      )}
     </div>
   )
 }
@@ -95,6 +103,18 @@ function MobileNavPanel({
             {m.nav_design_system()}
           </Link>
         </Button>
+        {clientEnv.VITE_TALKS_URL && (
+          <Button variant="ghost" size="sm" className="justify-start" asChild>
+            <a
+              href={clientEnv.VITE_TALKS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={onClose}
+            >
+              {m.nav_talks()}
+            </a>
+          </Button>
+        )}
         {!session && (
           <>
             <hr className="my-1 border-border" />
