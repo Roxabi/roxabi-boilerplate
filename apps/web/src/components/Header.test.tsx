@@ -1,6 +1,11 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mockParaglideMessages } from '@/test/__mocks__/mockMessages'
+
+const mockClientEnv = vi.hoisted(() => ({
+  VITE_TALKS_URL: undefined as string | undefined,
+  VITE_GITHUB_REPO_URL: undefined as string | undefined,
+}))
 
 vi.mock('@repo/ui', () => ({
   Button: ({
@@ -81,6 +86,10 @@ vi.mock('@/lib/useOrganizations', () => ({
 
 vi.mock('@/lib/config', () => ({
   GITHUB_REPO_URL: 'https://github.com/test/repo',
+}))
+
+vi.mock('@/lib/env.shared', () => ({
+  clientEnv: mockClientEnv,
 }))
 
 vi.mock('@/paraglide/runtime', () => ({
@@ -191,5 +200,56 @@ describe('Header', () => {
 
     // Assert
     expect(screen.getByLabelText('menu_open')).toBeInTheDocument()
+  })
+})
+
+describe('Header — Talks link (VITE_TALKS_URL)', () => {
+  beforeEach(() => {
+    mockClientEnv.VITE_TALKS_URL = undefined
+  })
+
+  afterEach(() => {
+    mockClientEnv.VITE_TALKS_URL = undefined
+  })
+
+  it('should NOT render the Talks link when VITE_TALKS_URL is undefined', () => {
+    // Arrange
+    mockClientEnv.VITE_TALKS_URL = undefined
+
+    // Act
+    render(<Header />)
+
+    // Assert
+    expect(screen.queryByText('nav_talks')).not.toBeInTheDocument()
+  })
+
+  it('should render the Talks link in desktop nav when VITE_TALKS_URL is set', () => {
+    // Arrange
+    mockClientEnv.VITE_TALKS_URL = 'https://talks.example.com'
+
+    // Act
+    render(<Header />)
+
+    // Assert
+    const links = screen.getAllByText('nav_talks')
+    expect(links.length).toBeGreaterThanOrEqual(1)
+    const desktopLink = links[0]?.closest('a')
+    expect(desktopLink).toHaveAttribute('href', 'https://talks.example.com')
+    expect(desktopLink).toHaveAttribute('target', '_blank')
+    expect(desktopLink).toHaveAttribute('rel', 'noopener noreferrer')
+  })
+
+  it('should render the Talks link in mobile nav when VITE_TALKS_URL is set and menu is open', () => {
+    // Arrange
+    mockClientEnv.VITE_TALKS_URL = 'https://talks.example.com'
+    render(<Header />)
+    const menuButton = screen.getByLabelText('menu_open')
+
+    // Act
+    fireEvent.click(menuButton)
+
+    // Assert
+    const links = screen.getAllByText('nav_talks')
+    expect(links.length).toBeGreaterThanOrEqual(2)
   })
 })

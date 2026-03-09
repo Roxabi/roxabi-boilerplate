@@ -5,15 +5,14 @@ import {
   forwardRef,
   Inject,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common'
 import { Reflector } from '@nestjs/core'
 import type { Role } from '@repo/types'
 import type { FastifyRequest } from 'fastify'
 import { ApiKeyService } from '../api-key/apiKey.service.js'
-import { ApiKeyExpiredException } from '../api-key/exceptions/apiKeyExpired.exception.js'
 import { ApiKeyInvalidException } from '../api-key/exceptions/apiKeyInvalid.exception.js'
-import { ApiKeyRevokedException } from '../api-key/exceptions/apiKeyRevoked.exception.js'
 import { ErrorCode } from '../common/errorCodes.js'
 import { PermissionService } from '../rbac/permission.service.js'
 import { UserService } from '../user/user.service.js'
@@ -49,6 +48,8 @@ const SOFT_DELETED_ALLOWED_ROUTES = [
 
 @Injectable()
 export class AuthGuard implements CanActivate {
+  private readonly logger = new Logger(AuthGuard.name)
+
   constructor(
     private readonly authService: AuthService,
     private readonly reflector: Reflector,
@@ -103,26 +104,21 @@ export class AuthGuard implements CanActivate {
       try {
         return await this.buildApiKeySession(bearerToken)
       } catch (err) {
-        if (err instanceof ApiKeyInvalidException)
-          throw new UnauthorizedException({
-            message: 'Invalid API key',
-            errorCode: ErrorCode.API_KEY_INVALID,
+        if (err instanceof ApiKeyInvalidException) {
+          this.logger.warn(`[resolveSession] API key rejected: ${err.errorCode}`, {
+            errorCode: err.errorCode,
           })
-        if (err instanceof ApiKeyRevokedException)
           throw new UnauthorizedException({
-            message: 'API key has been revoked',
-            errorCode: ErrorCode.API_KEY_REVOKED,
+            message: 'Unauthorized',
+            errorCode: ErrorCode.API_KEY_UNAUTHORIZED,
           })
-        if (err instanceof ApiKeyExpiredException)
-          throw new UnauthorizedException({
-            message: 'API key has expired',
-            errorCode: ErrorCode.API_KEY_EXPIRED,
-          })
+        }
         throw err
       }
     }
     const raw = await this.authService.getSession(request)
-    return isAuthenticatedSession(raw) ? raw : null
+    if (!isAuthenticatedSession(raw)) return null
+    return { ...raw, actorType: 'user' as const }
   }
 
   private async buildApiKeySession(token: string): Promise<AuthenticatedSession> {
@@ -182,12 +178,29 @@ export class AuthGuard implements CanActivate {
   }
 
   private checkRoles(context: ExecutionContext, session: AuthenticatedSession) {
-    // API key auth does not apply role checks — only permission/scope checks apply
-    if (session.actorType === 'api_key') return
     const requiredRoles = this.reflector.getAllAndOverride<Role[]>('ROLES', [
       context.getHandler(),
       context.getClass(),
     ])
+
+    if (session.actorType === 'api_key') {
+      // API key sessions skip role checks, but role-gated routes must also declare @Permissions()
+      // to be accessible via API key. Without @Permissions(), the route is role-only.
+      if (requiredRoles?.length) {
+        const requiredPermissions = this.reflector.getAllAndOverride<string[]>('PERMISSIONS', [
+          context.getHandler(),
+          context.getClass(),
+        ])
+        if (!requiredPermissions?.length) {
+          throw new ForbiddenException({
+            message: 'API key cannot access role-gated routes without @Permissions()',
+            errorCode: ErrorCode.API_KEY_SCOPE_DENIED,
+          })
+        }
+      }
+      return
+    }
+
     if (requiredRoles?.length) {
       const userRole = session.user.role ?? 'user'
       if (!requiredRoles.includes(userRole)) throw new ForbiddenException()

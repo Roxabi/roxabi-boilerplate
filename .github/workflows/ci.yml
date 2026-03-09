@@ -73,9 +73,8 @@ jobs:
         uses: trufflesecurity/trufflehog@v3.93.7
         with:
           path: ./
-          base: ${{ github.event.pull_request.base.sha || github.event.before }}
+          base: ${{ github.event.pull_request.base.sha || (github.event.before != '0000000000000000000000000000000000000000' && github.event.before) || '' }}
           head: ${{ github.event.pull_request.head.sha || github.sha }}
-          extra_args: --only-verified
 
   lint:
     name: Lint

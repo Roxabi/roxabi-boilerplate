@@ -8,7 +8,7 @@ export type AuthenticatedSession = {
   user: { id: string; role?: Role }
   session: { id: string; activeOrganizationId?: string | null }
   permissions: string[]
-  actorType?: 'user' | 'api_key'
+  actorType: 'user' | 'api_key'
   apiKeyId?: string
 }
 
