@@ -65,6 +65,13 @@ function DesktopNavLinks() {
           </a>
         </Button>
       )}
+      {clientEnv.VITE_DOCS_URL && (
+        <Button variant="ghost" size="sm" asChild>
+          <a href={clientEnv.VITE_DOCS_URL} target="_blank" rel="noopener noreferrer">
+            {m.nav_docs()}
+          </a>
+        </Button>
+      )}
     </div>
   )
 }
@@ -112,6 +119,18 @@ function MobileNavPanel({
               onClick={onClose}
             >
               {m.nav_talks()}
+            </a>
+          </Button>
+        )}
+        {clientEnv.VITE_DOCS_URL && (
+          <Button variant="ghost" size="sm" className="justify-start" asChild>
+            <a
+              href={clientEnv.VITE_DOCS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={onClose}
+            >
+              {m.nav_docs()}
             </a>
           </Button>
         )}

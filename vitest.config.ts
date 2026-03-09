@@ -60,6 +60,8 @@ export default defineConfig({
         '**/server.ts',
         // Generated i18n runtime (paraglide)
         '**/paraglide/**',
+        // Docs app (Next.js — no unit tests)
+        'apps/docs/**',
       ],
       // See artifacts/specs/17-testing-gold-standard.mdx for rationale.
       thresholds: {

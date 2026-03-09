@@ -148,6 +148,14 @@
           "style": { "useFilenamingConvention": "off" }
         }
       }
+    },
+    {
+      "includes": ["apps/docs/mdx-components.tsx"],
+      "linter": {
+        "rules": {
+          "style": { "useFilenamingConvention": "off" }
+        }
+      }
     }
   ],
   "files": {

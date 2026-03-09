@@ -23,6 +23,7 @@ function validateEnvPlugin(): Plugin {
         const schema = z.object({
           VITE_GITHUB_REPO_URL: z.string().url().optional(),
           VITE_TALKS_URL: z.string().url().optional(),
+          VITE_DOCS_URL: z.string().url().optional(),
         })
         const result = schema.safeParse(envVars)
         if (!result.success) {
