@@ -13,7 +13,7 @@ export default function Layout({ children }: { children: ReactNode }) {
             href={process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.roxabi.com'}
             className="text-fd-muted-foreground hover:text-fd-foreground ml-auto text-sm transition-colors"
           >
-            &larr; App
+            ← App
           </a>
         ),
       }}

@@ -4,7 +4,7 @@
   "installCommand": "bun install --ignore-scripts",
   "buildCommand": "turbo run build",
   "redirects": [
-    { "source": "/docs/(.*)", "destination": "https://docs.app.roxabi.com/$1", "permanent": false },
-    { "source": "/docs", "destination": "https://docs.app.roxabi.com", "permanent": false }
+    { "source": "/docs/(.*)", "destination": "https://docs.app.roxabi.com/$1", "permanent": true },
+    { "source": "/docs", "destination": "https://docs.app.roxabi.com", "permanent": true }
   ]
 }
