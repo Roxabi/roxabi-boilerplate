@@ -42,7 +42,8 @@ bun typecheck
 roxabi_boilerplate/
 ├── apps/
 │   ├── web/          # Frontend (TanStack Start)
-│   └── api/          # Backend (NestJS + Fastify)
+│   ├── api/          # Backend (NestJS + Fastify)
+│   └── docs/         # Documentation site (Fumadocs + Next.js)
 ├── packages/
 │   ├── ui/           # Shared UI components
 │   ├── config/       # Shared configurations
@@ -50,7 +51,7 @@ roxabi_boilerplate/
 │   ├── email/        # Email templates
 │   ├── vitest-config/ # Shared Vitest configuration
 │   └── playwright-config/ # Shared Playwright configuration
-└── docs/             # Documentation
+└── docs/             # MDX source files (rendered by apps/docs)
 ```
 
 ## Git Hooks

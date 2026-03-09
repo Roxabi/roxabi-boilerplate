@@ -17,6 +17,7 @@ staging → PR to main → CI runs → Vercel auto-deploys to production
 |-----------|----------|---------|
 | Web (TanStack Start + Nitro) | Vercel | SSR, edge caching, Fluid compute |
 | API (NestJS + Fastify) | Vercel | Zero-config NestJS, Fluid compute, auto-scaling |
+| Docs (Fumadocs + Next.js) | Vercel | Static/ISR — deployed to `docs.app.roxabi.com` |
 | Database | Neon | Serverless PostgreSQL, not managed by Vercel |
 
 No Docker is needed for deployment. Docker configurations (Dockerfiles, `docker-compose.prod.yml`, Nginx configs, `deploy/`) remain in the repo for local development only.
@@ -96,15 +97,16 @@ vercel login
 
 ## Initial Setup
 
-You need **two Vercel projects** pointing to the same GitHub repository — one for the web app and one for the API.
+You need **three Vercel projects** pointing to the same GitHub repository — one for the web app, one for the API, and one for the docs site.
 
 ### 1. Create Projects
 
-Create both projects from the Vercel dashboard (one-time setup):
+Create all three projects from the Vercel dashboard (one-time setup):
 
 1. Sign up at [vercel.com](https://vercel.com) and connect your GitHub account
 2. Click **Add New Project**, import the repository, set Root Directory to `apps/web`
 3. Repeat for `apps/api`
+4. Repeat for `apps/docs`
 
 Build settings are version-controlled in `apps/web/vercel.json` and `apps/api/vercel.json` — no manual configuration needed.
 
@@ -115,6 +117,7 @@ Link each app directory to its Vercel project:
 ```bash
 cd apps/web && vercel link
 cd apps/api && vercel link
+cd apps/docs && vercel link
 ```
 
 Select the matching project when prompted. This creates `.vercel/project.json` in each directory (gitignored).
@@ -307,12 +310,13 @@ If you are forking the Roxabi Boilerplate to start your own SaaS project, follow
 
 ### 1. Create Vercel Projects
 
-Create **two Vercel projects** from the same GitHub repository:
+Create **three Vercel projects** from the same GitHub repository:
 
 1. Sign up at [vercel.com](https://vercel.com) and connect your GitHub account
 2. Click **Add New Project**, import the repository, set Root Directory to `apps/web`
 3. Repeat for a second project with Root Directory set to `apps/api`
-4. Link each project locally with `vercel link` (see [Initial Setup](#initial-setup) above)
+4. Repeat for a third project with Root Directory set to `apps/docs`
+5. Link each project locally with `vercel link` (see [Initial Setup](#initial-setup) above)
 
 ### 2. Create and Initialize the Neon Database
 

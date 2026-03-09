@@ -357,11 +357,11 @@ The cache key is derived from `bun.lock`, so it invalidates only when dependenci
 
 ## Vercel Deployment Pipeline
 
-Vercel is the single deployment platform for both applications. Production deploys happen automatically; previews are manual.
+Vercel is the single deployment platform for all three applications. Production deploys happen automatically; previews are manual.
 
 ### Production Flow
 
-Only merges to `main` trigger production deployments. Both `apps/web` and `apps/api` are separate Vercel projects pointing to the same GitHub repository.
+Only merges to `main` trigger production deployments. `apps/web`, `apps/api`, and `apps/docs` are separate Vercel projects pointing to the same GitHub repository.
 
 ```mermaid
 flowchart TD
