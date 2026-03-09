@@ -49,6 +49,7 @@ packages/  ui(@repo/ui) types(@repo/types) config(@repo/config) email vitest-con
 | Clean | `bun run clean` / `clean:cache` | Artifacts / caches |
 | i18n | `bun run i18n:check` | Translation completeness |
 | Env check | `bun run env:check` | .env ↔ .env.example |
+| MDX check | `bun run mdx:check` | Frontmatter, JSX, links |
 | License | `bun run license:check` | Dependency licenses |
 | Docs | `bun run docs` | Runs apps/docs (port 3002) |
 | Dashboard | `/issues` skill | Issue dashboard (plugin-provided) |
