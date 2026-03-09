@@ -36,9 +36,8 @@ async function renderMermaidChart(
     // SVG output from mermaid is sanitized with DOMPurify before rendering
     const DOMPurify = (await import('dompurify')).default
     const cleanSvg = DOMPurify.sanitize(svg, {
-      USE_PROFILES: { svg: true, svgFilters: true, html: true },
+      USE_PROFILES: { svg: true, svgFilters: true },
       ADD_TAGS: ['foreignObject'],
-      HTML_INTEGRATION_POINTS: { foreignobject: true },
     })
     return { success: true, svg: cleanSvg }
   } catch (err) {

@@ -8,6 +8,7 @@ import type { RehypeCodeOptions } from 'fumadocs-core/mdx-plugins'
  * GitHub's built-in themes included in the shiki bundle.
  */
 export const shikiOptions = {
+  // JS engine avoids Oniguruma WASM OOM on CI; trades tokenisation fidelity for memory safety
   experimentalJSEngine: true,
   themes: {
     light: 'github-light',

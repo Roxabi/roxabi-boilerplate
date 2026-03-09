@@ -213,9 +213,6 @@ describe('Header — Talks link (VITE_TALKS_URL)', () => {
   })
 
   it('should NOT render the Talks link when VITE_TALKS_URL is undefined', () => {
-    // Arrange
-    mockClientEnv.VITE_TALKS_URL = undefined
-
     // Act
     render(<Header />)
 
@@ -250,6 +247,6 @@ describe('Header — Talks link (VITE_TALKS_URL)', () => {
 
     // Assert
     const links = screen.getAllByText('nav_talks')
-    expect(links.length).toBeGreaterThanOrEqual(2)
+    expect(links.length).toBe(2)
   })
 })
