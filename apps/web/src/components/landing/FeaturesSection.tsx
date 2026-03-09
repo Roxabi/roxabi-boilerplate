@@ -23,20 +23,20 @@ type Feature = {
 }
 
 export function FeaturesSection() {
-  const docsBase = clientEnv.VITE_DOCS_URL ?? ''
+  const docsBase = clientEnv.VITE_DOCS_URL ?? null
 
   const features: Feature[] = [
     {
       icon: Layers,
       title: m.feature_fullstack_title(),
       description: m.feature_fullstack_desc(),
-      href: `${docsBase}/docs/architecture/overview`,
+      href: '/docs/architecture/overview',
     },
     {
       icon: ShieldCheck,
       title: m.feature_auth_title(),
       description: m.feature_auth_desc(),
-      href: `${docsBase}/docs/guides/authentication`,
+      href: '/docs/guides/authentication',
     },
     {
       icon: Building2,
@@ -50,7 +50,7 @@ export function FeaturesSection() {
       icon: Globe,
       title: m.feature_i18n_title(),
       description: m.feature_i18n_desc(),
-      href: `${docsBase}/docs/configuration`,
+      href: '/docs/configuration',
     },
     { icon: Bot, title: m.feature_ai_title(), description: m.feature_ai_desc() },
   ]
@@ -67,13 +67,19 @@ export function FeaturesSection() {
                 icon={<feature.icon className="mb-2 size-8 text-primary" />}
                 title={feature.title}
                 description={feature.description}
-                className={cn(feature.href && 'cursor-pointer hover:border-primary/50')}
+                className={cn(feature.href && docsBase && 'cursor-pointer hover:border-primary/50')}
               />
             )
 
-            if (feature.href) {
+            if (feature.href && docsBase) {
               return (
-                <a key={feature.title} href={feature.href} className="h-full">
+                <a
+                  key={feature.title}
+                  href={`${docsBase}${feature.href}`}
+                  className="h-full"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   {card}
                 </a>
               )
