@@ -1,5 +1,4 @@
 import { cn } from '@repo/ui'
-import { Link } from '@tanstack/react-router'
 import {
   Bot,
   Building2,
@@ -13,6 +12,7 @@ import {
 import type * as React from 'react'
 import { FeatureCard } from '@/components/FeatureCard'
 import { SectionHeading } from '@/components/landing/SectionHeading'
+import { clientEnv } from '@/lib/env.shared'
 import { m } from '@/paraglide/messages'
 
 type Feature = {
@@ -23,18 +23,20 @@ type Feature = {
 }
 
 export function FeaturesSection() {
+  const docsBase = clientEnv.VITE_DOCS_URL ?? ''
+
   const features: Feature[] = [
     {
       icon: Layers,
       title: m.feature_fullstack_title(),
       description: m.feature_fullstack_desc(),
-      href: '/docs/architecture/overview',
+      href: `${docsBase}/docs/architecture/overview`,
     },
     {
       icon: ShieldCheck,
       title: m.feature_auth_title(),
       description: m.feature_auth_desc(),
-      href: '/docs/guides/authentication',
+      href: `${docsBase}/docs/guides/authentication`,
     },
     {
       icon: Building2,
@@ -48,7 +50,7 @@ export function FeaturesSection() {
       icon: Globe,
       title: m.feature_i18n_title(),
       description: m.feature_i18n_desc(),
-      href: '/docs/configuration',
+      href: `${docsBase}/docs/configuration`,
     },
     { icon: Bot, title: m.feature_ai_title(), description: m.feature_ai_desc() },
   ]
@@ -71,9 +73,9 @@ export function FeaturesSection() {
 
             if (feature.href) {
               return (
-                <Link key={feature.title} to={feature.href} className="h-full">
+                <a key={feature.title} href={feature.href} className="h-full">
                   {card}
-                </Link>
+                </a>
               )
             }
 
