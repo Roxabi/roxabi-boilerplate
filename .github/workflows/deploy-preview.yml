@@ -127,6 +127,11 @@ jobs:
             echo "Injecting API preview URL: $API_URL_OVERRIDE"
             EXTRA_ARGS="--env API_URL=$API_URL_OVERRIDE"
           fi
+          # Inject the API bypass secret so the Nitro proxy can send
+          # x-vercel-protection-bypass when forwarding requests to the API preview.
+          if [ -n "$VERCEL_API_BYPASS_SECRET" ]; then
+            EXTRA_ARGS="$EXTRA_ARGS --env VERCEL_API_BYPASS_SECRET=$VERCEL_API_BYPASS_SECRET"
+          fi
           for attempt in 1 2 3; do
             if URL=$(vercel deploy --token "$VERCEL_TOKEN" $EXTRA_ARGS); then break; fi
             if [ "$attempt" -lt 3 ]; then
@@ -142,6 +147,7 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_WEB }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_API_BYPASS_SECRET: ${{ secrets.VERCEL_API_BYPASS_SECRET }}
 
       - name: Summary
         run: |
@@ -259,14 +265,18 @@ jobs:
 
       - name: Health check (best-effort)
         continue-on-error: true
+        env:
+          VERCEL_API_BYPASS_SECRET: ${{ secrets.VERCEL_API_BYPASS_SECRET }}
         run: |
           PREVIEW_URL="${{ steps.deploy.outputs.url }}"
           echo "Checking preview URL: $PREVIEW_URL"
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$PREVIEW_URL" || echo "000")
+          BYPASS_HEADER=""
+          if [ -n "$VERCEL_API_BYPASS_SECRET" ]; then
+            BYPASS_HEADER="-H x-vercel-protection-bypass:$VERCEL_API_BYPASS_SECRET"
+          fi
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 $BYPASS_HEADER "$PREVIEW_URL" || echo "000")
           echo "HTTP status: $HTTP_STATUS"
-          if [ "$HTTP_STATUS" = "401" ]; then
-            echo "::warning::Preview URL returned 401 — Vercel Deployment Protection (SSO) is enabled. Preview requires Vercel team authentication to access."
-          elif [ "$HTTP_STATUS" = "200" ] || [ "$HTTP_STATUS" = "302" ]; then
+          if [ "$HTTP_STATUS" = "200" ] || [ "$HTTP_STATUS" = "302" ]; then
             echo "Preview URL is accessible"
           else
             echo "::warning::Preview URL returned unexpected status $HTTP_STATUS"
