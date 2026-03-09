@@ -64,10 +64,6 @@ export class LandingPage {
     return this.page.getByRole('link', { name: 'Roxabi' })
   }
 
-  get docsHeaderLink(): Locator {
-    return this.header.getByRole('link', { name: /docs/i }).first()
-  }
-
   // ---------------------------------------------------------------------------
   // Footer
   // ---------------------------------------------------------------------------
