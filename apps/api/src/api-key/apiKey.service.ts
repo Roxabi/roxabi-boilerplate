@@ -216,6 +216,13 @@ export class ApiKeyService {
       .where(eq(apiKeys.lastFour, lastFour))
       .limit(10)
 
+    if (candidates.length === 10) {
+      this.logger.warn(
+        `[validateBearerToken] lastFour bucket hit limit(10) — possible collision storm`,
+        { lastFour }
+      )
+    }
+
     const match = (candidates ?? []).find((c) => {
       const computed = Buffer.from(hmacHash(token, c.keySalt), 'hex')
       const stored = Buffer.from(c.keyHash, 'hex')

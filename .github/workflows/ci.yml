@@ -70,7 +70,7 @@ jobs:
           fetch-depth: 0
 
       - name: TruffleHog
-        uses: trufflesecurity/trufflehog@main
+        uses: trufflesecurity/trufflehog@v3.93.7
         with:
           path: ./
           base: ${{ github.event.pull_request.base.sha || github.event.before }}
@@ -623,7 +623,7 @@ jobs:
     name: Vercel Env Check
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging')
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -634,7 +634,14 @@ jobs:
           bun-version: ${{ env.BUN_VERSION }}
 
       - name: Check production env vars
+        if: github.ref == 'refs/heads/main'
         run: bun run scripts/checkVercelEnv.ts production
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+      - name: Check preview env vars
+        if: github.ref == 'refs/heads/staging'
+        run: bun run scripts/checkVercelEnv.ts preview
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
