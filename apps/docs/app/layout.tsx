@@ -1,12 +1,23 @@
 import { RootProvider } from 'fumadocs-ui/provider'
 import type { ReactNode } from 'react'
-import 'fumadocs-ui/style.css'
+import '../globals.css'
 
-export default function Layout({ children }: { children: ReactNode }) {
+const appUrl = process.env.NEXT_PUBLIC_APP_URL
+
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
-        <RootProvider>{children}</RootProvider>
+        <RootProvider>
+          {appUrl && (
+            <div className="flex h-9 items-center border-b px-4 text-xs text-muted-foreground">
+              <a href={appUrl} className="hover:text-foreground transition-colors">
+                &larr; Back to app
+              </a>
+            </div>
+          )}
+          {children}
+        </RootProvider>
       </body>
     </html>
   )
