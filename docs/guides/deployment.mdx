@@ -577,8 +577,8 @@ When deploying API previews, the Deploy Preview workflow creates an **isolated N
 
 | Step | What happens |
 |------|-------------|
-| `create-neon-branch` job | Creates a Neon branch named `preview/{branch}` with its own `DATABASE_URL` |
-| `deploy-api` job | Builds the API with the branch `DATABASE_URL`, runs `db:migrate` during build |
+| `deploy-api` job — Neon branch step | Creates (or recreates) a Neon branch named `preview/{branch}` with its own `DATABASE_URL`, then resets the schema for clean migrations |
+| `deploy-api` job — deploy step | Builds the API with the branch `DATABASE_URL`, runs `db:migrate` during build |
 | After review | Re-run the workflow with target `cleanup` to delete the Neon branch |
 
 **Cleanup:**
@@ -710,7 +710,7 @@ curl -H "x-vercel-protection-bypass: <your-bypass-secret>" https://<preview-url>
 - Free tier: 10s execution limit per request. Pro tier: 60s
 - 250MB max application size (Vercel Functions limitation)
 - `API_URL`, `APP_URL`, and `VITE_*` variables are declared in `turbo.jsonc` build env to ensure Turbo invalidates cache when they change
-- `apps/api/turbo.json` declares runtime secrets (database, auth) as `passThroughEnv` — these are available at runtime but don't affect build cache
+- Runtime secrets (database, auth, rate limiting) are declared as `globalPassThroughEnv` in root `turbo.jsonc` — these are available at runtime but don't affect build cache
 
 ---
 
