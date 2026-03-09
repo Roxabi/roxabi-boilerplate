@@ -220,7 +220,16 @@ jobs:
         id: deploy
         # DATABASE_URL is passed via step env (not inline shell interpolation).
         # Rate limiting uses in-memory storage in previews (no Upstash) — resets on cold start.
+        #
+        # APP_URL / CORS_ORIGIN are set to the stable Vercel branch alias for the web app.
+        # The alias format is: {project}-git-{branch-slug}-{team}.vercel.app
+        # Branch slugs replace non-alphanumeric chars with hyphens (Vercel's own algorithm).
+        # This avoids the chicken-and-egg problem: API deploys before web, so the web
+        # deployment URL isn't known yet, but the branch alias is predictable.
         run: |
+          BRANCH_SLUG=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/-\{2,\}/-/g' | sed 's/^-//;s/-$//')
+          WEB_PREVIEW_URL="https://roxabi-app-git-${BRANCH_SLUG}-roxabi.vercel.app"
+          echo "Web preview alias: $WEB_PREVIEW_URL"
           for attempt in 1 2 3; do
             # --build-env overrides the Neon Marketplace integration's production
             # DATABASE_URL during the Vercel build step (db:migrate).
@@ -230,7 +239,9 @@ jobs:
               --env "DATABASE_URL=$DATABASE_URL" \
               --env "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" \
               --env "SWAGGER_ENABLED=true" \
-              --env "RATE_LIMIT_ENABLED=false"); then break; fi
+              --env "RATE_LIMIT_ENABLED=false" \
+              --env "APP_URL=${WEB_PREVIEW_URL}" \
+              --env "CORS_ORIGIN=${WEB_PREVIEW_URL}"); then break; fi
             if [ "$attempt" -lt 3 ]; then
               echo "::warning::Deploy attempt $attempt/3 failed, retrying in 10s..."
               sleep 10
