@@ -75,6 +75,7 @@ jobs:
           path: ./
           base: ${{ github.event.pull_request.base.sha || (github.event.before != '0000000000000000000000000000000000000000' && github.event.before) || '' }}
           head: ${{ github.event.pull_request.head.sha || github.sha }}
+          extra_args: --only-verified
 
   lint:
     name: Lint
@@ -115,6 +116,9 @@ jobs:
 
       - name: Check dependency licenses
         run: bun run license:check
+
+      - name: Check MDX files
+        run: bun run mdx:check
 
   typecheck:
     name: Type Check
