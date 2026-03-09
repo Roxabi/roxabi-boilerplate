@@ -24,6 +24,10 @@ concurrency:
 env:
   BUN_VERSION: "1.3.9"
   NODE_VERSION: "24"
+  # Vercel project/team identifiers used to compute the stable web branch alias URL.
+  # Update if the Vercel project or team is renamed.
+  VERCEL_WEB_PROJECT_NAME: "roxabi-app"
+  VERCEL_TEAM_SLUG: "roxabi"
 
 jobs:
   vercel-env-check:
@@ -122,13 +126,19 @@ jobs:
         id: deploy
         run: |
           API_URL_OVERRIDE="${{ needs.deploy-api.outputs.url }}"
-          EXTRA_ARGS=""
+          EXTRA_ARGS=()
           if [ -n "$API_URL_OVERRIDE" ]; then
             echo "Injecting API preview URL: $API_URL_OVERRIDE"
-            EXTRA_ARGS="--env API_URL=$API_URL_OVERRIDE"
+            EXTRA_ARGS+=("--env" "API_URL=$API_URL_OVERRIDE")
+          fi
+          # Inject the API bypass secret so the Nitro proxy can send
+          # x-vercel-protection-bypass when forwarding requests to the API preview.
+          # Must use --build-env so the value is available at Vite config evaluation time.
+          if [ -n "$VERCEL_AUTOMATION_BYPASS_SECRET" ]; then
+            EXTRA_ARGS+=("--build-env" "VERCEL_AUTOMATION_BYPASS_SECRET=$VERCEL_AUTOMATION_BYPASS_SECRET")
           fi
           for attempt in 1 2 3; do
-            if URL=$(vercel deploy --token "$VERCEL_TOKEN" $EXTRA_ARGS); then break; fi
+            if URL=$(vercel deploy --token "$VERCEL_TOKEN" "${EXTRA_ARGS[@]}"); then break; fi
             if [ "$attempt" -lt 3 ]; then
               echo "::warning::Deploy attempt $attempt/3 failed, retrying in 10s..."
               sleep 10
@@ -142,6 +152,7 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_WEB }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
 
       - name: Summary
         run: |
@@ -220,7 +231,16 @@ jobs:
         id: deploy
         # DATABASE_URL is passed via step env (not inline shell interpolation).
         # Rate limiting uses in-memory storage in previews (no Upstash) — resets on cold start.
+        #
+        # APP_URL / CORS_ORIGIN are set to the stable Vercel branch alias for the web app.
+        # The alias format is: {project}-git-{branch-slug}-{team}.vercel.app
+        # Branch slugs replace non-alphanumeric chars with hyphens (Vercel's own algorithm).
+        # This avoids the chicken-and-egg problem: API deploys before web, so the web
+        # deployment URL isn't known yet, but the branch alias is predictable.
         run: |
+          BRANCH_SLUG=$(printf '%s' "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/-\{2,\}/-/g' | sed 's/^-//;s/-$//' | cut -c1-40 | sed 's/-$//')
+          WEB_PREVIEW_URL="https://${VERCEL_WEB_PROJECT_NAME}-git-${BRANCH_SLUG}-${VERCEL_TEAM_SLUG}.vercel.app"
+          echo "Web preview alias: $WEB_PREVIEW_URL"
           for attempt in 1 2 3; do
             # --build-env overrides the Neon Marketplace integration's production
             # DATABASE_URL during the Vercel build step (db:migrate).
@@ -230,7 +250,9 @@ jobs:
               --env "DATABASE_URL=$DATABASE_URL" \
               --env "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" \
               --env "SWAGGER_ENABLED=true" \
-              --env "RATE_LIMIT_ENABLED=false"); then break; fi
+              --env "RATE_LIMIT_ENABLED=false" \
+              --env "APP_URL=${WEB_PREVIEW_URL}" \
+              --env "CORS_ORIGIN=${WEB_PREVIEW_URL}"); then break; fi
             if [ "$attempt" -lt 3 ]; then
               echo "::warning::Deploy attempt $attempt/3 failed, retrying in 10s..."
               sleep 10
@@ -248,15 +270,26 @@ jobs:
 
       - name: Health check (best-effort)
         continue-on-error: true
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: |
           PREVIEW_URL="${{ steps.deploy.outputs.url }}"
           echo "Checking preview URL: $PREVIEW_URL"
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$PREVIEW_URL" || echo "000")
+          # Pipe the bypass header via stdin to keep the secret out of /proc/<pid>/cmdline.
+          # Never add set -x to this step — it would print the secret to the log.
+          HTTP_STATUS=$(
+            if [ -n "$VERCEL_AUTOMATION_BYPASS_SECRET" ]; then
+              printf 'x-vercel-protection-bypass: %s\r\n' "$VERCEL_AUTOMATION_BYPASS_SECRET" \
+                | curl -s -o /dev/null -w "%{http_code}" --max-time 30 --header @- "$PREVIEW_URL"
+            else
+              curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$PREVIEW_URL"
+            fi || echo "000"
+          )
           echo "HTTP status: $HTTP_STATUS"
-          if [ "$HTTP_STATUS" = "401" ]; then
-            echo "::warning::Preview URL returned 401 — Vercel Deployment Protection (SSO) is enabled. Preview requires Vercel team authentication to access."
-          elif [ "$HTTP_STATUS" = "200" ] || [ "$HTTP_STATUS" = "302" ]; then
+          if [ "$HTTP_STATUS" = "200" ] || [ "$HTTP_STATUS" = "302" ]; then
             echo "Preview URL is accessible"
+          elif [ "$HTTP_STATUS" = "401" ]; then
+            echo "::warning::Preview URL returned 401 — bypass header may be missing or invalid (VERCEL_AUTOMATION_BYPASS_SECRET)"
           else
             echo "::warning::Preview URL returned unexpected status $HTTP_STATUS"
           fi
