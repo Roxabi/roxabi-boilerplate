@@ -45,7 +45,6 @@ jobs:
               - 'biome.json'
               - 'tsconfig*.json'
               - 'lefthook.yml'
-              - '.gitleaks.toml'
               - '.github/workflows/**'
             e2e:
               - 'apps/web/src/**'
@@ -70,10 +69,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Run Gitleaks
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: TruffleHog
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.pull_request.base.sha || github.event.before }}
+          head: ${{ github.event.pull_request.head.sha || github.sha }}
+          extra_args: --only-verified
 
   lint:
     name: Lint

@@ -165,6 +165,7 @@
       "!**/.nitro",
       "!**/.content-collections",
       "!**/routeTree.gen.ts",
+      "!**/next-env.d.ts",
       "!**/src/paraglide",
       "!**/project.inlang",
       "!**/*.css",

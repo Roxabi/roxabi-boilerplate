@@ -59,7 +59,7 @@
       "persistent": true
     },
     "codegen": {
-      "outputs": ["src/routeTree.gen.ts", "src/paraglide/**"],
+      "outputs": ["src/routeTree.gen.ts", "src/paraglide/**", ".source/**"],
       "env": ["API_URL", "APP_URL", "VITE_*"]
     },
     "build": {

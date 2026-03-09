@@ -12,6 +12,8 @@
     "dev": "set -a; [ -f .env ] && . .env; set +a; bash scripts/predev.sh && turbo dev",
     "dev:web": "set -a; [ -f .env ] && . .env; set +a; turbo dev --filter=@repo/web",
     "dev:api": "set -a; [ -f .env ] && . .env; set +a; turbo dev --filter=@repo/api",
+    "dev:docs": "turbo dev --filter=@repo/docs",
+    "docs": "turbo dev --filter=@repo/docs",
     "dev:clean": "set -a; [ -f .env ] && . .env; set +a; fuser -k ${NITRO_PORT:-42069}/tcp ${API_PORT:-4000}/tcp ${APP_PORT:-3000}/tcp ${EMAIL_PORT:-3001}/tcp 2>/dev/null || true",
     "build": "turbo build",
     "lint": "biome check --diagnostic-level=warn .",
