@@ -55,6 +55,7 @@ describe('AuthController', () => {
         user: { id: 'user-1', role: 'user' as const },
         session: { id: 'sess-1', activeOrganizationId: 'org-1' },
         permissions: ['members:read', 'roles:read'],
+        actorType: 'user' as const,
       }
 
       // Act
@@ -72,6 +73,7 @@ describe('AuthController', () => {
         user: { id: 'user-1', role: 'user' as const },
         session: { id: 'sess-1', activeOrganizationId: null },
         permissions: [],
+        actorType: 'user' as const,
       }
 
       // Act
@@ -82,6 +84,7 @@ describe('AuthController', () => {
         user: { id: 'user-1', role: 'user' },
         session: { id: 'sess-1', activeOrganizationId: null },
         permissions: [],
+        actorType: 'user',
       })
     })
   })
