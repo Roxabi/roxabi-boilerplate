@@ -11,6 +11,7 @@ on:
           - both
           - web
           - api
+          - docs
           - cleanup
 
 permissions:
@@ -43,6 +44,44 @@ jobs:
         run: bun run scripts/checkVercelEnv.ts preview
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+  deploy-docs:
+    name: Deploy Docs Preview
+    runs-on: ubuntu-latest
+    needs: [vercel-env-check]
+    if: |
+      !cancelled() && !failure() &&
+      (inputs.target == 'docs' || inputs.target == 'both')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Deploy
+        id: deploy
+        run: |
+          for attempt in 1 2 3; do
+            if URL=$(vercel deploy --token "$VERCEL_TOKEN"); then break; fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "::warning::Deploy attempt $attempt/3 failed, retrying in 10s..."
+              sleep 10
+            else
+              echo "::error::All 3 deploy attempts failed"
+              exit 1
+            fi
+          done
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_DOCS }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+      - name: Summary
+        run: |
+          echo "### Docs Preview" >> "$GITHUB_STEP_SUMMARY"
+          echo "${{ steps.deploy.outputs.url }}" >> "$GITHUB_STEP_SUMMARY"
 
   deploy-web:
     name: Deploy Web Preview

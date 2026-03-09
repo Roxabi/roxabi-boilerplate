@@ -1,5 +1,9 @@
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+
+const mockClientEnv = vi.hoisted(() => ({
+  VITE_DOCS_URL: undefined as string | undefined,
+}))
 
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ children, ...props }: React.PropsWithChildren<Record<string, unknown>>) => (
@@ -40,6 +44,10 @@ vi.mock('@/paraglide/messages', () => ({
     feature_ai_title: () => 'AI',
     feature_ai_desc: () => 'AI integration',
   },
+}))
+
+vi.mock('@/lib/env.shared', () => ({
+  clientEnv: mockClientEnv,
 }))
 
 import { FeaturesSection } from './FeaturesSection'
@@ -93,5 +101,48 @@ describe('FeaturesSection', () => {
     // Assert
     const section = container.querySelector('section')
     expect(section).toBeInTheDocument()
+  })
+})
+
+describe('FeaturesSection — docs links (VITE_DOCS_URL)', () => {
+  afterEach(() => {
+    mockClientEnv.VITE_DOCS_URL = undefined
+  })
+
+  it('should render feature cards with docs hrefs WITHOUT anchor wrapper when VITE_DOCS_URL is undefined', () => {
+    // Arrange
+    mockClientEnv.VITE_DOCS_URL = undefined
+
+    // Act
+    const { container } = render(<FeaturesSection />)
+
+    // Assert — no external anchor links should be rendered
+    const externalLinks = container.querySelectorAll('a[target="_blank"]')
+    expect(externalLinks).toHaveLength(0)
+  })
+
+  it('should render feature cards with docs hrefs as anchor links when VITE_DOCS_URL is set', () => {
+    // Arrange
+    const docsBase = 'https://docs.app.roxabi.com'
+    mockClientEnv.VITE_DOCS_URL = docsBase
+
+    // Act
+    const { container } = render(<FeaturesSection />)
+
+    // Assert — features with href should be wrapped in <a>
+    const externalLinks = container.querySelectorAll('a[target="_blank"]')
+    expect(externalLinks.length).toBeGreaterThan(0)
+
+    const fullStackLink = Array.from(externalLinks).find(
+      (el) => el.getAttribute('href') === `${docsBase}/docs/architecture/overview`
+    )
+    expect(fullStackLink).toBeDefined()
+    expect(fullStackLink).toHaveAttribute('rel', 'noopener noreferrer')
+
+    const authLink = Array.from(externalLinks).find(
+      (el) => el.getAttribute('href') === `${docsBase}/docs/guides/authentication`
+    )
+    expect(authLink).toBeDefined()
+    expect(authLink).toHaveAttribute('rel', 'noopener noreferrer')
   })
 })

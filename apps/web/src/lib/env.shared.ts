@@ -2,8 +2,16 @@ import { z } from 'zod'
 
 export const clientEnvSchema = z.object({
   VITE_GITHUB_REPO_URL: z.string().url().optional(),
-  VITE_TALKS_URL: z.string().url().optional(),
-  VITE_DOCS_URL: z.string().url().optional(),
+  VITE_TALKS_URL: z
+    .string()
+    .url()
+    .refine((v) => v.startsWith('https://'), 'VITE_TALKS_URL must use https')
+    .optional(),
+  VITE_DOCS_URL: z
+    .string()
+    .url()
+    .refine((v) => v.startsWith('https://'), 'VITE_DOCS_URL must use https')
+    .optional(),
 })
 
 export type ClientEnv = z.infer<typeof clientEnvSchema>
