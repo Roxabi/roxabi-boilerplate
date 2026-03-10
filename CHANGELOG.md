@@ -12,6 +12,7 @@ Entries are generated automatically by `/promote` and committed to staging befor
 ### Fixed
 - fix(preview): move bypass secret to runtime Nitro server route (#489)
 - fix(docs): use turbo-ignore for Vercel ignoreCommand (#490)
+- fix(preview): use custom domain for staging branch APP_URL (#493)
 
 ### Documentation
 - docs: sync proxy and ignoreCommand references (#491)

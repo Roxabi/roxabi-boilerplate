@@ -8,6 +8,7 @@ description: All v0.8 releases
 ### Fixes
 - fix(preview): move bypass secret to runtime Nitro server route — secret is now read at request time, never baked into the build artifact (#489)
 - fix(docs): use turbo-ignore for Vercel ignoreCommand — fixes docs production deploy being skipped when no prior successful deploy exists (#490)
+- fix(preview): use custom domain for staging branch APP_URL — maps staging to `app.staging.roxabi.com` so better-auth CSRF origin check passes (#493)
 
 ### Documentation
 - docs: sync proxy and ignoreCommand references across architecture, auth, and troubleshooting docs (#491)
