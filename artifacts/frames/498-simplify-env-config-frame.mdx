@@ -1,0 +1,46 @@
+---
+title: 'Simplify .env configuration — reduce ~60 vars via derivation and presets'
+issue: 498
+status: approved
+tier: F-full
+date: 2026-03-10
+---
+
+## Problem
+
+`.env.example` has grown to ~60 environment variables across 13 sections (160 lines). Many variables are redundant (duplicated between app and dev-core sections), derivable from a single source (e.g. `CORS_ORIGIN` always equals `APP_URL`), or only relevant to advanced/niche use cases (granular rate limit tuning).
+
+This creates friction for new users setting up the project and increases misconfiguration risk — a typo in one of several redundant vars causes subtle bugs. Issue #496 recently consolidated `APP_NAME` handling, revealing more derivation opportunities.
+
+The goal is to reduce the variable count from ~60 to ~37 while maintaining full backward compatibility — explicit values silently take precedence over derived defaults.
+
+## Who
+
+- **Primary:** New developers onboarding to the project — fewer vars to configure, fewer chances for misconfiguration.
+- **Secondary:** Existing developers and CI pipelines — silent fallback ensures zero breakage; derived defaults match current convention.
+
+## Constraints
+
+- **Backward compatible:** Explicit `.env` values silently win over derived defaults. No deprecation warnings — changes documented in changelog only.
+- **Dependency:** #496 (APP_NAME configurable) is merged — builds on that work for `VITE_APP_NAME` derivation.
+- **env:check script:** Must be updated to understand derived/optional vars (don't flag missing vars that have sensible defaults).
+- **CI/CD:** Vercel and GitHub Actions workflows use env vars — derivation logic must work identically in all environments.
+- **Docker:** `docker-compose.yml` / `db:up` scripts derive container/volume names — must remain functional with `APP_SLUG`-only derivation.
+
+## Out of Scope
+
+- Removing genuinely required vars (OAuth secrets, DB credentials, API keys)
+- Breaking existing deployments or requiring `.env` migration scripts
+- Changing the env var loading mechanism (still dotenv / Vite define)
+- Refactoring the config module architecture
+
+## Complexity
+
+**Tier: F-full** — Touches multiple domains (Vite config, NestJS config, Docker scripts, env:check tooling, CI workflows, documentation). Three distinct change groups (derivation, dedup, presets) each with their own validation and testing surface.
+
+Signals:
+- ~60 vars across 13 sections — broad surface area
+- Changes span web app (Vite), API (NestJS), tooling (scripts), infra (Docker), and docs
+- Rate limit preset system introduces a new pattern (preset → individual override)
+- Dev-core field IDs moving to `.claude/dev-core.yml` touches plugin config boundary
+- env:check script needs new "derived var" concept
