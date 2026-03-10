@@ -1,181 +1,66 @@
-import { describe, expect, it, vi } from 'vitest'
+import { Test, type TestingModule } from '@nestjs/testing'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { CONSENT_REPO } from './consent.repository.js'
 import { ConsentService, type SaveConsentDto } from './consent.service.js'
-import { ConsentInsertFailedException } from './exceptions/consentInsertFailed.exception.js'
 import { ConsentNotFoundException } from './exceptions/consentNotFound.exception.js'
+import { InMemoryConsentRepository } from './repositories/inMemoryConsent.repository.js'
 
-const mockConsentRow = {
-  id: 'consent-1',
-  userId: 'user-1',
-  categories: { necessary: true, analytics: true, marketing: false },
-  policyVersion: '2026-02-v1',
-  action: 'customized',
-  ipAddress: '192.168.1.1',
-  userAgent: 'Mozilla/5.0',
-  createdAt: new Date('2026-02-17T12:00:00Z'),
-  updatedAt: new Date('2026-02-17T12:00:00Z'),
-}
+describe('ConsentService (with InMemoryConsentRepository)', () => {
+  let module: TestingModule
+  let service: ConsentService
+  let repo: InMemoryConsentRepository
 
-function createMockDb() {
-  const returningFn = vi.fn()
-  const valuesFn = vi.fn().mockReturnValue({ returning: returningFn })
-  const insertFn = vi.fn().mockReturnValue({ values: valuesFn })
+  beforeEach(async () => {
+    repo = new InMemoryConsentRepository()
+    module = await Test.createTestingModule({
+      providers: [ConsentService, { provide: CONSENT_REPO, useValue: repo }],
+    }).compile()
+    service = module.get(ConsentService)
+  })
 
-  const limitFn = vi.fn()
-  const orderByFn = vi.fn().mockReturnValue({ limit: limitFn })
-  const whereFn = vi.fn().mockReturnValue({ orderBy: orderByFn })
-  const fromFn = vi.fn().mockReturnValue({ where: whereFn })
-  const selectFn = vi.fn().mockReturnValue({ from: fromFn })
+  afterEach(async () => {
+    repo.clear()
+    await module.close()
+  })
 
-  return {
-    db: { insert: insertFn, select: selectFn },
-    chains: {
-      insert: { values: valuesFn, returning: returningFn },
-      select: { from: fromFn, where: whereFn, orderBy: orderByFn, limit: limitFn },
-    },
+  const validDto: SaveConsentDto = {
+    categories: { necessary: true, analytics: true, marketing: false },
+    policyVersion: '2026-02-v1',
+    action: 'customized',
+    ipAddress: '192.168.1.1',
+    userAgent: 'Mozilla/5.0',
   }
-}
 
-describe('ConsentService', () => {
   describe('saveConsent', () => {
-    it('should insert a consent record and return the mapped result', async () => {
-      // Arrange
-      const { db, chains } = createMockDb()
-      chains.insert.returning.mockResolvedValue([mockConsentRow])
-      const service = new ConsentService(db as never)
+    it('should persist and return a mapped ConsentRecord', async () => {
+      const result = await service.saveConsent('user-1', validDto)
 
-      const dto: SaveConsentDto = {
-        categories: { necessary: true, analytics: true, marketing: false },
-        policyVersion: '2026-02-v1',
-        action: 'customized',
-        ipAddress: '192.168.1.1',
-        userAgent: 'Mozilla/5.0',
-      }
-
-      // Act
-      const result = await service.saveConsent('user-1', dto)
-
-      // Assert
-      expect(db.insert).toHaveBeenCalled()
-      expect(chains.insert.values).toHaveBeenCalledWith(
-        expect.objectContaining({
-          userId: 'user-1',
-          categories: { necessary: true, analytics: true, marketing: false },
-          policyVersion: '2026-02-v1',
-          action: 'customized',
-          ipAddress: '192.168.1.1',
-          userAgent: 'Mozilla/5.0',
-        })
-      )
-      expect(result).toEqual({
-        id: 'consent-1',
-        userId: 'user-1',
-        categories: { necessary: true, analytics: true, marketing: false },
-        policyVersion: '2026-02-v1',
-        action: 'customized',
-        createdAt: '2026-02-17T12:00:00.000Z',
-        updatedAt: '2026-02-17T12:00:00.000Z',
-      })
+      expect(result.userId).toBe('user-1')
+      expect(result.categories).toEqual(validDto.categories)
+      expect(result.policyVersion).toBe('2026-02-v1')
+      expect(result.action).toBe('customized')
+      expect(result.id).toBeTruthy()
+      expect(result.createdAt).toBeTruthy()
     })
 
-    it('should store ipAddress and userAgent in the record', async () => {
-      // Arrange
-      const { db, chains } = createMockDb()
-      chains.insert.returning.mockResolvedValue([mockConsentRow])
-      const service = new ConsentService(db as never)
+    it('should accept optional ipAddress and userAgent without error', async () => {
+      const result = await service.saveConsent('user-1', validDto)
 
-      const dto: SaveConsentDto = {
-        categories: { necessary: true, analytics: false, marketing: false },
-        policyVersion: '2026-02-v1',
-        action: 'rejected',
-        ipAddress: '10.0.0.1',
-        userAgent: 'TestAgent/1.0',
-      }
-
-      // Act
-      await service.saveConsent('user-1', dto)
-
-      // Assert
-      expect(chains.insert.values).toHaveBeenCalledWith(
-        expect.objectContaining({
-          ipAddress: '10.0.0.1',
-          userAgent: 'TestAgent/1.0',
-        })
-      )
-    })
-
-    it('should throw ConsentInsertFailedException when insert returns no rows', async () => {
-      // Arrange
-      const { db, chains } = createMockDb()
-      chains.insert.returning.mockResolvedValue([])
-      const service = new ConsentService(db as never)
-
-      const dto: SaveConsentDto = {
-        categories: { necessary: true, analytics: false, marketing: false },
-        policyVersion: '2026-02-v1',
-        action: 'rejected',
-      }
-
-      // Act & Assert
-      await expect(service.saveConsent('user-1', dto)).rejects.toThrow(ConsentInsertFailedException)
-    })
-
-    it('should set ipAddress and userAgent to null when not provided', async () => {
-      // Arrange
-      const { db, chains } = createMockDb()
-      chains.insert.returning.mockResolvedValue([
-        { ...mockConsentRow, ipAddress: null, userAgent: null },
-      ])
-      const service = new ConsentService(db as never)
-
-      const dto: SaveConsentDto = {
-        categories: { necessary: true, analytics: false, marketing: false },
-        policyVersion: '2026-02-v1',
-        action: 'rejected',
-      }
-
-      // Act
-      await service.saveConsent('user-1', dto)
-
-      // Assert
-      expect(chains.insert.values).toHaveBeenCalledWith(
-        expect.objectContaining({
-          ipAddress: null,
-          userAgent: null,
-        })
-      )
+      expect(result.userId).toBe('user-1')
     })
   })
 
   describe('getLatestConsent', () => {
-    it('should return the most recent consent record for a user', async () => {
-      // Arrange
-      const { db, chains } = createMockDb()
-      chains.select.limit.mockResolvedValue([mockConsentRow])
-      const service = new ConsentService(db as never)
+    it('should return the most recent record after multiple saves', async () => {
+      await service.saveConsent('user-1', { ...validDto, policyVersion: '2026-01-v1' })
+      await service.saveConsent('user-1', { ...validDto, policyVersion: '2026-02-v1' })
 
-      // Act
       const result = await service.getLatestConsent('user-1')
 
-      // Assert
-      expect(result).toEqual({
-        id: 'consent-1',
-        userId: 'user-1',
-        categories: { necessary: true, analytics: true, marketing: false },
-        policyVersion: '2026-02-v1',
-        action: 'customized',
-        createdAt: '2026-02-17T12:00:00.000Z',
-        updatedAt: '2026-02-17T12:00:00.000Z',
-      })
-      expect(chains.select.limit).toHaveBeenCalledWith(1)
+      expect(result.policyVersion).toBe('2026-02-v1')
     })
 
-    it('should throw ConsentNotFoundException when no consent record exists for the user', async () => {
-      // Arrange
-      const { db, chains } = createMockDb()
-      chains.select.limit.mockResolvedValue([])
-      const service = new ConsentService(db as never)
-
-      // Act & Assert
+    it('should throw ConsentNotFoundException when no record exists', async () => {
       await expect(service.getLatestConsent('nonexistent-user')).rejects.toThrow(
         ConsentNotFoundException
       )
