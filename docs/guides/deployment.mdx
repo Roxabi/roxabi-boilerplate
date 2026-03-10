@@ -479,13 +479,10 @@ Build settings are version-controlled in `vercel.json` files — no dashboard co
 
 ```json
 {
-  "ignoreCommand": "[ \"$VERCEL_GIT_COMMIT_REF\" != \"main\" ] || git diff $VERCEL_GIT_PREVIOUS_SHA --quiet -- apps/docs",
+  "ignoreCommand": "[ \"$VERCEL_GIT_COMMIT_REF\" != \"main\" ] || npx turbo-ignore @repo/docs",
   "installCommand": "bun install --ignore-scripts",
   "buildCommand": "bun run codegen && next build"
 }
-```
-
-> **Note:** `apps/docs` uses a `git diff` path filter for `ignoreCommand` instead of `turbo-ignore`, since it is a Next.js app with its own build pipeline rather than a Turbo task graph dependency.
 
 Nitro (TanStack Start) outputs to `.vercel/output/` using the Vercel Build Output API — no `outputDirectory` override needed.
 
