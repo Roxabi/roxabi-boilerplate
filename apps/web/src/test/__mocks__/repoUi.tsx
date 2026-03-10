@@ -260,8 +260,7 @@ export const AlertDialog = ({
 export const AlertDialogTrigger = ({
   children,
   asChild,
-}: React.PropsWithChildren<{ asChild?: boolean }>) =>
-  asChild ? <>{children}</> : <div>{children}</div>
+}: React.PropsWithChildren<{ asChild?: boolean }>) => (asChild ? children : <div>{children}</div>)
 
 export const AlertDialogAction = ({
   children,
@@ -356,21 +355,6 @@ export const DropdownMenuSubContent = ({ children }: React.PropsWithChildren) =>
 export const useInView = () => ({ ref: { current: null }, inView: true })
 
 export const useReducedMotion = () => false
-
-export const PresentationNav = ({
-  sections,
-}: {
-  sections?: ReadonlyArray<{ id: string; label: string }>
-  onEscape?: () => void
-}) => (
-  <nav data-testid="presentation-nav">
-    {sections?.map((s) => (
-      <button key={s.id} type="button">
-        {s.label}
-      </button>
-    ))}
-  </nav>
-)
 
 export const StatCounter = ({
   value,

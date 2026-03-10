@@ -4,7 +4,6 @@ import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/paraglide/messages', () => ({
   m: {
-    footer_changelog: () => 'Changelog',
     footer_copyright: ({ year }: { year: string }) => `Copyright ${year} Roxabi`,
     github_label: () => 'GitHub',
     footer_legal_notice: () => 'Legal Notice',
@@ -78,15 +77,6 @@ describe('Footer', () => {
 
     // Assert
     expect(screen.getByText(`Copyright ${year} Roxabi`)).toBeInTheDocument()
-  })
-
-  it('should render the changelog link', () => {
-    // Arrange & Act
-    render(<Footer />)
-
-    // Assert
-    const link = screen.getByRole('link', { name: 'Changelog' })
-    expect(link).toHaveAttribute('href', '/docs/changelog')
   })
 
   it('should render the GitHub link', () => {

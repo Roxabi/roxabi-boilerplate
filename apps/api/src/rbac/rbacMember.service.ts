@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common'
+import { Injectable } from '@nestjs/common'
 import { and, eq } from 'drizzle-orm'
 import { ClsService } from 'nestjs-cls'
 import type { DrizzleTx } from '../database/drizzle.provider.js'
@@ -18,8 +18,6 @@ import { RoleNotFoundException } from './exceptions/roleNotFound.exception.js'
  */
 @Injectable()
 export class RbacMemberService {
-  private readonly logger = new Logger(RbacMemberService.name)
-
   constructor(
     private readonly tenantService: TenantService,
     private readonly cls: ClsService

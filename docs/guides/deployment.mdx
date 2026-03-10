@@ -17,6 +17,7 @@ staging → PR to main → CI runs → Vercel auto-deploys to production
 |-----------|----------|---------|
 | Web (TanStack Start + Nitro) | Vercel | SSR, edge caching, Fluid compute |
 | API (NestJS + Fastify) | Vercel | Zero-config NestJS, Fluid compute, auto-scaling |
+| Docs (Fumadocs + Next.js) | Vercel | Static/ISR — deployed to `docs.app.roxabi.com` |
 | Database | Neon | Serverless PostgreSQL, not managed by Vercel |
 
 No Docker is needed for deployment. Docker configurations (Dockerfiles, `docker-compose.prod.yml`, Nginx configs, `deploy/`) remain in the repo for local development only.
@@ -46,7 +47,7 @@ Preview deploys are **manual only**, triggered via the GitHub Actions tab.
 1. Go to **Actions** → **Deploy Preview**
 2. Click **Run workflow**
 3. Select the branch (typically `staging`)
-4. Choose a target: `web`, `api`, or `both`
+4. Choose a target: `web`, `api`, `docs`, or `both`
 5. Click **Run workflow**
 
 The workflow builds and deploys a Vercel preview. The preview URL appears in the **workflow run summary**.
@@ -69,8 +70,10 @@ The **Deploy Preview** workflow requires these repository secrets:
 | `VERCEL_ORG_ID` | Vercel team/org ID | `.vercel/project.json` → `orgId` (after `vercel link`) |
 | `VERCEL_PROJECT_ID_WEB` | Vercel project ID for web | `apps/web/.vercel/project.json` → `projectId` |
 | `VERCEL_PROJECT_ID_API` | Vercel project ID for API | `apps/api/.vercel/project.json` → `projectId` |
+| `VERCEL_PROJECT_ID_DOCS` | Vercel project ID for docs | `apps/docs/.vercel/project.json` → `projectId` |
 | `NEON_API_KEY` | Neon API key (for preview DB branches) | [console.neon.tech](https://console.neon.tech) → Account → API Keys |
 | `NEON_PROJECT_ID` | Neon project ID | [console.neon.tech](https://console.neon.tech) → Project Settings |
+| `VERCEL_AUTOMATION_BYPASS_SECRET` | API project's Protection Bypass for Automation secret — injected into the web preview build so the Nitro proxy can forward requests to the SSO-protected API preview URL | Vercel dashboard → API project → Settings → Deployment Protection → Protection Bypass for Automation → Generate |
 
 Add them at **Settings** → **Secrets and variables** → **Actions** → **New repository secret**.
 
@@ -96,15 +99,16 @@ vercel login
 
 ## Initial Setup
 
-You need **two Vercel projects** pointing to the same GitHub repository — one for the web app and one for the API.
+You need **three Vercel projects** pointing to the same GitHub repository — one for the web app, one for the API, and one for the docs site.
 
 ### 1. Create Projects
 
-Create both projects from the Vercel dashboard (one-time setup):
+Create all three projects from the Vercel dashboard (one-time setup):
 
 1. Sign up at [vercel.com](https://vercel.com) and connect your GitHub account
 2. Click **Add New Project**, import the repository, set Root Directory to `apps/web`
 3. Repeat for `apps/api`
+4. Repeat for `apps/docs`
 
 Build settings are version-controlled in `apps/web/vercel.json` and `apps/api/vercel.json` — no manual configuration needed.
 
@@ -115,6 +119,7 @@ Link each app directory to its Vercel project:
 ```bash
 cd apps/web && vercel link
 cd apps/api && vercel link
+cd apps/docs && vercel link
 ```
 
 Select the matching project when prompted. This creates `.vercel/project.json` in each directory (gitignored).
@@ -137,6 +142,12 @@ curl -X PATCH -H "Authorization: Bearer $TOKEN" \
 # Disable for API project
 curl -X PATCH -H "Authorization: Bearer $TOKEN" \
   "https://api.vercel.com/v9/projects/<api-project-id>?teamId=$TEAM_ID" \
+  -H "Content-Type: application/json" \
+  -d '{"previewDeploymentsDisabled":true}'
+
+# Disable for Docs project
+curl -X PATCH -H "Authorization: Bearer $TOKEN" \
+  "https://api.vercel.com/v9/projects/<docs-project-id>?teamId=$TEAM_ID" \
   -H "Content-Type: application/json" \
   -d '{"previewDeploymentsDisabled":true}'
 ```
@@ -307,12 +318,13 @@ If you are forking the Roxabi Boilerplate to start your own SaaS project, follow
 
 ### 1. Create Vercel Projects
 
-Create **two Vercel projects** from the same GitHub repository:
+Create **three Vercel projects** from the same GitHub repository:
 
 1. Sign up at [vercel.com](https://vercel.com) and connect your GitHub account
 2. Click **Add New Project**, import the repository, set Root Directory to `apps/web`
 3. Repeat for a second project with Root Directory set to `apps/api`
-4. Link each project locally with `vercel link` (see [Initial Setup](#initial-setup) above)
+4. Repeat for a third project with Root Directory set to `apps/docs`
+5. Link each project locally with `vercel link` (see [Initial Setup](#initial-setup) above)
 
 ### 2. Create and Initialize the Neon Database
 
@@ -337,7 +349,7 @@ DATABASE_URL="<your-neon-connection-string>" bun run db:migrate
 
 ### 3. Configure GitHub Actions Secrets
 
-Add these 6 secrets at **Settings** &gt; **Secrets and variables** &gt; **Actions** &gt; **New repository secret**:
+Add these 8 secrets at **Settings** &gt; **Secrets and variables** &gt; **Actions** &gt; **New repository secret**:
 
 | Secret | Description | Where to find |
 |--------|-------------|---------------|
@@ -345,8 +357,10 @@ Add these 6 secrets at **Settings** &gt; **Secrets and variables** &gt; **Action
 | `VERCEL_ORG_ID` | Vercel team/org ID | `.vercel/project.json` &gt; `orgId` (after `vercel link`) |
 | `VERCEL_PROJECT_ID_WEB` | Vercel project ID for web | `apps/web/.vercel/project.json` &gt; `projectId` |
 | `VERCEL_PROJECT_ID_API` | Vercel project ID for API | `apps/api/.vercel/project.json` &gt; `projectId` |
+| `VERCEL_PROJECT_ID_DOCS` | Vercel project ID for docs | `apps/docs/.vercel/project.json` &gt; `projectId` |
 | `NEON_API_KEY` | Neon API key (for preview DB branches) | [console.neon.tech](https://console.neon.tech) &gt; Account &gt; API Keys |
 | `NEON_PROJECT_ID` | Neon project ID | [console.neon.tech](https://console.neon.tech) &gt; Project Settings |
+| `VERCEL_AUTOMATION_BYPASS_SECRET` | API project's Protection Bypass for Automation secret — injected into the web preview build so the Nitro proxy can forward requests to the SSO-protected API preview URL | Vercel dashboard &gt; API project &gt; Settings &gt; Deployment Protection &gt; Protection Bypass for Automation &gt; Generate |
 
 ### 4. Provision Upstash Redis (Rate Limiting)
 
@@ -367,7 +381,7 @@ Install the Resend integration for transactional emails:
 
 ### 6. Disable Automatic Preview Deployments
 
-Disable Vercel's automatic preview deployments on **both** projects to prevent rate-limit exhaustion. See [Disable Automatic Preview Deployments](#3-disable-automatic-preview-deployments) for the API commands.
+Disable Vercel's automatic preview deployments on **all three** projects to prevent rate-limit exhaustion. See [Disable Automatic Preview Deployments](#3-disable-automatic-preview-deployments) for the curl commands.
 
 ### 7. Deploy to Production
 
@@ -461,6 +475,18 @@ Build settings are version-controlled in `vercel.json` files — no dashboard co
 }
 ```
 
+**`apps/docs/vercel.json`:**
+
+```json
+{
+  "ignoreCommand": "[ \"$VERCEL_GIT_COMMIT_REF\" != \"main\" ] || git diff $VERCEL_GIT_PREVIOUS_SHA --quiet -- apps/docs",
+  "installCommand": "bun install --ignore-scripts",
+  "buildCommand": "bun run codegen && next build"
+}
+```
+
+> **Note:** `apps/docs` uses a `git diff` path filter for `ignoreCommand` instead of `turbo-ignore`, since it is a Next.js app with its own build pipeline rather than a Turbo task graph dependency.
+
 Nitro (TanStack Start) outputs to `.vercel/output/` using the Vercel Build Output API — no `outputDirectory` override needed.
 
 > **Important:** Dashboard build settings (Install Command, Build Command) must match `vercel.json` values. If they diverge, Vercel shows a "Configuration Settings differ" warning. Use the Vercel API to sync them if needed:
@@ -553,8 +579,8 @@ When deploying API previews, the Deploy Preview workflow creates an **isolated N
 
 | Step | What happens |
 |------|-------------|
-| `create-neon-branch` job | Creates a Neon branch named `preview/{branch}` with its own `DATABASE_URL` |
-| `deploy-api` job | Builds the API with the branch `DATABASE_URL`, runs `db:migrate` during build |
+| `deploy-api` job — Neon branch step | Creates (or recreates) a Neon branch named `preview/{branch}` with its own `DATABASE_URL`, then resets the schema for clean migrations |
+| `deploy-api` job — deploy step | Builds the API with the branch `DATABASE_URL`, runs `db:migrate` during build |
 | After review | Re-run the workflow with target `cleanup` to delete the Neon branch |
 
 **Cleanup:**
@@ -643,8 +669,8 @@ This requires **Vercel team SSO authentication** to access any deployment URL th
 | Option | Behavior | Trade-off |
 |--------|----------|-----------|
 | **A. Relax protection to production only** | Previews become publicly accessible | Anyone with the URL can access previews |
-| **B. Protection Bypass header** | CI health checks pass, humans still need SSO | Only useful for automation, not manual review |
-| **C. Accept the default** | All previews require SSO login | Most secure, but requires Vercel team membership |
+| **B. Protection Bypass for Automation** | Web→API proxy bypasses SSO transparently; CI health checks pass; humans still need SSO | Recommended — most secure option that still allows automated previews |
+| **C. Accept the default** | All previews require SSO login | Most secure, but preview deployments cannot communicate with each other |
 
 **Option A — Make previews public:**
 
@@ -665,15 +691,21 @@ curl -X PATCH -H "Authorization: Bearer $TOKEN" \
   -d '{"ssoProtection":{"deploymentType":"prod_deployment_urls_only"}}'
 ```
 
-**Option B — Protection Bypass for Automation:**
+**Option B — Protection Bypass for Automation (recommended):**
 
-Vercel supports a `x-vercel-protection-bypass` header that CI workflows can use to access protected preview URLs without SSO. Generate a bypass secret in the Vercel dashboard under **Settings** &gt; **Deployment Protection** &gt; **Protection Bypass for Automation**, then pass it as a header in health check requests:
+The Deploy Preview workflow integrates with Vercel's [Protection Bypass for Automation](https://vercel.com/docs/security/deployment-protection/methods-to-bypass-deployment-protection/protection-bypass-automation) to allow the web app's Nitro proxy to forward requests to the SSO-protected API preview without requiring team authentication.
 
-```bash
-curl -H "x-vercel-protection-bypass: <your-bypass-secret>" https://<preview-url>/api/health
-```
+**How it works:**
 
-**Option C — Keep the default:** No configuration needed. All team members log in via Vercel SSO to access preview URLs.
+1. Generate a bypass secret on the **API project**: Vercel dashboard → API project → Settings → Deployment Protection → Protection Bypass for Automation → **Generate**
+2. Add it as a GitHub Actions secret: `VERCEL_AUTOMATION_BYPASS_SECRET`
+3. The Deploy Preview workflow injects the secret at web build time via `--build-env`
+4. The Nitro proxy in `vite.config.ts` reads the secret and adds `x-vercel-protection-bypass` to every outgoing `/api/**` request (server-side, invisible to clients)
+5. The health check step also uses the secret to verify API preview accessibility
+
+The bypass secret is **only** active in preview environments (`VERCEL_ENV !== 'production'`), so production deployments are unaffected.
+
+**Option C — Keep the default:** No configuration needed. All team members log in via Vercel SSO to access preview URLs, but web→API communication in previews will fail (401 errors).
 
 ---
 
@@ -686,7 +718,7 @@ curl -H "x-vercel-protection-bypass: <your-bypass-secret>" https://<preview-url>
 - Free tier: 10s execution limit per request. Pro tier: 60s
 - 250MB max application size (Vercel Functions limitation)
 - `API_URL`, `APP_URL`, and `VITE_*` variables are declared in `turbo.jsonc` build env to ensure Turbo invalidates cache when they change
-- `apps/api/turbo.json` declares runtime secrets (database, auth) as `passThroughEnv` — these are available at runtime but don't affect build cache
+- Runtime secrets (database, auth, rate limiting) are declared as `globalPassThroughEnv` in root `turbo.jsonc` — these are available at runtime but don't affect build cache
 
 ---
 

@@ -1,6 +1,7 @@
 import { Badge, Button } from '@repo/ui'
 import { CheckCircle2, ExternalLink, Loader2 } from 'lucide-react'
 import { GITHUB_REPO_URL } from '@/lib/config'
+import { clientEnv } from '@/lib/env.shared'
 import { m } from '@/paraglide/messages'
 
 // --- Terminal Feed ---
@@ -191,7 +192,9 @@ export function HeroSection() {
               className="shadow-[0_0_24px_rgba(99,102,241,0.35)] transition-all duration-200 hover:shadow-[0_0_40px_rgba(99,102,241,0.55)]"
               asChild
             >
-              <a href="/docs">{m.hero_cta_start()}</a>
+              <a href={clientEnv.VITE_DOCS_URL ?? '#'} target="_blank" rel="noopener noreferrer">
+                {m.hero_cta_start()}
+              </a>
             </Button>
             <Button variant="outline" size="lg" className="transition-all duration-200" asChild>
               <a

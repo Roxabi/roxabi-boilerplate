@@ -1,0 +1,607 @@
+---
+title: "Plan: feat(talks): Lyra origin story — Product/Startup audience (52 Days)"
+issue: 451
+spec: artifacts/specs/451-lyra-product-startup-spec.mdx
+complexity: 4/10
+tier: F-lite
+generated: 2026-03-06
+---
+
+## Summary
+
+New scroll-snap presentation at `/talks/lyra-product` for startup/product audiences.
+18 sections, warm amber/orange palette, i18n FR/EN, single-mode (no toggle).
+Pattern: lyra-dev (`apps/web/src/components/presentation/lyra-dev/`). Single frontend-dev agent.
+
+## Reference Patterns
+
+- Route pattern: `apps/web/src/routes/talks/lyra-dev.tsx` + `lyra-dev.lazy.tsx`
+- Section pattern: `apps/web/src/components/presentation/lyra-dev/AbandonedQuestSection.tsx`
+- Config pattern: `apps/web/src/components/presentation/lyra-dev/devConfig.ts`
+- i18n pattern: `apps/web/messages/en.json` keys `talk_ld_*`
+- Talks index: `apps/web/src/routes/talks/index.tsx`
+
+## Agents
+
+| Agent | Tasks | Domain |
+|-------|-------|--------|
+| frontend-dev | T1–T29 | All implementation |
+
+## i18n Key Inventory
+
+### Nav keys (18)
+
+```
+talk_lp_nav_title          → "52 Days" / "52 Jours"
+talk_lp_nav_wrong_bet      → "Wrong Bet" / "Mauvais Pari"
+talk_lp_nav_pivot          → "Pivot" / "Pivot"
+talk_lp_nav_kill           → "Kill Darlings" / "Tuer ses Chéris"
+talk_lp_nav_foundation     → "Foundation" / "Fondation"
+talk_lp_nav_radar          → "Radar" / "Radar"
+talk_lp_nav_telegram       → "Ship It" / "Shipper"
+talk_lp_nav_process        → "Process" / "Processus"
+talk_lp_nav_changelog      → "Changelog" / "Changelog"
+talk_lp_nav_explosion      → "One Day" / "Un Jour"
+talk_lp_nav_voice          → "Voice" / "Voix"
+talk_lp_nav_night          → "The Night" / "La Nuit"
+talk_lp_nav_identity       → "Identity" / "Identité"
+talk_lp_nav_ecosystem      → "Ecosystem" / "Écosystème"
+talk_lp_nav_numbers        → "Numbers" / "Chiffres"
+talk_lp_nav_four_days      → "4 Days" / "4 Jours"
+talk_lp_nav_lesson         → "Lesson" / "Leçon"
+talk_lp_nav_closing        → "Closing" / "Conclusion"
+```
+
+### Section content keys
+
+**title (8 keys)**
+```
+talk_lp_title_badge        → "Lyra Origin Talks" / "Lyra Origin Talks"
+talk_lp_title_title        → "52 Days from Zero to Ecosystem" / "52 Jours de Zéro à l'Écosystème"
+talk_lp_title_subtitle     → "Iteration speed · Kill your darlings · Ecosystem emergence" / "Vitesse d'itération · Tuer ses chéris · Émergence d'écosystème"
+talk_lp_title_epigraph     → "What you thought was a side project was actually a laboratory." / "Ce que tu croyais être un projet perso était en réalité un laboratoire."
+talk_lp_title_prompt       → "SCROLL TO START" / "DÉFILER POUR COMMENCER"
+talk_lp_title_stat1        → "52 days" / "52 jours"
+talk_lp_title_stat2        → "6 repos" / "6 repos"
+talk_lp_title_stat3        → "1 ecosystem" / "1 écosystème"
+```
+
+**wrong-bet (7 keys)**
+```
+talk_lp_wrong_date         → "D01-05 · January 12-17" / "D01-05 · 12-17 janvier"
+talk_lp_wrong_title        → "The Wrong Bet" / "Le Mauvais Pari"
+talk_lp_wrong_label        → "MCP Google Workspace · 5 days" / "MCP Google Workspace · 5 jours"
+talk_lp_wrong_body         → "The 'right way' isn't always the right way. MCP was well-documented, standard protocol — everything a good engineer would reach for. 5 days of rigid callbacks, opaque errors, zero flexibility." / "La 'bonne façon' n'est pas toujours la bonne façon. MCP était bien documenté, protocole standard — tout ce qu'un bon ingénieur choisirait. 5 jours de callbacks rigides, erreurs opaques, flexibilité nulle."
+talk_lp_wrong_lesson_label → "LESSON #1" / "LEÇON #1"
+talk_lp_wrong_lesson       → "The right way for others isn't always the right way for your problem." / "La bonne façon des autres n'est pas toujours la bonne façon pour ton problème."
+talk_lp_wrong_cost         → "Cost: 5 days" / "Coût : 5 jours"
+```
+
+**pivot-speed (5 keys)**
+```
+talk_lp_pivot_date         → "D05 · January 17" / "D05 · 17 janvier"
+talk_lp_pivot_title        → "Kill It. Move Fast." / "Tue-le. Avance Vite."
+talk_lp_pivot_body         → "Decision in one commit. Complete migration to Python direct. Everything accelerates immediately — first new skills in 2 days." / "Décision en un commit. Migration complète vers Python direct. Tout s'accélère immédiatement — premiers nouveaux skills en 2 jours."
+talk_lp_pivot_stat         → "Day 5 → Python direct → 3 new skills in 4 days" / "Jour 5 → Python direct → 3 nouveaux skills en 4 jours"
+talk_lp_pivot_insight      → "The moment you kill the wrong bet, the timeline resets." / "Le moment où tu tues le mauvais pari, le compteur repart."
+```
+
+**kill-darlings (7 keys)**
+```
+talk_lp_kill_date          → "D12 · Mid-January" / "D12 · Mi-Janvier"
+talk_lp_kill_title         → "Kill Your Darlings" / "Tuez vos Chéris"
+talk_lp_kill_commit        → "cfa0ce3: Remove linkedin-jobs skill — not used and ineffective" / "cfa0ce3 : Remove linkedin-jobs skill — not used and ineffective"
+talk_lp_kill_label         → "4 days of work · Deleted in 1 commit" / "4 jours de travail · Supprimé en 1 commit"
+talk_lp_kill_lesson_label  → "LESSON #3" / "LEÇON #3"
+talk_lp_kill_lesson        → "No sunk cost fallacy. A feature that doesn't work → delete it." / "Pas de sunk cost fallacy. Un skill qui ne fonctionne pas → supprimez-le."
+talk_lp_kill_badge         → "DELETED" / "SUPPRIMÉ"
+```
+
+**shared-foundation (8 keys)**
+```
+talk_lp_foundation_date    → "D09-12 · Late January" / "D09-12 · Fin Janvier"
+talk_lp_foundation_title   → "The First Compound Investment" / "Le Premier Investissement Composé"
+talk_lp_foundation_before  → "240 lines / script" / "240 lignes / script"
+talk_lp_foundation_after   → "10 lines / script" / "10 lignes / script"
+talk_lp_foundation_label   → "_shared/ modules" / "modules _shared/"
+talk_lp_foundation_body    → "Every skill reimplemented auth, env loading, error handling. One shared layer — immediate return on every script written after." / "Chaque skill réimplémentait l'auth, le chargement des variables, la gestion d'erreur. Une couche partagée — retour immédiat sur chaque script écrit ensuite."
+talk_lp_foundation_lesson_label → "LESSON #2" / "LEÇON #2"
+talk_lp_foundation_lesson  → "Mutualize at the second duplication. Not the third." / "Mutualisez à la deuxième duplication. Pas à la troisième."
+```
+
+**knowledge-radar (11 keys)**
+```
+talk_lp_radar_date         → "D22 · January 22" / "D22 · 22 janvier"
+talk_lp_radar_title        → "Build Your Radar" / "Construisez votre Radar"
+talk_lp_radar_subtitle     → "389 entries · 52 days of active intelligence" / "389 entrées · 52 jours d'intelligence active"
+talk_lp_radar_body         → "Not just bookmarking — active competitive intelligence. Every architectural decision validated or invalidated in real time by what others were building." / "Pas du bookmarking — de l'intelligence concurrentielle active. Chaque décision architecturale validée ou invalidée en temps réel par ce que les autres construisaient."
+talk_lp_radar_stat1_label  → "X / Twitter" / "X / Twitter"
+talk_lp_radar_stat1        → "214" / "214"
+talk_lp_radar_stat2_label  → "GitHub repos" / "Repos GitHub"
+talk_lp_radar_stat2        → "52" / "52"
+talk_lp_radar_stat3_label  → "Total entries" / "Entrées totales"
+talk_lp_radar_stat3        → "389" / "389"
+talk_lp_radar_insight      → "Your competitive advantage is how fast you learn, not how fast you code." / "Votre avantage concurrentiel est votre vitesse d'apprentissage, pas votre vitesse de code."
+```
+
+**telegram-anywhere (7 keys)**
+```
+talk_lp_telegram_date      → "D22-24 · January 22-24" / "D22-24 · 22-24 janvier"
+talk_lp_telegram_title     → "Ship It. Off the Desk." / "Shippez. Lâchez le Bureau."
+talk_lp_telegram_body      → "Telegram bot live. Your assistant is no longer tied to a chair. Mobile, in bed, at 6:34am before the first coffee." / "Bot Telegram en prod. Votre assistant n'est plus attaché à une chaise. Mobile, au lit, à 6h34 avant le premier café."
+talk_lp_telegram_stat      → "Day 1: 20 sessions · 105 messages" / "Jour 1 : 20 sessions · 105 messages"
+talk_lp_telegram_insight   → "Constraint removal > feature addition." / "Supprimer une contrainte > ajouter une feature."
+talk_lp_telegram_label     → "FIRST SESSION" / "PREMIÈRE SESSION"
+talk_lp_telegram_time      → "6:34 AM" / "6h34"
+```
+
+**industrial-turn (9 keys)**
+```
+talk_lp_process_date       → "D26-31 · January 26-31" / "D26-31 · 26-31 janvier"
+talk_lp_process_title      → "Spec First, Code After" / "Spec d'Abord, Code Ensuite"
+talk_lp_process_body       → "259 commits in 17 days. But more importantly: the shift from 'code first, regrets later' to 'spec first, code after'. linkedin-jobs would have been avoided. The 4 bot refactors would have been 1." / "259 commits en 17 jours. Mais surtout : le passage de 'code first, regrets later' à 'spec first, code after'. linkedin-jobs aurait été évité. Les 4 refactors du bot auraient été 1."
+talk_lp_process_stat       → "259 commits · 17 days · ~15/day" / "259 commits · 17 jours · ~15/jour"
+talk_lp_process_rule1_label → "BEFORE" / "AVANT"
+talk_lp_process_rule1      → "Code first. Regrets later." / "Code first. Regrets later."
+talk_lp_process_rule2_label → "AFTER" / "APRÈS"
+talk_lp_process_rule2      → "Spec first. Code after." / "Spec first. Code after."
+talk_lp_process_milestone  → "The system is stable. It can now handle complex requests without breaking." / "Le système est stable. Il peut maintenant traiter des requêtes complexes sans planter."
+```
+
+**patch-notes (8 keys)**
+```
+talk_lp_patch_title        → "What You Remove Defines You" / "Ce que vous Supprimez vous Définit"
+talk_lp_patch_version      → "PATCH 1.4.0 — January 31" / "PATCH 1.4.0 — 31 janvier"
+talk_lp_patch_removed1     → "Linear (too heavy for solo builder)" / "Linear (trop lourd pour un solo builder)"
+talk_lp_patch_removed2     → "261 mypy errors (resolved in one legendary commit)" / "261 erreurs mypy (résolues en un seul commit légendaire)"
+talk_lp_patch_added1       → "GitHub Issues as official task system" / "GitHub Issues comme système de tâches officiel"
+talk_lp_patch_added2       → "Strict mypy config" / "Config mypy stricte"
+talk_lp_patch_added3       → "Session persistence JSONL" / "Persistance de sessions JSONL"
+talk_lp_patch_insight      → "Every deletion is a statement about what matters." / "Chaque suppression est une déclaration sur ce qui compte."
+```
+
+**the-day (10 keys)**
+```
+talk_lp_day_date           → "D47 · February 28" / "D47 · 28 février"
+talk_lp_day_title          → "One Day. Three Repos." / "Un Jour. Trois Repos."
+talk_lp_day_body           → "February 28 — the most intense non-debugging day. Three new systems born in parallel, all from real needs identified during 2ndBrain." / "28 février — la journée la plus intense hors debug. Trois nouveaux systèmes nés en parallèle, tous issus de besoins réels identifiés dans 2ndBrain."
+talk_lp_day_item1_label    → "voiceCLI" / "voiceCLI"
+talk_lp_day_item1          → "TTS + STT CLI — Qwen3, Chatterbox, Whisper. Born from Telegram's need for voice." / "CLI TTS + STT — Qwen3, Chatterbox, Whisper. Né du besoin vocal de Telegram."
+talk_lp_day_item2_label    → "roxabi-plugins" / "roxabi-plugins"
+talk_lp_day_item2          → "Open-source marketplace — 1 → 11 plugins in 4 days." / "Marketplace open-source — 1 → 11 plugins en 4 jours."
+talk_lp_day_item3_label    → "roxabi-claude-config" / "roxabi-claude-config"
+talk_lp_day_item3          → "Shared config + alias lyra='ssh mickael@machine1'" / "Config partagée + alias lyra='ssh mickael@machine1'"
+talk_lp_day_insight        → "Ecosystems don't emerge from planning. They emerge from compounding." / "Les écosystèmes n'émergent pas de la planification. Ils émergent du compounding."
+```
+
+**voice (9 keys)**
+```
+talk_lp_voice_date         → "D47 · February 28" / "D47 · 28 février"
+talk_lp_voice_title        → "A New Modality" / "Une Nouvelle Modalité"
+talk_lp_voice_before_label → "BEFORE" / "AVANT"
+talk_lp_voice_before       → "~15 seconds / message" / "~15 secondes / message"
+talk_lp_voice_after_label  → "AFTER (qwen-fast)" / "APRÈS (qwen-fast)"
+talk_lp_voice_after        → "~2-3 seconds / message" / "~2-3 secondes / message"
+talk_lp_voice_stat         → "Qwen-fast + CUDA graphs = 5-9× faster" / "Qwen-fast + CUDA graphs = 5-9× plus rapide"
+talk_lp_voice_body         → "First commit: fix PyTorch for RTX 5070 Ti (Blackwell). By end of day: voice generation viable for real-time Telegram conversation." / "Premier commit : fix PyTorch pour RTX 5070 Ti (Blackwell). En fin de journée : génération vocale viable pour Telegram en temps réel."
+talk_lp_voice_insight      → "The right hardware investment pays off in one day." / "Le bon investissement hardware se rembourse en une journée."
+```
+
+**the-night (9 keys)**
+```
+talk_lp_night_date         → "D50 · March 1" / "D50 · 1er mars"
+talk_lp_night_title        → "The Night Everything Changed" / "La Nuit où Tout a Changé"
+talk_lp_night_t1           → "00:14 — Generate a rich emotional vocal" / "00:14 — Génère un vocal riche d'émotion"
+talk_lp_night_t2           → "00:50 — Let's design the voice together" / "00:50 — Ok, on design la voix ensemble"
+talk_lp_night_t3           → "01:24 — First voice profile: intellectual, quietly brilliant" / "01:24 — Premier profil vocal : femme intellectuelle, timide mais brillante"
+talk_lp_night_t4           → "08:26 — Why did we go from Lyra to Solene?" / "08:26 — Pourquoi on est passé de Lyra à Solene ?"
+talk_lp_night_t5           → "22:24 — Make me a 5-minute vocal on how to build your new engine" / "22:24 — Fait moi un vocal d'au moins 5min sur comment construire ton nouveau moteur"
+talk_lp_night_stat         → "38 sessions · 266 messages · 1 day" / "38 sessions · 266 messages · 1 jour"
+talk_lp_night_insight      → "The first time you ask your creation to explain itself — that's when it becomes real." / "La première fois que vous demandez à votre création de s'expliquer — c'est à ce moment qu'elle devient réelle."
+```
+
+**lyra-not-solene (9 keys)**
+```
+talk_lp_identity_title     → "Names Matter" / "Les Noms Comptent"
+talk_lp_identity_label     → "The Identity Test" / "Le Test d'Identité"
+talk_lp_identity_body      → "Solene appeared in a midnight voice brainstorm. She lasted a few hours. Lyra was the answer that had been there all along." / "Solene est apparue dans un brainstorm vocal nocturne. Elle a duré quelques heures. Lyra était la réponse qui avait toujours été là."
+talk_lp_identity_wrong_label → "TESTED" / "TESTÉ"
+talk_lp_identity_wrong     → "Solene" / "Solene"
+talk_lp_identity_right_label → "THE ANSWER" / "LA RÉPONSE"
+talk_lp_identity_right     → "Lyra" / "Lyra"
+talk_lp_identity_right_body → "The free electron — non liée à un atome fixe." / "L'électron libre — non liée à un atome fixe."
+talk_lp_identity_insight   → "The name is the concept. Get the concept right." / "Le nom est le concept. Trouvez le bon concept."
+```
+
+**the-ecosystem (7 keys)**
+```
+talk_lp_ecosystem_title    → "Emergence, Not Planning" / "Émergence, Pas Planification"
+talk_lp_ecosystem_body     → "6 repos. All feeding each other. None of it was planned." / "6 repos. Tous qui se nourrissent mutuellement. Rien de tout ça n'était planifié."
+talk_lp_ecosystem_label    → "6 REPOS · 1 ECOSYSTEM" / "6 REPOS · 1 ÉCOSYSTÈME"
+talk_lp_ecosystem_insight  → "You don't build an ecosystem. You build things that deserve each other." / "On ne construit pas un écosystème. On construit des choses qui se méritent."
+talk_lp_ecosystem_repo1    → "2ndBrain → dev process, architecture decisions" / "2ndBrain → process de dev, décisions d'architecture"
+talk_lp_ecosystem_repo2    → "roxabi_boilerplate → consumes dev-core from day 1" / "roxabi_boilerplate → consomme dev-core dès le jour 1"
+talk_lp_ecosystem_repo3    → "voiceCLI + roxabi-plugins + claude-config → 1 day" / "voiceCLI + roxabi-plugins + claude-config → 1 jour"
+```
+
+**the-numbers (14 keys)**
+```
+talk_lp_numbers_title      → "52 Days" / "52 Jours"
+talk_lp_numbers_stat1_label → "Commits (2ndBrain)" / "Commits (2ndBrain)"
+talk_lp_numbers_stat1      → "462" / "462"
+talk_lp_numbers_stat2_label → "Knowledge entries" / "Entrées de veille"
+talk_lp_numbers_stat2      → "389" / "389"
+talk_lp_numbers_stat3_label → "Bot sessions" / "Sessions bot"
+talk_lp_numbers_stat3      → "194" / "194"
+talk_lp_numbers_stat4_label → "Days to ecosystem" / "Jours vers l'écosystème"
+talk_lp_numbers_stat4      → "52" / "52"
+talk_lp_numbers_stat5_label → "Open-source plugins" / "Plugins open-source"
+talk_lp_numbers_stat5      → "11" / "11"
+talk_lp_numbers_stat6_label → "Active repos" / "Repos actifs"
+talk_lp_numbers_stat6      → "6" / "6"
+talk_lp_numbers_insight    → "Each number is a decision made, not a feature shipped." / "Chaque chiffre est une décision prise, pas une feature livrée."
+```
+
+**lyra-in-4-days (8 keys)**
+```
+talk_lp_outcome_date       → "D52-55 · March 1-4" / "D52-55 · 1-4 mars"
+talk_lp_outcome_title      → "52 Days → 4 Days" / "52 Jours → 4 Jours"
+talk_lp_outcome_body       → "March 1: first commit. March 4: SimpleLyraAgent receives first end-to-end message. Hub, 2 channel adapters, CI, 8 ADRs, full documentation." / "1er mars : premier commit. 4 mars : SimpleLyraAgent reçoit le premier message end-to-end. Hub, 2 adaptateurs, CI, 8 ADRs, documentation complète."
+talk_lp_outcome_j1         → "J+1: Hub skeleton — asyncio bus + bindings + pools" / "J+1 : Squelette hub — bus asyncio + bindings + pools"
+talk_lp_outcome_j2         → "J+2: Telegram + Discord adapters" / "J+2 : Adaptateurs Telegram + Discord"
+talk_lp_outcome_j3         → "J+3: CI, pre-commit, 8 ADRs documented from day 1" / "J+3 : CI, pre-commit, 8 ADRs documentés dès le départ"
+talk_lp_outcome_j4         → "J+4: SimpleLyraAgent — first E2E message" / "J+4 : SimpleLyraAgent — premier message E2E"
+talk_lp_outcome_insight    → "52 days of learnings compressed into 4 days of build. That's what a laboratory is for." / "52 jours d'apprentissages compressés en 4 jours de construction. C'est à ça que sert un laboratoire."
+```
+
+**the-lesson (6 keys)**
+```
+talk_lp_lesson_title       → "The Laboratory" / "Le Laboratoire"
+talk_lp_lesson_epigraph    → "2ndBrain was a laboratory. Everything else is the engine." / "2ndBrain était un laboratoire. Tout le reste est le moteur."
+talk_lp_lesson_body        → "Every 'mistake' was information. Every refactor was a discovery. The debt wasn't failure — it was the price of fast learning." / "Chaque 'erreur' était une information. Chaque refactor était une découverte. La dette n'était pas un échec — c'était le prix de l'apprentissage rapide."
+talk_lp_lesson_p1          → "Wrong bets are data" / "Les mauvais paris sont des données"
+talk_lp_lesson_p2          → "Kill darlings without regret" / "Tuer ses chéris sans regret"
+talk_lp_lesson_p3          → "Compound early — invest in shared foundation" / "Capitaliser tôt — investir dans les fondations partagées"
+talk_lp_lesson_p4          → "Your lab is your competitive advantage" / "Votre labo est votre avantage concurrentiel"
+```
+
+**closing (5 keys)**
+```
+talk_lp_closing_title      → "Build Your Lab" / "Construisez votre Labo"
+talk_lp_closing_body       → "The ecosystem you see today didn't start as an ecosystem. It started with one wrong bet — and the discipline to kill it in 5 days." / "L'écosystème que vous voyez aujourd'hui n'a pas commencé comme un écosystème. Il a commencé par un mauvais pari — et la discipline de le tuer en 5 jours."
+talk_lp_closing_cta        → "What's your laboratory?" / "C'est quoi votre laboratoire ?"
+talk_lp_closing_links_label → "FIND LYRA" / "TROUVER LYRA"
+talk_lp_closing_contact    → "Links & contact" / "Liens & contact"
+```
+
+**Talks index additions (2 keys)**
+```
+talk_index_lyraproduct_title    → "52 Days" / "52 Jours"
+talk_index_lyraproduct_subtitle → "Product decisions, iteration speed & ecosystem emergence" / "Décisions produit, vitesse d'itération & émergence d'écosystème"
+```
+
+**Total i18n keys: 18 nav + ~155 content + 2 index = ~175 keys**
+
+## Micro-Tasks
+
+### Slice S1 — Route Infrastructure
+
+**T1 — Create `productConfig.ts`** [P]
+```
+File: apps/web/src/components/presentation/lyra-product/productConfig.ts
+Agent: frontend-dev
+Spec: R1, U14
+Phase: GREEN
+Difficulty: 1
+Time: 5 min
+```
+Shape:
+```ts
+export type ProductPhaseColor = 'amber' | 'orange' | 'rose' | 'cyan'
+export type ProductSectionConfig = { phase: string; day: string; color: ProductPhaseColor }
+export const productSections: Record<string, ProductSectionConfig> = {
+  'title': { phase: 'INTRO', day: 'D00', color: 'amber' },
+  'wrong-bet': { phase: 'WRONG_BET', day: 'D01-05', color: 'rose' },
+  'pivot-speed': { phase: 'PIVOT', day: 'D05', color: 'orange' },
+  'kill-darlings': { phase: 'KILL_IT', day: 'D12', color: 'rose' },
+  'shared-foundation': { phase: 'COMPOUND', day: 'D09-12', color: 'amber' },
+  'knowledge-radar': { phase: 'RADAR', day: 'D22', color: 'cyan' },
+  'telegram-anywhere': { phase: 'SHIP_IT', day: 'D22-24', color: 'orange' },
+  'industrial-turn': { phase: 'PROCESS', day: 'D26-31', color: 'amber' },
+  'patch-notes': { phase: 'CHANGELOG', day: 'D31', color: 'amber' },
+  'the-day': { phase: 'EXPLOSION', day: 'D47', color: 'orange' },
+  'voice': { phase: 'NEW_MODE', day: 'D47', color: 'cyan' },
+  'the-night': { phase: 'TURNING_PT', day: 'D50', color: 'rose' },
+  'lyra-not-solene': { phase: 'IDENTITY', day: 'D50', color: 'amber' },
+  'the-ecosystem': { phase: 'ECOSYSTEM', day: 'D47-54', color: 'cyan' },
+  'the-numbers': { phase: 'METRICS', day: '—', color: 'amber' },
+  'lyra-in-4-days': { phase: 'OUTCOME', day: 'D52-55', color: 'orange' },
+  'the-lesson': { phase: 'LESSON', day: '—', color: 'amber' },
+  'closing': { phase: 'NEXT', day: '—', color: 'amber' },
+}
+export const colorMap: Record<ProductPhaseColor, { text: string; border: string; bg: string; glow: string }> = {
+  amber:  { text: 'text-amber-400', border: 'border-amber-400/30', bg: 'bg-amber-500/8', glow: 'rgba(245,158,11,0.15)' },
+  orange: { text: 'text-orange-400', border: 'border-orange-400/30', bg: 'bg-orange-500/8', glow: 'rgba(249,115,22,0.15)' },
+  rose:   { text: 'text-rose-400', border: 'border-rose-400/30', bg: 'bg-rose-500/8', glow: 'rgba(244,63,94,0.15)' },
+  cyan:   { text: 'text-cyan-400', border: 'border-cyan-400/30', bg: 'bg-cyan-500/8', glow: 'rgba(34,211,238,0.15)' },
+}
+export type SectionId = keyof typeof productSections
+export const PRODUCT_SECTION_IDS = Object.keys(productSections) as string[]
+```
+Verify: `cd ../roxabi-451 && bun run typecheck 2>&1 | grep lyra-product | wc -l` → 0 errors
+
+**T2 — Create `lyra-product.tsx` (route + search schema)** [P]
+```
+File: apps/web/src/routes/talks/lyra-product.tsx
+Agent: frontend-dev
+Spec: R1, U7-U11
+Phase: GREEN
+Difficulty: 1
+Time: 5 min
+```
+Shape: copy lyra-dev.tsx pattern exactly — `AVATAR_VARIANTS`, `AVATAR_SIZES`, `AVATAR_POSITIONS`, searchSchema with `avatar/avatarSize/avatarPos`, `createFileRoute('/talks/lyra-product')`.
+Verify: `ls apps/web/src/routes/talks/lyra-product.tsx` → file exists
+
+**T3 — Create `SectionChrome.tsx`** [dep: T1]
+```
+File: apps/web/src/components/presentation/lyra-product/SectionChrome.tsx
+Agent: frontend-dev
+Spec: U14, SC-9
+Phase: GREEN
+Difficulty: 1
+Time: 5 min
+```
+Shape: read `productSections[sectionId]` → render phase label + day in `colorMap[color].text` top-left, `hidden md:flex`. Same structure as lyra-dev `SectionChrome.tsx`.
+Verify: component renders with correct phase/day labels
+
+**T4 — Create `lyra-product.lazy.tsx` (full shell)** [dep: T1, T2]
+```
+File: apps/web/src/routes/talks/lyra-product.lazy.tsx
+Agent: frontend-dev
+Spec: U1-U13, SC-1 to SC-5
+Phase: GREEN
+Difficulty: 2
+Time: 15 min
+```
+Shape: mirror lyra-dev.lazy.tsx — `createLazyFileRoute('/talks/lyra-product')`, `LyraDevPresentation`-equivalent with:
+- `data-presentation data-mode="product"` root div with `bg-[#0d0a07]`
+- Roxabi wordmark: `font-mono text-xs text-amber-400/50 hover:text-amber-400`
+- Top-right: `LocaleSwitcher` + `ThemeToggle` (no ModeToggle)
+- Bottom-left: progress counter `{idx+1} / {total}` in `text-amber-400/40`
+- `LyraCompanion` avatar: `stage={currentSectionIndex}` + hover controls
+- Keyboard: V/[/]/P shortcuts via `useEffect` + `avatarParamsRef`
+- `IntersectionObserver` on `PRODUCT_SECTION_IDS`
+- `PresentationNav` with `sections` array using `m.talk_lp_nav_*()` labels
+- 18 `SectionContainer` + `SectionChrome` placeholders (stub content divs initially)
+- `useSearch({ from: '/talks/lyra-product' })` for avatar params
+Verify: route renders 18 scroll sections at localhost:3000/talks/lyra-product
+
+**T5 — Update `/talks` index** [P]
+```
+File: apps/web/src/routes/talks/index.tsx
+Agent: frontend-dev
+Spec: SC-15
+Phase: GREEN
+Difficulty: 1
+Time: 5 min
+```
+Shape: add 5th card after lyra-dev card. Change grid to `sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5`.
+Add: `<Link to="/talks/lyra-product">` with `TrendingUp` icon, `bg-amber-500/10 text-amber-500`,
+`m.talk_index_lyraproduct_title()`, `m.talk_index_lyraproduct_subtitle()`.
+Verify: `/talks` shows 5 cards
+
+**T6 — Run codegen** [dep: T2, T4, T5]
+```
+Command: cd apps/web && bun run codegen
+Agent: frontend-dev
+Spec: SC-16
+Phase: GREEN
+Time: 2 min
+```
+Verify: `grep lyra-product apps/web/src/routeTree.gen.ts` → route present
+
+### Slice S3 — i18n Keys
+
+**T7 — Add all `talk_lp_*` keys to `en.json`** [P]
+```
+File: apps/web/messages/en.json
+Agent: frontend-dev
+Spec: SC-12, SC-14
+Phase: GREEN
+Difficulty: 2
+Time: 15 min
+```
+Add all ~175 English keys from the i18n inventory above. Keys: 18 nav + 8 title + 7 wrong + 5 pivot + 7 kill + 8 foundation + 11 radar + 7 telegram + 9 process + 8 patch + 10 day + 9 voice + 9 night + 9 identity + 7 ecosystem + 14 numbers + 8 outcome + 6 lesson + 5 closing + 2 index = ~175 keys.
+Verify: `bun run i18n:check` → 0 missing EN keys for `talk_lp_*`
+
+**T8 — Add all `talk_lp_*` keys to `fr.json`** [P, dep: T7 for key list]
+```
+File: apps/web/messages/fr.json
+Agent: frontend-dev
+Spec: SC-12, SC-14
+Phase: GREEN
+Difficulty: 2
+Time: 15 min
+```
+Add all ~175 French keys from the i18n inventory above.
+Verify: `bun run i18n:check` → 0 missing FR keys for `talk_lp_*`
+
+**T9 — Regenerate paraglide messages** [dep: T7, T8]
+```
+Command: cd apps/web && bun run codegen
+Phase: GREEN
+Time: 1 min
+```
+Verify: `m.talk_lp_title_title` accessible in TSX files
+
+### Slice S4 — Sections 1–6
+
+**T10 — TitleSection** [dep: T9, P with T11-T15]
+```
+File: apps/web/src/components/presentation/lyra-product/TitleSection.tsx
+Agent: frontend-dev
+Phase: GREEN / Difficulty: 2 / Time: 10 min
+```
+Layout: centered, full-screen. Ambient amber glow (3 blurs). Badge (`talk_lp_title_badge`). H1 amber gradient (`talk_lp_title_title`). Subtitle muted (`talk_lp_title_subtitle`). Blockquote epigraph (`talk_lp_title_epigraph`). 3 stat chips (52d · 6 repos · 1 ecosystem) in a row. Scroll prompt pulse.
+
+**T11 — WrongBetSection** [dep: T9, P]
+```
+File: apps/web/src/components/presentation/lyra-product/WrongBetSection.tsx
+Phase: GREEN / Difficulty: 2 / Time: 10 min
+```
+Layout: date + title in rose. "MCP log" terminal box (border rose-400/30, bg rose-500/5) showing protocol errors metaphor. Cost badge (5 days). Lesson callout (amber badge + italic quote).
+
+**T12 — PivotSpeedSection** [dep: T9, P]
+```
+File: apps/web/src/components/presentation/lyra-product/PivotSpeedSection.tsx
+Phase: GREEN / Difficulty: 2 / Time: 8 min
+```
+Layout: date + title in orange. Simple "before → after" visual (MCP crossed → Python arrow). Stat chip. Insight quote in amber blockquote.
+
+**T13 — KillDarlingsSection** [dep: T9, P]
+```
+File: apps/web/src/components/presentation/lyra-product/KillDarlingsSection.tsx
+Phase: GREEN / Difficulty: 2 / Time: 10 min
+```
+Layout: date + title in rose. "Commit log" box showing `cfa0ce3` commit in monospace (border rose/30). Label chip. Lesson callout. "DELETED" badge variant.
+
+**T14 — SharedFoundationSection** [dep: T9, P]
+```
+File: apps/web/src/components/presentation/lyra-product/SharedFoundationSection.tsx
+Phase: GREEN / Difficulty: 2 / Time: 10 min
+```
+Layout: date + title in amber. Before/After stat boxes side-by-side (240 lines → 10 lines, large numbers). `_shared/` label chip. Body text. Lesson callout.
+
+**T15 — KnowledgeRadarSection** [dep: T9, P]
+```
+File: apps/web/src/components/presentation/lyra-product/KnowledgeRadarSection.tsx
+Phase: GREEN / Difficulty: 2 / Time: 10 min
+```
+Layout: date + title in cyan. 3 stat cards (X:214, GitHub:52, Total:389) with cyan borders. Body text. Insight quote. Ambient cyan glow.
+
+### Slice S5 — Sections 7–12
+
+**T16 — TelegramSection** [dep: T9, P with T17-T21]
+```
+File: apps/web/src/components/presentation/lyra-product/TelegramSection.tsx
+Phase: GREEN / Difficulty: 2 / Time: 10 min
+```
+Layout: date + title in orange. "First session" stat chip (20 sessions · 105 msgs). Time display "6:34 AM". Body text. Insight quote.
+
+**T17 — IndustrialTurnSection** [dep: T9, P]
+```
+File: apps/web/src/components/presentation/lyra-product/IndustrialTurnSection.tsx
+Phase: GREEN / Difficulty: 2 / Time: 10 min
+```
+Layout: date + title in amber. Before/After rule display (BEFORE: "Code first" rose → AFTER: "Spec first" amber). Commit stat. Body text. Milestone badge.
+
+**T18 — PatchNotesSection** [dep: T9, P]
+```
+File: apps/web/src/components/presentation/lyra-product/PatchNotesSection.tsx
+Phase: GREEN / Difficulty: 2 / Time: 10 min
+```
+Layout: title in amber. Terminal/changelog box (border amber-400/30) with REMOVED (rose text) and ADDED (amber text) sections styled as `PATCH 1.4.0` header. Insight quote.
+
+**T19 — TheDaySection** [dep: T9, P]
+```
+File: apps/web/src/components/presentation/lyra-product/TheDaySection.tsx
+Phase: GREEN / Difficulty: 3 / Time: 15 min
+```
+Layout: date + title in orange. 3 repo cards in a row (voiceCLI/roxabi-plugins/claude-config) with orange border and respective icons or glyphs. Body text. Insight quote. Ambient orange glow.
+
+**T20 — VoiceSection** [dep: T9, P]
+```
+File: apps/web/src/components/presentation/lyra-product/VoiceSection.tsx
+Phase: GREEN / Difficulty: 2 / Time: 10 min
+```
+Layout: date + title in cyan. Before/After latency comparison (15s → 2-3s, large numbers with labels). Stat chip (5-9× faster). Body text. Insight. Ambient cyan glow.
+
+**T21 — TheNightSection** [dep: T9, P]
+```
+File: apps/web/src/components/presentation/lyra-product/TheNightSection.tsx
+Phase: GREEN / Difficulty: 3 / Time: 15 min
+```
+Layout: date + title in rose. Dark section bg `bg-[#0a0005]` (darker than base). Timeline list of 5 timestamped entries (00:14, 00:50, 01:24, 08:26, 22:24) with timestamps in rose monospace. Stat chip. Insight quote. Ambient rose glow.
+
+### Slice S6 — Sections 13–18
+
+**T22 — LyraNotSoleneSection** [dep: T9, P with T23-T27]
+```
+File: apps/web/src/components/presentation/lyra-product/LyraNotSoleneSection.tsx
+Phase: GREEN / Difficulty: 2 / Time: 12 min
+```
+Layout: title in amber. "Identity test" label. Side-by-side comparison (TESTED: "Solene" rose/crossed → THE ANSWER: "Lyra" amber/bold). Right-body "free electron" tagline. Insight quote.
+
+**T23 — TheEcosystemSection** [dep: T9, P]
+```
+File: apps/web/src/components/presentation/lyra-product/TheEcosystemSection.tsx
+Phase: GREEN / Difficulty: 3 / Time: 15 min
+```
+Layout: title in cyan. Label chip "6 REPOS · 1 ECOSYSTEM". 3 repo-group cards (each with a → arrow connecting them). Body text. Insight quote. Ambient cyan glow.
+
+**T24 — TheNumbersSection** [dep: T9, P]
+```
+File: apps/web/src/components/presentation/lyra-product/TheNumbersSection.tsx
+Phase: GREEN / Difficulty: 2 / Time: 10 min
+```
+Layout: title in amber. 6-stat grid (2×3) with large number + label for each (462, 389, 194, 52, 11, 6). Each stat card with amber border. Insight quote at bottom.
+
+**T25 — LyraIn4DaysSection** [dep: T9, P]
+```
+File: apps/web/src/components/presentation/lyra-product/LyraIn4DaysSection.tsx
+Phase: GREEN / Difficulty: 2 / Time: 12 min
+```
+Layout: date + title in orange. "52 → 4" large display. Timeline list J+1 through J+4 with day labels and descriptions. Body text. Insight quote.
+
+**T26 — TheLessonSection** [dep: T9, P]
+```
+File: apps/web/src/components/presentation/lyra-product/TheLessonSection.tsx
+Phase: GREEN / Difficulty: 2 / Time: 10 min
+```
+Layout: title in amber. Large epigraph blockquote (the central lesson). Body text. 4-principle list (amber bullets/badges). Clean, meditative layout.
+
+**T27 — ClosingSection** [dep: T9, P]
+```
+File: apps/web/src/components/presentation/lyra-product/ClosingSection.tsx
+Phase: GREEN / Difficulty: 2 / Time: 8 min
+```
+Layout: title in amber. Body. Large CTA question ("What's your laboratory?") in large amber text. "FIND LYRA" label + links/contact placeholder. Back to `/talks` link. Ambient final glow.
+
+### Slice S7 — Verification
+
+**T28 — Wire all sections into `lyra-product.lazy.tsx`** [dep: T10-T27]
+```
+File: apps/web/src/routes/talks/lyra-product.lazy.tsx
+Agent: frontend-dev
+Phase: REFACTOR / Difficulty: 2 / Time: 10 min
+```
+Replace stub section content with actual imported section components. Import all 18 components from `@/components/presentation/lyra-product/*`.
+Verify: all 18 sections render with content at localhost:3000/talks/lyra-product
+
+**T29 — Final verification** [dep: T28]
+```
+Commands:
+  cd ../roxabi-451 && bun run typecheck 2>&1 | grep -i error | wc -l  # → 0
+  cd ../roxabi-451 && bun run i18n:check 2>&1 | tail -5               # → 0 missing
+  cd ../roxabi-451 && bun run lint 2>&1 | tail -5                      # → 0 errors
+Phase: GREEN / Time: 5 min
+```
+
+## Consistency Report
+
+| Spec section | Covered by tasks | Status |
+|-------------|-----------------|--------|
+| R1 route | T2, T4, T6 | ✓ |
+| U1-U13 UI | T4, T5 | ✓ |
+| U14 SectionChrome | T3 | ✓ |
+| S1 infrastructure | T1-T6 | ✓ |
+| S2 SectionChrome | T3 | ✓ |
+| S3 i18n | T7, T8, T9 | ✓ |
+| S4 sections 1-6 | T10-T15 | ✓ |
+| S5 sections 7-12 | T16-T21 | ✓ |
+| S6 sections 13-18 | T22-T27 | ✓ |
+| S7 FR translations | T8 | ✓ |
+| S8 avatar+keyboard | T4 | ✓ |
+| SC-1 to SC-16 | T1-T29 | ✓ |
+
+**Total: 29 tasks · 16 success criteria · 100% coverage**

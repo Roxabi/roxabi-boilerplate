@@ -44,11 +44,9 @@ function createMockDbWithJoin() {
   }
 }
 
-import { ApiKeyExpiredException } from './exceptions/apiKeyExpired.exception.js'
 import { ApiKeyExpiryInPastException } from './exceptions/apiKeyExpiryInPast.exception.js'
 import { ApiKeyInvalidException } from './exceptions/apiKeyInvalid.exception.js'
 import { ApiKeyNotFoundException } from './exceptions/apiKeyNotFound.exception.js'
-import { ApiKeyRevokedException } from './exceptions/apiKeyRevoked.exception.js'
 import { ApiKeyScopesExceededException } from './exceptions/apiKeyScopesExceeded.exception.js'
 
 // ---------------------------------------------------------------------------
@@ -96,6 +94,7 @@ function createSession(overrides: Partial<AuthenticatedSession> = {}): Authentic
     user: { id: 'user-1' },
     session: { id: 'sess-1', activeOrganizationId: 'org-1' },
     permissions: ['api_keys:read', 'api_keys:write', 'billing:read'],
+    actorType: 'user',
     ...overrides,
   }
 }
@@ -763,8 +762,8 @@ describe('ApiKeyService', () => {
       })
     })
 
-    it('should throw ApiKeyRevokedException when key revokedAt is set', async () => {
-      // Arrange
+    it('should throw ApiKeyInvalidException when key revokedAt is set', async () => {
+      // Arrange — revoked keys are collapsed to ApiKeyInvalidException (uniform external exception)
       const { token, salt, hash } = buildValidToken()
       const candidate = {
         id: 'key-revoked',
@@ -783,14 +782,14 @@ describe('ApiKeyService', () => {
       const service = createService(db as never)
 
       // Act & Assert
-      await expect(service.validateBearerToken(token)).rejects.toThrow(ApiKeyRevokedException)
+      await expect(service.validateBearerToken(token)).rejects.toThrow(ApiKeyInvalidException)
       await expect(service.validateBearerToken(token)).rejects.toMatchObject({
-        errorCode: ErrorCode.API_KEY_REVOKED,
+        errorCode: ErrorCode.API_KEY_INVALID,
       })
     })
 
-    it('should throw ApiKeyExpiredException when expiresAt is in the past', async () => {
-      // Arrange
+    it('should throw ApiKeyInvalidException when expiresAt is in the past', async () => {
+      // Arrange — expired keys are collapsed to ApiKeyInvalidException (uniform external exception)
       const { token, salt, hash } = buildValidToken()
       const candidate = {
         id: 'key-expired',
@@ -809,10 +808,30 @@ describe('ApiKeyService', () => {
       const service = createService(db as never)
 
       // Act & Assert
-      await expect(service.validateBearerToken(token)).rejects.toThrow(ApiKeyExpiredException)
+      await expect(service.validateBearerToken(token)).rejects.toThrow(ApiKeyInvalidException)
       await expect(service.validateBearerToken(token)).rejects.toMatchObject({
-        errorCode: ErrorCode.API_KEY_EXPIRED,
+        errorCode: ErrorCode.API_KEY_INVALID,
       })
+    })
+
+    it('should throw ApiKeyInvalidException for tokens that do not match the sk_live_ format', async () => {
+      // Arrange
+      const { db, _limitFn } = createMockDbWithJoin()
+      _limitFn.mockResolvedValue([]) // DB never reached
+      const service = createService(db as never)
+
+      // Act & Assert — wrong prefix
+      await expect(service.validateBearerToken('invalid_token_abc')).rejects.toThrow(
+        ApiKeyInvalidException
+      )
+      // Too short
+      await expect(service.validateBearerToken('sk_live_short')).rejects.toThrow(
+        ApiKeyInvalidException
+      )
+      // Correct format
+      const validToken = `sk_live_${'a'.repeat(32)}`
+      // DB returns empty — still invalid but gets past format check
+      await expect(service.validateBearerToken(validToken)).rejects.toThrow(ApiKeyInvalidException)
     })
 
     it('should return the correct candidate when multiple rows share the same lastFour (collision)', async () => {

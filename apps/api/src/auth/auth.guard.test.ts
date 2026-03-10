@@ -1,6 +1,5 @@
 import { ForbiddenException, UnauthorizedException } from '@nestjs/common'
 import { describe, expect, it, vi } from 'vitest'
-import { ApiKeyRevokedException } from '../api-key/exceptions/apiKeyRevoked.exception.js'
 import { ErrorCode } from '../common/errorCodes.js'
 import { AuthGuard } from './auth.guard.js'
 
@@ -133,9 +132,12 @@ describe('AuthGuard', () => {
     // Act
     const result = await guard.canActivate(context as never)
 
-    // Assert
+    // Assert — session gets actorType: 'user' added by the guard (new object via spread)
     expect(result).toBe(true)
-    expect((req as Record<string, unknown>).session).toBe(session)
+    expect((req as Record<string, unknown>).session).toMatchObject(session)
+    expect(((req as Record<string, unknown>).session as Record<string, unknown>).actorType).toBe(
+      'user'
+    )
     expect((req as Record<string, unknown>).user).toBe(session.user)
   })
 
@@ -532,8 +534,8 @@ describe('AuthGuard', () => {
       expect(userService.getSoftDeleteStatus).not.toHaveBeenCalled()
     })
 
-    it('should NOT throw ForbiddenException for api_key actorType even when route requires @Roles(admin)', async () => {
-      // Arrange — route metadata says ROLES: ['admin'], but API key auth should skip the roles check
+    it('should throw ForbiddenException with API_KEY_SCOPE_DENIED when route requires @Roles() but no @Permissions()', async () => {
+      // Arrange — role-gated routes without @Permissions() are inaccessible to API key sessions
       const apiKeyService = createMockApiKeyService(validKeyData)
       const permissionService = createMockPermissionService(['api:read'])
       const { guard } = createGuard(
@@ -547,7 +549,28 @@ describe('AuthGuard', () => {
         headers: { authorization: `Bearer ${VALID_API_KEY_TOKEN}` },
       })
 
-      // Act & Assert — should NOT throw ForbiddenException because roles check is skipped for API key auth
+      // Act & Assert — throws because role-gated route has no @Permissions() declared
+      await expect(guard.canActivate(context as never)).rejects.toMatchObject({
+        response: { errorCode: ErrorCode.API_KEY_SCOPE_DENIED },
+      })
+    })
+
+    it('should NOT throw ForbiddenException for api_key actorType when route requires @Roles() AND @Permissions() that key has', async () => {
+      // Arrange — role-gated route also declares @Permissions(), API key has the required scope
+      const apiKeyService = createMockApiKeyService(validKeyData)
+      const permissionService = createMockPermissionService(['api:read'])
+      const { guard } = createGuard(
+        null,
+        { ROLES: ['admin'], PERMISSIONS: ['api:read'] },
+        createMockUserService(),
+        apiKeyService,
+        permissionService
+      )
+      const { context } = createMockContext({
+        headers: { authorization: `Bearer ${VALID_API_KEY_TOKEN}` },
+      })
+
+      // Act & Assert — should pass because @Permissions() is also declared and key has the scope
       await expect(guard.canActivate(context as never)).resolves.toBe(true)
     })
 
@@ -628,10 +651,13 @@ describe('AuthGuard', () => {
       expect(apiKeyService.validateBearerToken).not.toHaveBeenCalled()
     })
 
-    it('should rethrow as UnauthorizedException with API_KEY_REVOKED when validateBearerToken throws ApiKeyRevokedException', async () => {
-      // Arrange
-      const revokedError = new ApiKeyRevokedException()
-      const apiKeyService = createMockApiKeyService(null, revokedError)
+    it('should rethrow as UnauthorizedException with API_KEY_UNAUTHORIZED when validateBearerToken throws ApiKeyInvalidException', async () => {
+      // Arrange — all API key auth failures (invalid, revoked, expired) collapse to API_KEY_UNAUTHORIZED externally
+      const { ApiKeyInvalidException: InvalidEx } = await import(
+        '../api-key/exceptions/apiKeyInvalid.exception.js'
+      )
+      const invalidError = new InvalidEx()
+      const apiKeyService = createMockApiKeyService(null, invalidError)
       const { guard } = createGuard(null, {}, createMockUserService(), apiKeyService)
       const { context } = createMockContext({
         headers: { authorization: `Bearer ${VALID_API_KEY_TOKEN}` },
@@ -642,7 +668,7 @@ describe('AuthGuard', () => {
         UnauthorizedException
       )
       await expect(guard.canActivate(context as never)).rejects.toMatchObject({
-        response: { errorCode: ErrorCode.API_KEY_REVOKED },
+        response: { errorCode: ErrorCode.API_KEY_UNAUTHORIZED },
       })
     })
 

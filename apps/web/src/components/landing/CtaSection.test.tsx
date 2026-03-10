@@ -1,5 +1,9 @@
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+
+const mockClientEnv = vi.hoisted(() => ({
+  VITE_DOCS_URL: undefined as string | undefined,
+}))
 
 vi.mock('@repo/ui', () => ({
   Button: ({ children, asChild }: React.PropsWithChildren<{ asChild?: boolean; size?: string }>) =>
@@ -15,40 +19,38 @@ vi.mock('@/paraglide/messages', () => ({
   },
 }))
 
+vi.mock('@/lib/env.shared', () => ({
+  clientEnv: mockClientEnv,
+}))
+
 import { CtaSection } from './CtaSection'
 
 describe('CtaSection', () => {
-  it('should render the section heading', () => {
-    // Arrange & Act
-    render(<CtaSection />)
+  afterEach(() => {
+    mockClientEnv.VITE_DOCS_URL = undefined
+  })
 
-    // Assert
+  it('should render the section heading', () => {
+    render(<CtaSection />)
     expect(screen.getByText('Ready to Start?')).toBeInTheDocument()
   })
 
   it('should render the subtitle', () => {
-    // Arrange & Act
     render(<CtaSection />)
-
-    // Assert
     expect(screen.getByText('Get started building your SaaS today')).toBeInTheDocument()
   })
 
-  it('should render the CTA button', () => {
-    // Arrange & Act
+  it('should not render the CTA button when VITE_DOCS_URL is unset', () => {
     render(<CtaSection />)
-
-    // Assert
-    const button = screen.getByText('Get Started')
-    expect(button).toBeInTheDocument()
+    expect(screen.queryByText('Get Started')).not.toBeInTheDocument()
   })
 
-  it('should link the CTA button to docs', () => {
-    // Arrange & Act
+  it('should render the CTA button linking to docs URL when VITE_DOCS_URL is set', () => {
+    mockClientEnv.VITE_DOCS_URL = 'https://docs.app.roxabi.com'
     render(<CtaSection />)
-
-    // Assert
     const link = screen.getByRole('link', { name: 'Get Started' })
-    expect(link).toHaveAttribute('href', '/docs')
+    expect(link).toHaveAttribute('href', 'https://docs.app.roxabi.com')
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer')
   })
 })

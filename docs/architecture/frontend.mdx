@@ -1,6 +1,6 @@
 ---
 title: Frontend Architecture
-description: TanStack Start SSR setup, file-based routing, state management, Fumadocs integration, component patterns, and shared UI package.
+description: TanStack Start SSR setup, file-based routing, state management, component patterns, and shared UI package.
 ---
 
 ## Overview
@@ -10,7 +10,6 @@ The web application (`apps/web`) is built with **TanStack Start**, a full-stack 
 Key architectural decisions:
 
 - **SSR by default** -- TanStack Start renders pages on the server via Nitro, then hydrates on the client. This gives fast initial loads and SEO support without a separate SSR framework.
-- **Single dev server** -- The web app and documentation (`/docs/*`) run in the same Vite process. Fumadocs MDX content is compiled at build time and rendered through a catch-all route.
 - **Proxy to API** -- In both development and production, API requests (`/api/**`) are proxied through Nitro to the NestJS backend, avoiding CORS complexity.
 - **Shared UI package** -- Presentational components live in `@repo/ui`, while app-specific components live in `apps/web/src/components/`.
 
@@ -53,7 +52,6 @@ The Vite configuration (`vite.config.ts`) chains several plugins in order:
 
 | Plugin | Purpose |
 |--------|---------|
-| `fumadocs-mdx/vite` | Compiles MDX files from `docs/` into virtual modules |
 | `@tanstack/devtools-vite` | Unified TanStack devtools panel (dev only) |
 | `@inlang/paraglide-js` | Compile-time i18n with URL-based locale strategy |
 | `nitro/vite` | SSR runtime, API proxy, and production build |
@@ -96,7 +94,6 @@ TanStack Router generates a typed route tree from the file system. Routes live i
 | `demo/store.tsx` | `/demo/store` | `routes/demo/store.tsx` |
 | `demo/start.ssr.full-ssr.tsx` | `/demo/start/ssr/full-ssr` | Dot notation for nested paths |
 | `demo/form/steps.tsx` | `/demo/form/steps` | Directory for deeper nesting |
-| `docs/$.tsx` | `/docs/*` (splat) | Catch-all for Fumadocs |
 | `$.tsx` | `/*` (root splat) | 404 fallback |
 | `demo/api.tq-todos.ts` | `/demo/api/tq-todos` | Server-only API route |
 | `-components/` | (not routed) | Private directory prefix |
@@ -163,24 +160,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 })
 ```
 
-The `AppShell` component conditionally hides the main `Header` for routes under `/docs` and `/talks`, which provide their own chrome (Fumadocs layout, presentation nav):
-
-```ts
-const CHROMELESS_PREFIXES = ['/docs', '/talks'] as const
-
-function AppShell({ children }: { children: React.ReactNode }) {
-  const pathname = useRouterState({ select: (s) => s.location.pathname })
-  const isChromeless = CHROMELESS_PREFIXES.some((prefix) => pathname.startsWith(prefix))
-
-  return (
-    <RootProvider>
-      {!isChromeless && <Header />}
-      <ErrorBoundary FallbackComponent={ErrorFallback}>{children}</ErrorBoundary>
-      <Toaster richColors />
-    </RootProvider>
-  )
-}
-```
+The `AppShell` component renders the `Header` on all routes. The `/docs` and `/talks` routes have been removed from `apps/web` — docs are served by the standalone `apps/docs` site, and talks were migrated to external repos. `CHROMELESS_PREFIXES` is now an empty array.
 
 ### Server API Routes
 
@@ -290,66 +270,26 @@ const addTodo = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => { /* server-side logic */ })
 ```
 
-## Fumadocs Integration
+## Documentation Site (`apps/docs`)
 
-Documentation is rendered at `/docs/*` using **Fumadocs v16** with TanStack Start. This is not a separate application -- it runs in the same Vite dev server and production build.
+Documentation is served by a **standalone Next.js application** at `apps/docs/`, powered by Fumadocs v16. It is deployed separately to `docs.app.roxabi.com`.
 
-### Content Pipeline
+The MDX source files live at `docs/` (repo root). `apps/docs` reads them via `source.config.ts` and serves them through a Next.js catch-all route.
 
 ```mermaid
 flowchart TD
-    A["docs/<br/>(repo root, MDX files)"] --> B["apps/web/docs<br/>(symlink to ../../docs)"]
-    B --> C["source.config.ts<br/>(Fumadocs MDX config, async loading)"]
-    C --> D["fumadocs-mdx/vite<br/>(Vite plugin, compiles MDX at build)"]
-    D --> E["Virtual modules"]
-    E --> E1["fumadocs-mdx:collections/server<br/>(page tree, frontmatter)"]
-    E --> E2["fumadocs-mdx:collections/browser<br/>(MDX components, TOC)"]
-    E1 --> F["routes/docs/$.tsx<br/>(catch-all route, renders DocsLayout)"]
-    E2 --> F
+    A["docs/<br/>(repo root, MDX files)"] --> B["apps/docs/source.config.ts"]
+    B --> C["fumadocs-mdx codegen<br/>(run before next build)"]
+    C --> D["apps/docs/app/docs/[[...slug]]/page.tsx"]
 ```
 
-### Configuration
+Run the docs site locally:
 
-The Fumadocs source config (`source.config.ts`) defines the docs collection with **async loading** to prevent out-of-memory errors during Nitro's SSR build:
-
-```ts
-import { defineConfig, defineDocs } from 'fumadocs-mdx/config'
-
-export const docs = defineDocs({
-  dir: 'docs',
-  docs: {
-    async: true, // Lazy-load MDX body; only frontmatter is eagerly bundled
-  },
-})
-
-export default defineConfig()
+```bash
+bun run docs   # starts apps/docs on port 3002
 ```
 
-The source loader (`src/lib/source.ts`) converts the collection into a navigable page tree:
-
-```ts
-import { docs } from 'fumadocs-mdx:collections/server'
-import { loader } from 'fumadocs-core/source'
-
-export const source = loader({
-  baseUrl: '/docs',
-  source: docs.toFumadocsSource(),
-})
-```
-
-### Docs Route
-
-The catch-all route `routes/docs/$.tsx` handles all documentation pages:
-
-1. **Server loader** resolves the slug to a page entry and serializes the page tree
-2. **Client loader** preloads the MDX content for the matched path
-3. **Component** renders the Fumadocs `DocsLayout` with sidebar navigation and the `DocsPage` with title, description, TOC, and MDX body
-
-Navigation metadata comes from `meta.json` files in each docs subdirectory. These control sidebar ordering and section titles.
-
-### Type Safety
-
-Virtual module types are declared in `src/fumadocs.d.ts`, providing TypeScript definitions for the `fumadocs-mdx:collections/server` and `fumadocs-mdx:collections/browser` imports.
+`apps/docs` is a separate TurboRepo package (`@repo/docs`) with its own Next.js build pipeline; it is not part of the `apps/web` Vite/Nitro build.
 
 ## Component Architecture
 
@@ -369,7 +309,6 @@ apps/web/src/
     LocaleSwitcher.tsx      # Language selector
     GithubIcon.tsx          # GitHub link icon
     FeatureCard.tsx         # Landing page feature card
-    DocsErrorBoundary.tsx   # Error boundary for docs pages
     landing/                # Landing page sections
       HeroSection.tsx
       FeaturesSection.tsx
@@ -378,10 +317,6 @@ apps/web/src/
       TechStackSection.tsx
       CtaSection.tsx
       SectionHeading.tsx
-    presentation/           # Presentation/talk components
-      IntroSection.tsx
-      BuildingBlocksSection.tsx
-      ...
 ```
 
 ### Component Patterns
@@ -499,7 +434,6 @@ The architecture maintains a clear separation between server-side and client-sid
 |----------|---------|
 | `src/server.ts` | Server entry point, Paraglide middleware |
 | `src/lib/apiClient.server.ts` | Server-side API client (ofetch with correlation IDs) |
-| `src/lib/source.ts` | Fumadocs page tree resolution |
 | `src/data/*.ts` | Server functions (`createServerFn`) |
 | `routes/**/api.*.ts` | Server-only API route handlers |
 | Route `loader` functions | Run on server during SSR |
@@ -573,12 +507,7 @@ This means route definitions use unlocalized paths (`/login`), while the actual 
 
 ## Error Handling
 
-Error boundaries are layered at two levels:
-
-1. **Root error boundary** (`__root.tsx`) -- Catches unhandled errors in any route. Displays a generic error page with a retry button and uses i18n messages.
-2. **Docs error boundary** (`docs-error-boundary.tsx`) -- Wraps the Fumadocs layout specifically, providing a docs-themed error page with a "back to docs" link.
-
-Both use `react-error-boundary` with custom fallback components.
+Error boundaries are handled by the **root error boundary** (`__root.tsx`) — catches unhandled errors in any route and displays a generic error page with a retry button using i18n messages. Uses `react-error-boundary` with a custom fallback component.
 
 ## Developer Tooling
 

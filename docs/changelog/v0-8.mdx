@@ -1,0 +1,30 @@
+---
+title: v0.8.x
+description: All v0.8 releases
+---
+
+## v0.8.0 — March 10, 2026
+
+### Features
+- feat(docs): add standalone Fumadocs docs site at docs.app.roxabi.com (#474, #476, #479)
+- feat(auth): notify existing user on duplicate sign-up attempt (#465)
+- feat(talks): add Lyra product/startup talk (#451, #467)
+- feat(talks): improve lyra-story design — typography, layout, visual polish (#466, #468)
+
+### Fixes
+- fix(preview): wire web→API preview URL and bypass Vercel Deployment Protection (#483)
+- fix(ci,docs): MDX checker + dashboard-ported fixes (#482)
+- fix(docs): run codegen before next build in Vercel deployment (#480)
+- fix(ci,api,web): apply review findings from PR #475 (#477, #478)
+- fix(e2e): remove stale docsHeaderLink assertion after docs route removal
+
+### Documentation
+- docs(deployment): document VERCEL_AUTOMATION_BYPASS_SECRET setup (#484)
+- docs: sync docs and docker-compose for last 2-3 days of changes (#481)
+
+### Maintenance
+- chore(web): remove docs route and fumadocs infrastructure (#472)
+- chore(talks): remove talks routes — migrated to roxabi-talks (#471)
+- chore(lint): ignore talks/ directory in Biome config
+- chore(deps): bump lucide-react from 0.576.0 to 0.577.0 (#473)
+- chore(security): update vulnerable dependencies (#469, #470)

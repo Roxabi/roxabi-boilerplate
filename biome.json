@@ -117,6 +117,23 @@
       }
     },
     {
+      "includes": ["**/components/presentation/**", "**/routes/talks/**"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noExcessiveCognitiveComplexity": "info",
+            "noExcessiveLinesPerFunction": "info"
+          },
+          "suspicious": {
+            "noArrayIndexKey": "info"
+          },
+          "style": {
+            "noNonNullAssertion": "info"
+          }
+        }
+      }
+    },
+    {
       "includes": ["**/routes/**"],
       "linter": {
         "rules": {
@@ -126,6 +143,14 @@
     },
     {
       "includes": [".claude/**"],
+      "linter": {
+        "rules": {
+          "style": { "useFilenamingConvention": "off" }
+        }
+      }
+    },
+    {
+      "includes": ["apps/docs/mdx-components.tsx"],
       "linter": {
         "rules": {
           "style": { "useFilenamingConvention": "off" }
@@ -148,6 +173,7 @@
       "!**/.nitro",
       "!**/.content-collections",
       "!**/routeTree.gen.ts",
+      "!**/next-env.d.ts",
       "!**/src/paraglide",
       "!**/project.inlang",
       "!**/*.css",
@@ -155,7 +181,8 @@
       "!**/test-results",
       "!**/reports/licenses.json",
       "!**/.vercel",
-      "!**/e2e/.auth"
+      "!**/e2e/.auth",
+      "!talks"
     ]
   }
 }

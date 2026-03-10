@@ -45,7 +45,6 @@ jobs:
               - 'biome.json'
               - 'tsconfig*.json'
               - 'lefthook.yml'
-              - '.gitleaks.toml'
               - '.github/workflows/**'
             e2e:
               - 'apps/web/src/**'
@@ -70,10 +69,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Run Gitleaks
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: TruffleHog
+        uses: trufflesecurity/trufflehog@v3.93.7
+        with:
+          path: ./
+          base: ${{ github.event.pull_request.base.sha || (github.event.before != '0000000000000000000000000000000000000000' && github.event.before) || '' }}
+          head: ${{ github.event.pull_request.head.sha || github.sha }}
+          extra_args: --only-verified
 
   lint:
     name: Lint
@@ -114,6 +116,9 @@ jobs:
 
       - name: Check dependency licenses
         run: bun run license:check
+
+      - name: Check MDX files
+        run: bun run mdx:check
 
   typecheck:
     name: Type Check
@@ -459,22 +464,6 @@ jobs:
           path: playwright-report/
           retention-days: 7
 
-  docs-links:
-    name: Docs Link Audit
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: ${{ env.BUN_VERSION }}
-
-      - name: Check internal documentation links
-        run: bun run tools/docsLinkAudit.ts
-
   # Intentionally runs on every push to main/staging regardless of changed paths.
   # Full browser coverage is required on protected branches before release.
   e2e-matrix:
@@ -637,7 +626,7 @@ jobs:
     name: Vercel Env Check
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging')
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -648,7 +637,14 @@ jobs:
           bun-version: ${{ env.BUN_VERSION }}
 
       - name: Check production env vars
+        if: github.ref == 'refs/heads/main'
         run: bun run scripts/checkVercelEnv.ts production
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+      - name: Check preview env vars
+        if: github.ref == 'refs/heads/staging'
+        run: bun run scripts/checkVercelEnv.ts preview
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
@@ -656,7 +652,7 @@ jobs:
     name: CI Success
     runs-on: ubuntu-latest
     if: always()
-    needs: [secrets, lint, typecheck, test, build, e2e, e2e-matrix, merge-reports, docs-links]
+    needs: [secrets, lint, typecheck, test, build, e2e, e2e-matrix, merge-reports]
     steps:
       - name: Check job outcomes
         env:
@@ -668,7 +664,6 @@ jobs:
           E2E_RESULT: ${{ needs.e2e.result }}
           E2E_MATRIX_RESULT: ${{ needs.e2e-matrix.result }}
           MERGE_REPORTS_RESULT: ${{ needs.merge-reports.result }}
-          DOCS_LINKS_RESULT: ${{ needs.docs-links.result }}
         run: |
           results=( \
             "$SECRETS_RESULT" \
@@ -679,7 +674,6 @@ jobs:
             "$E2E_RESULT" \
             "$E2E_MATRIX_RESULT" \
             "$MERGE_REPORTS_RESULT" \
-            "$DOCS_LINKS_RESULT" \
           )
           for result in "${results[@]}"; do
             if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then

@@ -7,11 +7,9 @@ import type { AuthenticatedSession } from '../auth/types.js'
 import { DRIZZLE, type DrizzleDB } from '../database/drizzle.provider.js'
 import { apiKeys } from '../database/schema/apiKey.schema.js'
 import { users } from '../database/schema/auth.schema.js'
-import { ApiKeyExpiredException } from './exceptions/apiKeyExpired.exception.js'
 import { ApiKeyExpiryInPastException } from './exceptions/apiKeyExpiryInPast.exception.js'
 import { ApiKeyInvalidException } from './exceptions/apiKeyInvalid.exception.js'
 import { ApiKeyNotFoundException } from './exceptions/apiKeyNotFound.exception.js'
-import { ApiKeyRevokedException } from './exceptions/apiKeyRevoked.exception.js'
 import { ApiKeyScopesExceededException } from './exceptions/apiKeyScopesExceeded.exception.js'
 
 const KEY_PREFIX = 'sk_live_'
@@ -197,8 +195,15 @@ export class ApiKeyService {
     scopes: string[]
     role: string
   }> {
+    const TOKEN_REGEX = /^sk_live_[a-zA-Z0-9]{32}$/
+    if (!TOKEN_REGEX.test(token)) {
+      throw new ApiKeyInvalidException()
+    }
+
     const lastFour = token.slice(-4)
 
+    // TODO: lastFour should have a database index for performance:
+    // CREATE INDEX idx_api_keys_last_four ON api_keys(last_four)
     const candidates = await this.db
       .select({
         id: apiKeys.id,
@@ -213,8 +218,22 @@ export class ApiKeyService {
       })
       .from(apiKeys)
       .innerJoin(users, eq(apiKeys.userId, users.id))
-      .where(eq(apiKeys.lastFour, lastFour))
+      .where(and(eq(apiKeys.lastFour, lastFour), isNull(users.deletedAt)))
       .limit(10)
+
+    if (candidates.length === 10) {
+      this.logger.warn(
+        `[validateBearerToken] lastFour bucket hit limit(10) — possible collision storm`,
+        { lastFour }
+      )
+    }
+
+    if (candidates.length === 0) {
+      // Constant-time dummy to prevent timing oracle on lastFour enumeration
+      const dummy = Buffer.from(hmacHash(token, randomBytes(16).toString('hex')), 'hex')
+      timingSafeEqual(dummy, dummy)
+      throw new ApiKeyInvalidException()
+    }
 
     const match = (candidates ?? []).find((c) => {
       const computed = Buffer.from(hmacHash(token, c.keySalt), 'hex')
@@ -222,14 +241,8 @@ export class ApiKeyService {
       return computed.length === stored.length && timingSafeEqual(computed, stored)
     })
 
-    if (!match) {
+    if (!match || match.revokedAt || (match.expiresAt && match.expiresAt < new Date())) {
       throw new ApiKeyInvalidException()
-    }
-    if (match.revokedAt) {
-      throw new ApiKeyRevokedException()
-    }
-    if (match.expiresAt && match.expiresAt < new Date()) {
-      throw new ApiKeyExpiredException()
     }
 
     return {
