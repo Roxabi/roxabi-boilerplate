@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import { appName } from '@/lib/appName'
 import { GITHUB_REPO_URL } from '@/lib/config'
 import { useConsent } from '@/lib/consent/useConsent'
 import { m } from '@/paraglide/messages'
@@ -13,7 +14,7 @@ export function Footer() {
       <div className="mx-auto max-w-7xl px-6 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         {/* Left: copyright + product links */}
         <div className="flex flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground">
-          <span>{m.footer_copyright({ year: CURRENT_YEAR })}</span>
+          <span>{m.footer_copyright({ year: CURRENT_YEAR, appName })}</span>
           <a
             href={GITHUB_REPO_URL}
             target="_blank"

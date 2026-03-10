@@ -92,7 +92,7 @@
   "cta_subtitle": "Clonez le repo et livrez votre première feature en moins de 5 minutes.",
   "cta_button": "Commencer",
   "footer_changelog": "Changelog",
-  "footer_copyright": "© {year} Roxabi. Sous licence MIT.",
+  "footer_copyright": "© {year} {appName}. Propulsé par Roxabi.",
   "user_menu_label": "Menu utilisateur",
   "user_menu_profile": "Profil",
   "user_menu_account": "Paramètres du compte",

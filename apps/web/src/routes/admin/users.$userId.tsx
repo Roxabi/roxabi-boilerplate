@@ -42,6 +42,7 @@ import { toast } from 'sonner'
 import { BackLink, DetailSkeleton } from '@/components/admin/DetailShared'
 import { UserActions } from '@/components/admin/UserActions'
 import { adminUserKeys } from '@/lib/admin/queryKeys'
+import { appName } from '@/lib/appName'
 import { useSession } from '@/lib/authClient'
 import { formatDate, formatTimestamp } from '@/lib/formatDate'
 import { enforceRoutePermission } from '@/lib/routePermissions'
@@ -51,7 +52,7 @@ export const Route = createFileRoute('/admin/users/$userId')({
   staticData: { permission: 'role:superadmin' },
   beforeLoad: enforceRoutePermission,
   component: AdminUserDetailPage,
-  head: () => ({ meta: [{ title: 'User Detail | Admin | Roxabi' }] }),
+  head: () => ({ meta: [{ title: `User Detail | Admin | ${appName}` }] }),
 })
 
 function ProfileCard({ data }: { data: AdminUserDetail }) {

@@ -6,6 +6,7 @@ type ExistingAccountEmailProps = {
   translations: Translations['existingAccount']
   locale: string
   appUrl?: string
+  appName?: string
 }
 
 export function ExistingAccountEmail(props: ExistingAccountEmailProps) {

@@ -4,6 +4,7 @@ import { BuildingIcon, ListIcon, NetworkIcon, PlusIcon } from 'lucide-react'
 import { useState } from 'react'
 import type { FilterConfig } from '@/components/admin/FilterBar'
 import { FilterBar } from '@/components/admin/FilterBar'
+import { appName } from '@/lib/appName'
 import { enforceRoutePermission } from '@/lib/routePermissions'
 import { CreateOrganizationDialog } from './-organizations-create-dialog'
 import type { OrgFilters } from './-organizations-types'
@@ -13,7 +14,7 @@ export const Route = createFileRoute('/admin/organizations')({
   staticData: { permission: 'role:superadmin' },
   beforeLoad: enforceRoutePermission,
   component: AdminOrganizationsPage,
-  head: () => ({ meta: [{ title: 'Organizations | Admin | Roxabi' }] }),
+  head: () => ({ meta: [{ title: `Organizations | Admin | ${appName}` }] }),
 })
 
 const INITIAL_FILTERS: OrgFilters = {

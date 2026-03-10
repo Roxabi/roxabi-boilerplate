@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { appName } from '@/lib/appName'
 import { authClient } from '@/lib/authClient'
 import { hasPermission } from '@/lib/permissions'
 import {
@@ -31,7 +32,7 @@ export const Route = createFileRoute('/settings/api-keys/')({
   },
   component: ApiKeysSettingsPage,
   head: () => ({
-    meta: [{ title: 'API Keys | Settings | Roxabi' }],
+    meta: [{ title: `API Keys | Settings | ${appName}` }],
   }),
 })
 

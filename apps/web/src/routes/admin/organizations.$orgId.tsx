@@ -29,6 +29,7 @@ import { BackLink, DetailSkeleton } from '@/components/admin/DetailShared'
 import { MemberContextMenu, MemberKebabButton } from '@/components/admin/MemberContextMenu'
 import { OrgActions } from '@/components/admin/OrgActions'
 import { adminOrgKeys } from '@/lib/admin/queryKeys'
+import { appName } from '@/lib/appName'
 import { useSession } from '@/lib/authClient'
 import { formatDate } from '@/lib/formatDate'
 import { enforceRoutePermission } from '@/lib/routePermissions'
@@ -37,7 +38,7 @@ export const Route = createFileRoute('/admin/organizations/$orgId')({
   staticData: { permission: 'role:superadmin' },
   beforeLoad: enforceRoutePermission,
   component: AdminOrgDetailPage,
-  head: () => ({ meta: [{ title: 'Organization Detail | Admin | Roxabi' }] }),
+  head: () => ({ meta: [{ title: `Organization Detail | Admin | ${appName}` }] }),
 })
 
 function ProfileField({

@@ -5,6 +5,7 @@ import { FlagIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { CreateFlagDialog } from '@/components/admin/CreateFlagDialog'
 import { FlagListItem } from '@/components/admin/FlagListItem'
+import { appName } from '@/lib/appName'
 import { deleteFeatureFlag, toggleFeatureFlag } from '@/lib/featureFlags/api'
 import { featureFlagQueries } from '@/lib/featureFlags/queries'
 import { featureFlagKeys } from '@/lib/featureFlags/queryKeys'
@@ -26,7 +27,7 @@ export const Route = createFileRoute('/admin/feature-flags')({
   beforeLoad: enforceRoutePermission,
   component: FeatureFlagsPage,
   errorComponent: FeatureFlagsErrorBoundary,
-  head: () => ({ meta: [{ title: 'Feature Flags | Admin | Roxabi' }] }),
+  head: () => ({ meta: [{ title: `Feature Flags | Admin | ${appName}` }] }),
 })
 
 function FlagsSkeleton() {

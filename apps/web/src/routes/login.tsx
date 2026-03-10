@@ -1,5 +1,6 @@
 import { Tabs, TabsList, TabsTrigger } from '@repo/ui'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { appName } from '@/lib/appName'
 import { fetchEnabledProviders } from '@/lib/authClient'
 import { requireGuest } from '@/lib/routeGuards'
 import { m } from '@/paraglide/messages'
@@ -20,7 +21,7 @@ export const Route = createFileRoute('/login')({
   loader: fetchEnabledProviders,
   component: LoginPage,
   head: () => ({
-    meta: [{ title: `${m.auth_sign_in_title()} | Roxabi` }],
+    meta: [{ title: `${m.auth_sign_in_title()} | ${appName}` }],
   }),
 })
 

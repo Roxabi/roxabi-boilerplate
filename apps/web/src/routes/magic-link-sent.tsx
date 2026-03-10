@@ -3,6 +3,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { ExternalLink } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { appName } from '@/lib/appName'
 import { authClient } from '@/lib/authClient'
 import { m } from '@/paraglide/messages'
 import { AuthLayout } from '../components/AuthLayout'
@@ -42,7 +43,7 @@ export const Route = createFileRoute('/magic-link-sent')({
   }),
   component: MagicLinkSentPage,
   head: () => ({
-    meta: [{ title: `${m.auth_magic_link_sent_title()} | Roxabi` }],
+    meta: [{ title: `${m.auth_magic_link_sent_title()} | ${appName}` }],
   }),
 })
 

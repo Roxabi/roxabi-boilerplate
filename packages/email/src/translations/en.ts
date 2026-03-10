@@ -18,8 +18,8 @@ export const en: Translations = {
     footer: 'If you did not request a password reset, you can safely ignore this email.',
   },
   magicLink: {
-    subject: 'Sign in to Roxabi',
-    heading: 'Sign in to Roxabi',
+    subject: 'Sign in',
+    heading: 'Sign in',
     body: 'Click the button below to sign in to your account.',
     cta: 'Sign in',
     expiry: 'This link expires in 5 minutes.',

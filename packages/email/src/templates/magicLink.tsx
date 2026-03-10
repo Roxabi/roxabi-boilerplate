@@ -6,6 +6,7 @@ type MagicLinkEmailProps = {
   translations: Translations['magicLink']
   locale: string
   appUrl?: string
+  appName?: string
 }
 
 export function MagicLinkEmail(props: MagicLinkEmailProps) {

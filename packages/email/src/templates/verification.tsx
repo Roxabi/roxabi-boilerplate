@@ -6,6 +6,7 @@ type VerificationEmailProps = {
   translations: Translations['verification']
   locale: string
   appUrl?: string
+  appName?: string
 }
 
 export function VerificationEmail(props: VerificationEmailProps) {

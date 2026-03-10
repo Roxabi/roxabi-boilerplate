@@ -1,6 +1,7 @@
 import { Card, CardDescription, CardHeader, CardTitle, Separator } from '@repo/ui'
 import { createFileRoute } from '@tanstack/react-router'
 import { PrivacyDataSection } from '@/components/settings/PrivacyDataSection'
+import { appName } from '@/lib/appName'
 import { m } from '@/paraglide/messages'
 import { EmailChangeSection, PasswordChangeSection, useIsOAuthOnly } from './-account-credentials'
 import { DeleteAccountSection } from './-account-delete'
@@ -8,7 +9,7 @@ import { DeleteAccountSection } from './-account-delete'
 export const Route = createFileRoute('/settings/account')({
   component: AccountSettingsPage,
   head: () => ({
-    meta: [{ title: m.account_head_title({ appName: 'Roxabi' }) }],
+    meta: [{ title: m.account_head_title({ appName }) }],
   }),
 })
 

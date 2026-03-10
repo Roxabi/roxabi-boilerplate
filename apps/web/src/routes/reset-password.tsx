@@ -2,6 +2,7 @@ import { Button, FormMessage, Input, Label } from '@repo/ui'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { appName } from '@/lib/appName'
 import { authClient } from '@/lib/authClient'
 import { requireGuest } from '@/lib/routeGuards'
 import { m } from '@/paraglide/messages'
@@ -13,7 +14,7 @@ export const Route = createFileRoute('/reset-password')({
   beforeLoad: requireGuest,
   component: ResetPasswordPage,
   head: () => ({
-    meta: [{ title: `${m.auth_reset_password_title()} | Roxabi` }],
+    meta: [{ title: `${m.auth_reset_password_title()} | ${appName}` }],
   }),
 })
 

@@ -2,6 +2,7 @@ import { Button, Label, PasswordInput } from '@repo/ui'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { appName } from '@/lib/appName'
 import { authClient } from '@/lib/authClient'
 import { requireGuest } from '@/lib/routeGuards'
 import { m } from '@/paraglide/messages'
@@ -18,7 +19,7 @@ export const Route = createFileRoute('/reset-password/confirm')({
   }),
   component: ResetPasswordConfirmPage,
   head: () => ({
-    meta: [{ title: `${m.auth_reset_confirm_title()} | Roxabi` }],
+    meta: [{ title: `${m.auth_reset_confirm_title()} | ${appName}` }],
   }),
 })
 

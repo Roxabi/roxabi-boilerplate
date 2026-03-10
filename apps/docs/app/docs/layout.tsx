@@ -7,13 +7,12 @@ export default function Layout({ children }: { children: ReactNode }) {
     <DocsLayout
       tree={source.pageTree}
       nav={{
-        title: 'Roxabi Docs',
-        children: (
+        title: (
           <a
-            href={process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.roxabi.com'}
-            className="text-fd-muted-foreground hover:text-fd-foreground ml-auto text-sm transition-colors"
+            href={process.env.NEXT_PUBLIC_APP_URL ?? '/'}
+            className="text-xs font-bold tracking-wider text-fd-muted-foreground/70 hover:text-fd-foreground uppercase transition-colors"
           >
-            ← App
+            {process.env.NEXT_PUBLIC_APP_NAME ?? 'Docs'}
           </a>
         ),
       }}

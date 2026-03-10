@@ -1,5 +1,6 @@
 import { Button, Card, CardContent, CardHeader, CardTitle } from '@repo/ui'
 import { createFileRoute, Link, useSearch } from '@tanstack/react-router'
+import { appName } from '@/lib/appName'
 import { m } from '@/paraglide/messages'
 
 type AccountDeletedSearch = {
@@ -14,7 +15,7 @@ export const Route = createFileRoute('/account-deleted')({
     purged: typeof search.purged === 'string' ? search.purged : undefined,
   }),
   head: () => ({
-    meta: [{ title: `${m.account_deleted_scheduled_title()} | Roxabi` }],
+    meta: [{ title: `${m.account_deleted_scheduled_title()} | ${appName}` }],
   }),
 })
 

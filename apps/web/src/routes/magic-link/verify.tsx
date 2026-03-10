@@ -2,6 +2,7 @@ import { Button } from '@repo/ui'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { appName } from '@/lib/appName'
 import { authClient, useSession } from '@/lib/authClient'
 import { m } from '@/paraglide/messages'
 import { AuthLayout } from '../../components/AuthLayout'
@@ -18,7 +19,7 @@ export const Route = createFileRoute('/magic-link/verify')({
   }),
   component: MagicLinkVerifyPage,
   head: () => ({
-    meta: [{ title: `${m.auth_magic_link_verify_title()} | Roxabi` }],
+    meta: [{ title: `${m.auth_magic_link_verify_title()} | ${appName}` }],
   }),
 })
 

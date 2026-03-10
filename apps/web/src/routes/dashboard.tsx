@@ -3,6 +3,7 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { BookOpenIcon, SettingsIcon, UsersIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { fetchUserProfile } from '@/lib/api'
+import { appName } from '@/lib/appName'
 import { authClient, useSession } from '@/lib/authClient'
 import { requireAuth } from '@/lib/routeGuards'
 import { useOrganizations } from '@/lib/useOrganizations'
@@ -12,7 +13,7 @@ export const Route = createFileRoute('/dashboard')({
   beforeLoad: requireAuth,
   component: DashboardPage,
   head: () => ({
-    meta: [{ title: 'Dashboard | Roxabi' }],
+    meta: [{ title: `Dashboard | ${appName}` }],
   }),
 })
 

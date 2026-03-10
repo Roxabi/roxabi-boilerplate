@@ -2,9 +2,12 @@ import { render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
+vi.mock('@/lib/appName', () => ({ appName: 'TestApp' }))
+
 vi.mock('@/paraglide/messages', () => ({
   m: {
-    footer_copyright: ({ year }: { year: string }) => `Copyright ${year} Roxabi`,
+    footer_copyright: ({ year, appName }: { year: string; appName: string }) =>
+      `Copyright ${year} ${appName}`,
     github_label: () => 'GitHub',
     footer_legal_notice: () => 'Legal Notice',
     footer_terms: () => 'Terms',
@@ -76,7 +79,7 @@ describe('Footer', () => {
     render(<Footer />)
 
     // Assert
-    expect(screen.getByText(`Copyright ${year} Roxabi`)).toBeInTheDocument()
+    expect(screen.getByText(`Copyright ${year} TestApp`)).toBeInTheDocument()
   })
 
   it('should render the GitHub link', () => {

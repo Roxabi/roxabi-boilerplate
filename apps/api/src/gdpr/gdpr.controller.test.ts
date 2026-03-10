@@ -82,7 +82,7 @@ describe('GdprController', () => {
       // Assert
       expect(reply.header).toHaveBeenCalledWith(
         'Content-Disposition',
-        expect.stringMatching(/attachment; filename="roxabi-data-export-\d{4}-\d{2}-\d{2}\.json"/)
+        expect.stringMatching(/attachment; filename="\w+-data-export-\d{4}-\d{2}-\d{2}\.json"/)
       )
     })
 

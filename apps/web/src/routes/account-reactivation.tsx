@@ -15,6 +15,7 @@ import { AlertTriangleIcon } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { purgeAccount, reactivateAccount } from '@/lib/api'
+import { appName } from '@/lib/appName'
 import { authClient, useSession } from '@/lib/authClient'
 import { m } from '@/paraglide/messages'
 
@@ -29,7 +30,7 @@ export const Route = createFileRoute('/account-reactivation')({
       typeof search.deleteScheduledFor === 'string' ? search.deleteScheduledFor : undefined,
   }),
   head: () => ({
-    meta: [{ title: `${m.account_reactivation_title()} | Roxabi` }],
+    meta: [{ title: `${m.account_reactivation_title()} | ${appName}` }],
   }),
 })
 

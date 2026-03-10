@@ -36,8 +36,7 @@ describe('renderMagicLinkEmail', () => {
 
   it('should fall back to English for unsupported locale', async () => {
     const result = await renderMagicLinkEmail(url, 'de')
-    expect(result.subject).toBe('Sign in to Roxabi')
-    expect(result.html).toContain('Sign in to Roxabi')
+    expect(result.subject).toBe('Sign in')
     expect(result.html).toContain('Sign in')
   })
 

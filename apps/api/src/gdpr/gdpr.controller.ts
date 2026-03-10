@@ -22,7 +22,8 @@ export class GdprController {
     const data = await this.gdprService.exportUserData(session.user.id)
 
     const date = new Date().toISOString().split('T')[0]
-    reply.header('Content-Disposition', `attachment; filename="roxabi-data-export-${date}.json"`)
+    const slug = (process.env.APP_NAME ?? 'app').toLowerCase()
+    reply.header('Content-Disposition', `attachment; filename="${slug}-data-export-${date}.json"`)
 
     return data
   }

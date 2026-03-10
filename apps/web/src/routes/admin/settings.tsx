@@ -16,6 +16,7 @@ import { createFileRoute, useBlocker } from '@tanstack/react-router'
 import { AlertTriangleIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { appName } from '@/lib/appName'
 import { authClient } from '@/lib/authClient'
 import { isErrorWithMessage } from '@/lib/errorUtils'
 import { hasPermission } from '@/lib/permissions'
@@ -41,7 +42,7 @@ export const Route = createFileRoute('/admin/settings')({
   beforeLoad: enforceRoutePermission,
   component: AdminSettingsPage,
   head: () => ({
-    meta: [{ title: `${m.org_settings_title()} | Roxabi` }],
+    meta: [{ title: `${m.org_settings_title()} | ${appName}` }],
   }),
 })
 

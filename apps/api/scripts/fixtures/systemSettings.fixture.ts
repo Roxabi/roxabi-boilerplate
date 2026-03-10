@@ -1,10 +1,12 @@
 import * as schema from '../../src/database/schema/index.js'
 import type { FixtureContext, Preset, SeedResult, Tx } from './types.js'
 
+const APP_NAME = process.env.APP_NAME ?? 'App'
+
 export const DEFAULT_SYSTEM_SETTINGS = [
   {
     key: 'app.name',
-    value: 'Roxabi',
+    value: APP_NAME,
     type: 'string',
     name: 'Application Name',
     description: 'The name of the application displayed in the UI',
@@ -68,7 +70,7 @@ export const DEFAULT_SYSTEM_SETTINGS = [
   },
   {
     key: 'email.fromName',
-    value: 'Roxabi',
+    value: APP_NAME,
     type: 'string',
     name: 'Email From Name',
     description: 'Sender name for outgoing emails',

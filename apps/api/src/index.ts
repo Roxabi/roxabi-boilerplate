@@ -81,9 +81,10 @@ function configureSwagger(
   swaggerEnabled: boolean
 ): void {
   if (swaggerEnabled) {
+    const appName = process.env.APP_NAME ?? 'App'
     const config = new DocumentBuilder()
-      .setTitle('Roxabi API')
-      .setDescription('Roxabi SaaS Backend API')
+      .setTitle(appName + ' API')
+      .setDescription(appName + ' SaaS Backend API')
       .setVersion('1.0')
       .addBearerAuth()
       .build()

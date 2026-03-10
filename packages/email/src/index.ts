@@ -24,7 +24,8 @@ export function escapeHtml(str: string): string {
 export async function renderVerificationEmail(
   url: string,
   locale: string,
-  appUrl?: string
+  appUrl?: string,
+  appName?: string
 ): Promise<EmailRenderResult> {
   const translations = getTranslations(locale)
 
@@ -33,6 +34,7 @@ export async function renderVerificationEmail(
     translations: translations.verification,
     locale,
     appUrl,
+    appName,
   })
   const html = await render(element)
   const text = await render(element, { plainText: true })
@@ -43,7 +45,8 @@ export async function renderVerificationEmail(
 export async function renderResetEmail(
   url: string,
   locale: string,
-  appUrl?: string
+  appUrl?: string,
+  appName?: string
 ): Promise<EmailRenderResult> {
   const translations = getTranslations(locale)
 
@@ -52,6 +55,7 @@ export async function renderResetEmail(
     translations: translations.reset,
     locale,
     appUrl,
+    appName,
   })
   const html = await render(element)
   const text = await render(element, { plainText: true })
@@ -62,7 +66,8 @@ export async function renderResetEmail(
 export async function renderMagicLinkEmail(
   url: string,
   locale: string,
-  appUrl?: string
+  appUrl?: string,
+  appName?: string
 ): Promise<EmailRenderResult> {
   const translations = getTranslations(locale)
 
@@ -71,6 +76,7 @@ export async function renderMagicLinkEmail(
     translations: translations.magicLink,
     locale,
     appUrl,
+    appName,
   })
   const html = await render(element)
   const text = await render(element, { plainText: true })
@@ -81,7 +87,8 @@ export async function renderMagicLinkEmail(
 export async function renderExistingAccountEmail(
   loginUrl: string,
   locale: string,
-  appUrl?: string
+  appUrl?: string,
+  appName?: string
 ): Promise<EmailRenderResult> {
   const translations = getTranslations(locale)
 
@@ -90,6 +97,7 @@ export async function renderExistingAccountEmail(
     translations: translations.existingAccount,
     locale,
     appUrl,
+    appName,
   })
   const html = await render(element)
   const text = await render(element, { plainText: true })

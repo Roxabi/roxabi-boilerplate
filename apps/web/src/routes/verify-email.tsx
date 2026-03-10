@@ -3,6 +3,7 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { appName } from '@/lib/appName'
 import { authClient, useSession } from '@/lib/authClient'
 import { m } from '@/paraglide/messages'
 import { AuthLayout } from '../components/AuthLayout'
@@ -19,7 +20,7 @@ export const Route = createFileRoute('/verify-email')({
   }),
   component: VerifyEmailPage,
   head: () => ({
-    meta: [{ title: `${m.auth_verify_email_title()} | Roxabi` }],
+    meta: [{ title: `${m.auth_verify_email_title()} | ${appName}` }],
   }),
 })
 

@@ -18,13 +18,15 @@ type EmailLayoutProps = {
   preview: string
   locale: string
   appUrl?: string
+  appName?: string
 }
 
 export function EmailLayout({
   children,
   preview,
   locale,
-  appUrl = 'https://roxabi.fr',
+  appUrl = '/',
+  appName = 'App',
 }: EmailLayoutProps) {
   return (
     <Html lang={locale}>
@@ -33,7 +35,7 @@ export function EmailLayout({
       <Body style={bodyStyle}>
         <Container style={containerStyle}>
           <Section style={headerStyle}>
-            <Text style={logoStyle}>Roxabi</Text>
+            <Text style={logoStyle}>{appName}</Text>
           </Section>
           <Section style={contentStyle}>{children}</Section>
           <Hr style={hrStyle} />
@@ -41,7 +43,7 @@ export function EmailLayout({
             <Text style={footerTextStyle}>
               &copy; {new Date().getFullYear()}{' '}
               <Link href={appUrl} style={footerLinkStyle}>
-                Roxabi
+                {appName}
               </Link>
             </Text>
           </Section>

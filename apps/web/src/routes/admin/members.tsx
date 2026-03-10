@@ -17,6 +17,7 @@ import { MembersTable } from '@/components/admin/MembersTable'
 import { PaginationControls } from '@/components/admin/PaginationControls'
 import { PendingInvitations } from '@/components/admin/PendingInvitations'
 import type { MembersResponse, OrgRole } from '@/components/admin/types'
+import { appName } from '@/lib/appName'
 import { authClient, useSession } from '@/lib/authClient'
 import { parseErrorMessage } from '@/lib/errorUtils'
 import { enforceRoutePermission } from '@/lib/routePermissions'
@@ -27,7 +28,7 @@ export const Route = createFileRoute('/admin/members')({
   beforeLoad: enforceRoutePermission,
   component: AdminMembersPage,
   head: () => ({
-    meta: [{ title: `${m.org_members_title()} | Roxabi` }],
+    meta: [{ title: `${m.org_members_title()} | ${appName}` }],
   }),
 })
 

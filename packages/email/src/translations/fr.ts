@@ -20,8 +20,8 @@ export const fr: Translations = {
       'Si vous n\u2019avez pas demandé de réinitialisation de mot de passe, vous pouvez ignorer cet e-mail.',
   },
   magicLink: {
-    subject: 'Connectez-vous à Roxabi',
-    heading: 'Connectez-vous à Roxabi',
+    subject: 'Connectez-vous',
+    heading: 'Connectez-vous',
     body: 'Cliquez sur le bouton ci-dessous pour vous connecter à votre compte.',
     cta: 'Se connecter',
     expiry: 'Ce lien expire dans 5 minutes.',

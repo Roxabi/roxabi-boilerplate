@@ -23,6 +23,7 @@ import { LoadMoreButton } from '@/components/admin/LoadMoreButton'
 import { UserContextMenu, UserKebabButton } from '@/components/admin/UserContextMenu'
 import { useCursorPagination } from '@/hooks/useCursorPagination'
 import { adminOrgKeys, adminUserKeys } from '@/lib/admin/queryKeys'
+import { appName } from '@/lib/appName'
 import { formatDate } from '@/lib/formatDate'
 import { formatRelativeTime } from '@/lib/formatRelativeTime'
 import { enforceRoutePermission } from '@/lib/routePermissions'
@@ -32,7 +33,7 @@ export const Route = createFileRoute('/admin/users')({
   staticData: { permission: 'role:superadmin' },
   beforeLoad: enforceRoutePermission,
   component: AdminUsersPage,
-  head: () => ({ meta: [{ title: 'Users | Admin | Roxabi' }] }),
+  head: () => ({ meta: [{ title: `Users | Admin | ${appName}` }] }),
 })
 
 type UserFilters = {

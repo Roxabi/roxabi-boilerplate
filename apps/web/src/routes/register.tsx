@@ -17,6 +17,7 @@ import { CheckCircle } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { legalConfig } from '@/config/legal.config'
+import { appName } from '@/lib/appName'
 import { authClient, fetchEnabledProviders } from '@/lib/authClient'
 import { requireGuest } from '@/lib/routeGuards'
 import { m } from '@/paraglide/messages'
@@ -37,7 +38,7 @@ export const Route = createFileRoute('/register')({
   loader: fetchEnabledProviders,
   component: RegisterPage,
   head: () => ({
-    meta: [{ title: `${m.auth_register_title()} | Roxabi` }],
+    meta: [{ title: `${m.auth_register_title()} | ${appName}` }],
   }),
 })
 

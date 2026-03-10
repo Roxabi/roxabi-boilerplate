@@ -315,7 +315,8 @@ describe('createBetterAuth sendVerificationEmail', () => {
     expect(mockRenderVerificationEmail).toHaveBeenCalledWith(
       'http://localhost:3000/verify-email?token=abc',
       'fr',
-      'http://localhost:3000'
+      'http://localhost:3000',
+      'App'
     )
     expect(mockEmail.send).toHaveBeenCalledWith({
       to: 'user@example.com',
@@ -348,7 +349,8 @@ describe('createBetterAuth sendVerificationEmail', () => {
     expect(mockRenderVerificationEmail).toHaveBeenCalledWith(
       'http://localhost:3000/verify-email?token=abc',
       'en',
-      'http://localhost:3000'
+      'http://localhost:3000',
+      'App'
     )
   })
 
@@ -461,7 +463,8 @@ describe('createBetterAuth sendResetPassword', () => {
     expect(mockRenderResetEmail).toHaveBeenCalledWith(
       'http://localhost:3000/reset-password/confirm?token=xyz',
       'fr',
-      'http://localhost:3000'
+      'http://localhost:3000',
+      'App'
     )
     expect(mockEmail.send).toHaveBeenCalledWith({
       to: 'user@example.com',
@@ -494,7 +497,8 @@ describe('createBetterAuth sendResetPassword', () => {
     expect(mockRenderResetEmail).toHaveBeenCalledWith(
       'http://localhost:3000/reset-password/confirm?token=xyz',
       'en',
-      'http://localhost:3000'
+      'http://localhost:3000',
+      'App'
     )
   })
 
@@ -607,7 +611,8 @@ describe('createBetterAuth sendMagicLink', () => {
     expect(mockRenderMagicLinkEmail).toHaveBeenCalledWith(
       'http://localhost:3000/magic-link/verify?token=m1',
       'fr',
-      'http://localhost:3000'
+      'http://localhost:3000',
+      'App'
     )
     expect(mockEmail.send).toHaveBeenCalledWith({
       to: 'user@example.com',
@@ -641,7 +646,8 @@ describe('createBetterAuth sendMagicLink', () => {
     expect(mockRenderMagicLinkEmail).toHaveBeenCalledWith(
       'http://localhost:3000/magic-link/verify?token=mx',
       'en',
-      'http://localhost:3000'
+      'http://localhost:3000',
+      'App'
     )
   })
 
@@ -685,9 +691,9 @@ describe('createBetterAuth sendMagicLink', () => {
     // Assert - should send fallback email with frontend URL
     expect(mockEmail.send).toHaveBeenCalledWith({
       to: 'user@example.com',
-      subject: 'Sign in to Roxabi',
+      subject: 'Sign in to App',
       html: '<p>Click <a href="http://localhost:3000/magic-link/verify?token=m3">here</a> to sign in.</p>',
-      text: 'Sign in to Roxabi: http://localhost:3000/magic-link/verify?token=m3',
+      text: 'Sign in to App: http://localhost:3000/magic-link/verify?token=m3',
     })
   })
 
@@ -794,7 +800,8 @@ describe('createBetterAuth buildFrontendUrl', () => {
     expect(mockRenderVerificationEmail).toHaveBeenCalledWith(
       'http://localhost:3000/verify-email?token=abc',
       'en',
-      'http://localhost:3000'
+      'http://localhost:3000',
+      'App'
     )
   })
 
@@ -827,7 +834,8 @@ describe('createBetterAuth buildFrontendUrl', () => {
     expect(mockRenderResetEmail).toHaveBeenCalledWith(
       'http://localhost:3000/reset-password/confirm?token=xyz',
       'en',
-      'http://localhost:3000'
+      'http://localhost:3000',
+      'App'
     )
   })
 
@@ -859,7 +867,8 @@ describe('createBetterAuth buildFrontendUrl', () => {
     expect(mockRenderMagicLinkEmail).toHaveBeenCalledWith(
       'http://localhost:3000/magic-link/verify?token=m1',
       'en',
-      'http://localhost:3000'
+      'http://localhost:3000',
+      'App'
     )
   })
 
@@ -893,7 +902,8 @@ describe('createBetterAuth buildFrontendUrl', () => {
     expect(mockRenderVerificationEmail).toHaveBeenCalledWith(
       'http://localhost:4000/api/auth/verify-email?token=abc&callbackURL=%2F',
       'en',
-      undefined
+      undefined,
+      'App'
     )
   })
 
@@ -1000,7 +1010,8 @@ describe('buildFrontendUrl edge cases', () => {
     expect(mockRenderVerificationEmail).toHaveBeenCalledWith(
       'http://localhost:3000/verify-email?token=abc',
       'en',
-      'http://localhost:3000'
+      'http://localhost:3000',
+      'App'
     )
   })
 
@@ -1033,7 +1044,8 @@ describe('buildFrontendUrl edge cases', () => {
     expect(mockRenderVerificationEmail).toHaveBeenCalledWith(
       'http://localhost:3000/verify-email?token=abc',
       'en',
-      'http://localhost:3000'
+      'http://localhost:3000',
+      'App'
     )
   })
 
@@ -1067,7 +1079,8 @@ describe('buildFrontendUrl edge cases', () => {
     expect(mockRenderResetEmail).toHaveBeenCalledWith(
       'http://localhost:4000/api/auth/reset-password?token=xyz&callbackURL=%2F',
       'en',
-      undefined
+      undefined,
+      'App'
     )
   })
 })
@@ -1189,7 +1202,8 @@ describe('createBetterAuth onExistingUserSignUp', () => {
     expect(mockRenderExistingAccountEmail).toHaveBeenCalledWith(
       'http://localhost:3000/login',
       'fr',
-      'http://localhost:3000'
+      'http://localhost:3000',
+      'App'
     )
     expect(mockEmail.send).toHaveBeenCalledWith({
       to: 'existing@example.com',
@@ -1219,7 +1233,8 @@ describe('createBetterAuth onExistingUserSignUp', () => {
     expect(mockRenderExistingAccountEmail).toHaveBeenCalledWith(
       'http://localhost:3000/login',
       'en',
-      'http://localhost:3000'
+      'http://localhost:3000',
+      'App'
     )
   })
 
@@ -1279,7 +1294,7 @@ describe('createBetterAuth onExistingUserSignUp', () => {
     await handler({ user: { email: 'existing@example.com' } })
 
     // Assert — login URL falls back to relative path
-    expect(mockRenderExistingAccountEmail).toHaveBeenCalledWith('/login', 'en', undefined)
+    expect(mockRenderExistingAccountEmail).toHaveBeenCalledWith('/login', 'en', undefined, 'App')
     expect(mockEmail.send).toHaveBeenCalled()
   })
 

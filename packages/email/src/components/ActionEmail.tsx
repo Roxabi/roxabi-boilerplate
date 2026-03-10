@@ -7,11 +7,12 @@ type ActionEmailProps = {
   translations: EmailTemplateStrings
   locale: string
   appUrl?: string
+  appName?: string
 }
 
-export function ActionEmail({ url, translations, locale, appUrl }: ActionEmailProps) {
+export function ActionEmail({ url, translations, locale, appUrl, appName }: ActionEmailProps) {
   return (
-    <EmailLayout preview={translations.subject} locale={locale} appUrl={appUrl}>
+    <EmailLayout preview={translations.subject} locale={locale} appUrl={appUrl} appName={appName}>
       <Text style={headingStyle}>{translations.heading}</Text>
       <Text style={bodyTextStyle}>{translations.body}</Text>
       <Button style={buttonStyle} href={url}>

@@ -62,6 +62,7 @@ function buildSocialProviders(config: AuthInstanceConfig): Record<string, unknow
 }
 
 function buildEmailAndPasswordConfig(emailProvider: EmailProvider, config: AuthInstanceConfig) {
+  const appName = process.env.APP_NAME ?? 'App'
   return {
     enabled: true,
     requireEmailVerification: true,
@@ -75,7 +76,8 @@ function buildEmailAndPasswordConfig(emailProvider: EmailProvider, config: AuthI
         const { html, text, subject } = await renderExistingAccountEmail(
           loginUrl,
           locale,
-          config.appURL
+          config.appURL,
+          appName
         )
         emailContent = { html, text, subject }
       } catch {
@@ -107,7 +109,12 @@ function buildEmailAndPasswordConfig(emailProvider: EmailProvider, config: AuthI
       let emailContent: { html: string; text?: string; subject: string }
       try {
         const locale = (user as UserWithLocale).locale ?? 'en'
-        const { html, text, subject } = await renderResetEmail(emailUrl, locale, config.appURL)
+        const { html, text, subject } = await renderResetEmail(
+          emailUrl,
+          locale,
+          config.appURL,
+          appName
+        )
         emailContent = { html, text, subject }
       } catch {
         logger.warn('Failed to render reset password email template, using plain fallback')
@@ -130,6 +137,7 @@ function buildEmailAndPasswordConfig(emailProvider: EmailProvider, config: AuthI
 }
 
 function buildEmailVerificationConfig(emailProvider: EmailProvider, config: AuthInstanceConfig) {
+  const appName = process.env.APP_NAME ?? 'App'
   return {
     // Better Auth applies server-side rate limiting on verification email sends
     // (rateLimit plugin). Client-side cooldown (60s) is UX guidance only.
@@ -151,7 +159,8 @@ function buildEmailVerificationConfig(emailProvider: EmailProvider, config: Auth
         const { html, text, subject } = await renderVerificationEmail(
           emailUrl,
           locale,
-          config.appURL
+          config.appURL,
+          appName
         )
         emailContent = { html, text, subject }
       } catch {
@@ -179,6 +188,7 @@ function buildMagicLinkPlugin(
   emailProvider: EmailProvider,
   config: AuthInstanceConfig
 ) {
+  const appName = process.env.APP_NAME ?? 'App'
   return magicLink({
     async sendMagicLink({ email, url }) {
       const emailUrl = buildFrontendUrl(url, config.appURL, '/magic-link/verify')
@@ -195,14 +205,19 @@ function buildMagicLinkPlugin(
       let emailContent: { html: string; text?: string; subject: string }
       try {
         const locale = userData.locale ?? 'en'
-        const { html, text, subject } = await renderMagicLinkEmail(emailUrl, locale, config.appURL)
+        const { html, text, subject } = await renderMagicLinkEmail(
+          emailUrl,
+          locale,
+          config.appURL,
+          appName
+        )
         emailContent = { html, text, subject }
       } catch {
         logger.warn('Failed to render magic link email template, using plain fallback')
         emailContent = {
-          subject: 'Sign in to Roxabi',
+          subject: `Sign in to ${appName}`,
           html: `<p>Click <a href="${escapeHtml(emailUrl)}">here</a> to sign in.</p>`,
-          text: `Sign in to Roxabi: ${emailUrl}`,
+          text: `Sign in to ${appName}: ${emailUrl}`,
         }
       }
 

@@ -23,6 +23,7 @@ import { FilterBar } from '@/components/admin/FilterBar'
 import { LoadMoreButton } from '@/components/admin/LoadMoreButton'
 import { useCursorPagination } from '@/hooks/useCursorPagination'
 import { adminAuditKeys } from '@/lib/admin/queryKeys'
+import { appName } from '@/lib/appName'
 import { formatTimestamp } from '@/lib/formatDate'
 import { enforceRoutePermission } from '@/lib/routePermissions'
 
@@ -30,7 +31,7 @@ export const Route = createFileRoute('/admin/audit-logs')({
   staticData: { permission: 'role:superadmin' },
   beforeLoad: enforceRoutePermission,
   component: AdminAuditLogsPage,
-  head: () => ({ meta: [{ title: 'Audit Logs | Admin | Roxabi' }] }),
+  head: () => ({ meta: [{ title: `Audit Logs | Admin | ${appName}` }] }),
 })
 
 type AuditEntry = Omit<AuditLogEntry, 'timestamp' | 'action' | 'actorType'> & {

@@ -6,6 +6,7 @@ import { SettingsIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { SettingsCard } from '@/components/admin/SettingsCard'
 import { adminSettingsKeys } from '@/lib/admin/queryKeys'
+import { appName } from '@/lib/appName'
 import { isErrorWithMessage } from '@/lib/errorUtils'
 import { enforceRoutePermission } from '@/lib/routePermissions'
 
@@ -13,7 +14,7 @@ export const Route = createFileRoute('/admin/system-settings')({
   staticData: { permission: 'role:superadmin' },
   beforeLoad: enforceRoutePermission,
   component: SystemSettingsPage,
-  head: () => ({ meta: [{ title: 'System Settings | Admin | Roxabi' }] }),
+  head: () => ({ meta: [{ title: `System Settings | Admin | ${appName}` }] }),
 })
 
 function SettingsSkeleton() {
