@@ -1,5 +1,4 @@
 import { cn } from '@repo/ui'
-import { Link } from '@tanstack/react-router'
 import {
   Bot,
   Building2,
@@ -13,6 +12,7 @@ import {
 import type * as React from 'react'
 import { FeatureCard } from '@/components/FeatureCard'
 import { SectionHeading } from '@/components/landing/SectionHeading'
+import { clientEnv } from '@/lib/env.shared'
 import { m } from '@/paraglide/messages'
 
 type Feature = {
@@ -23,6 +23,8 @@ type Feature = {
 }
 
 export function FeaturesSection() {
+  const docsBase = clientEnv.VITE_DOCS_URL ?? null
+
   const features: Feature[] = [
     {
       icon: Layers,
@@ -65,15 +67,21 @@ export function FeaturesSection() {
                 icon={<feature.icon className="mb-2 size-8 text-primary" />}
                 title={feature.title}
                 description={feature.description}
-                className={cn(feature.href && 'cursor-pointer hover:border-primary/50')}
+                className={cn(feature.href && docsBase && 'cursor-pointer hover:border-primary/50')}
               />
             )
 
-            if (feature.href) {
+            if (feature.href && docsBase) {
               return (
-                <Link key={feature.title} to={feature.href} className="h-full">
+                <a
+                  key={feature.title}
+                  href={`${docsBase}${feature.href}`}
+                  className="h-full"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   {card}
-                </Link>
+                </a>
               )
             }
 

@@ -1,4 +1,3 @@
-import { Separator } from '@repo/ui'
 import { Link } from '@tanstack/react-router'
 import { GITHUB_REPO_URL } from '@/lib/config'
 import { useConsent } from '@/lib/consent/useConsent'
@@ -15,17 +14,6 @@ export function Footer() {
         {/* Left: copyright + product links */}
         <div className="flex flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground">
           <span>{m.footer_copyright({ year: CURRENT_YEAR })}</span>
-          <Separator orientation="vertical" className="!h-3 mx-1 hidden sm:block" />
-          <Link
-            to="/docs/$"
-            params={{ _splat: 'changelog' }}
-            className="hover:text-foreground transition-colors"
-          >
-            {m.footer_changelog()}
-          </Link>
-          <span className="hidden sm:inline" aria-hidden="true">
-            ·
-          </span>
           <a
             href={GITHUB_REPO_URL}
             target="_blank"

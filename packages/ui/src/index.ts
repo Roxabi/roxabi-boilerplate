@@ -121,7 +121,6 @@ export type {
   ToggleLabels,
 } from './components/PasswordInput'
 export { calculateStrength, PASSWORD_RULES, PasswordInput } from './components/PasswordInput'
-export { PresentationNav } from './components/PresentationNav'
 export {
   Select,
   SelectContent,

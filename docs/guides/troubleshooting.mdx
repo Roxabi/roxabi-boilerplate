@@ -7,9 +7,9 @@ Common issues encountered during development and their solutions.
 
 ## Database Connection Failures
 
-**Symptom:** `connection refused` or `ECONNREFUSED` errors on port 5432 when starting the API or running migrations.
+**Symptom:** `connection refused` or `ECONNREFUSED` errors on port 5432 (or your `POSTGRES_PORT`) when starting the API or running migrations.
 
-**Cause:** The PostgreSQL Docker container is not running, or is mapped to a different port than the app expects.
+**Cause:** The PostgreSQL Docker container is not running, or is mapped to a different port than `DATABASE_URL` expects.
 
 **Fix:** Start the Docker services and verify the container is healthy:
 

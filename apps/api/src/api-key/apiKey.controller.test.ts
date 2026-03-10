@@ -32,6 +32,7 @@ function createSession(overrides: Partial<AuthenticatedSession> = {}): Authentic
     user: { id: 'user-1' },
     session: { id: 'sess-1', activeOrganizationId: 'org-1' },
     permissions: ['api_keys:read', 'api_keys:write'],
+    actorType: 'user',
     ...overrides,
   }
 }

@@ -1,5 +1,9 @@
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+
+const mockClientEnv = vi.hoisted(() => ({
+  VITE_DOCS_URL: undefined as string | undefined,
+}))
 
 vi.mock('@/paraglide/messages', () => ({
   m: {
@@ -19,6 +23,10 @@ vi.mock('@/paraglide/messages', () => ({
 
 vi.mock('@/lib/config', () => ({
   GITHUB_REPO_URL: 'https://github.com/test/repo',
+}))
+
+vi.mock('@/lib/env.shared', () => ({
+  clientEnv: mockClientEnv,
 }))
 
 import { HeroSection } from './HeroSection'
@@ -80,5 +88,37 @@ describe('HeroSection', () => {
     expect(screen.getByText('Config needed')).toBeInTheDocument()
     expect(screen.getByText('100%')).toBeInTheDocument()
     expect(screen.getByText('Production ready')).toBeInTheDocument()
+  })
+})
+
+describe('HeroSection — CTA link (VITE_DOCS_URL)', () => {
+  afterEach(() => {
+    mockClientEnv.VITE_DOCS_URL = undefined
+  })
+
+  it('should render CTA link with href="#" when VITE_DOCS_URL is undefined', () => {
+    // Arrange
+    mockClientEnv.VITE_DOCS_URL = undefined
+
+    // Act
+    render(<HeroSection />)
+
+    // Assert
+    const ctaLink = screen.getByRole('link', { name: /get started/i })
+    expect(ctaLink).toHaveAttribute('href', '#')
+  })
+
+  it('should render CTA link with correct URL when VITE_DOCS_URL is set', () => {
+    // Arrange
+    mockClientEnv.VITE_DOCS_URL = 'https://docs.example.com'
+
+    // Act
+    render(<HeroSection />)
+
+    // Assert
+    const ctaLink = screen.getByRole('link', { name: /get started/i })
+    expect(ctaLink).toHaveAttribute('href', 'https://docs.example.com')
+    expect(ctaLink).toHaveAttribute('target', '_blank')
+    expect(ctaLink).toHaveAttribute('rel', 'noopener noreferrer')
   })
 })

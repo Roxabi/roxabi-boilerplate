@@ -137,7 +137,7 @@ Deployment runs automatically on pushes to `main` via Vercel:
 
 No Docker or SSH needed — Vercel watches the GitHub repo directly.
 
-> **First-time setup:** Create two Vercel projects (web + API) from the same repo. See the [Deployment Guide](./guides/deployment).
+> **First-time setup:** Create three Vercel projects (web + API + docs) from the same repo. See the [Deployment Guide](./guides/deployment).
 
 > **Marketplace integrations:** For Neon, Resend, and Upstash, install the [Vercel Marketplace integrations](https://vercel.com/marketplace) instead of manually configuring env vars. See the [Deployment Guide](./guides/deployment) for step-by-step instructions.
 
@@ -176,7 +176,7 @@ bun db:seed
 
 > **Note:** Data persists across restarts. To stop: `bun db:down`. To wipe and re-seed: `bun db:reset && bun db:seed`.
 
-> **Troubleshooting:** If port 5432 is already in use, stop your local PostgreSQL first (`sudo systemctl stop postgresql` or `brew services stop postgresql`).
+> **Troubleshooting:** If port 5432 is already in use, either stop your local PostgreSQL (`sudo systemctl stop postgresql` or `brew services stop postgresql`) or set `POSTGRES_PORT=5433` (or any free port) in `.env` before running `bun db:up`. Remember to update `DATABASE_URL` to match.
 
 > **Multiple projects on the same machine:** If another project is already running Docker containers with the same names, you'll get container or volume conflicts. Set `POSTGRES_CONTAINER`, `MAILPIT_CONTAINER`, `POSTGRES_VOLUME`, and `DB_BRANCH_PREFIX` in `.env` to unique values before running `bun db:up`. See [Configuration — Docker Overrides](./configuration#docker-overrides-local-dev--multi-project).
 
@@ -197,7 +197,7 @@ bun --filter @repo/api dev
 - API: http://localhost:4000
 - API Docs (Swagger): http://localhost:4000/api/docs
 - Email Preview: http://localhost:3001
-- Documentation: http://localhost:3000/docs (served by `bun docs`)
+- Documentation: http://localhost:3002 (served by `bun docs` — runs apps/docs)
 
 ## Useful Commands
 
@@ -210,7 +210,7 @@ bun --filter @repo/api dev
 | `bun typecheck` | TypeScript type checking |
 | `bun run test` | Run all tests (via turbo + vitest) |
 | `bun run test:coverage` | Tests with coverage |
-| `bun docs` | Start documentation server (runs apps/web) |
+| `bun docs` | Start documentation server (runs apps/docs, port 3002) |
 | `bun db:up` | Start PostgreSQL (Docker Compose) |
 | `bun db:down` | Stop PostgreSQL (preserves data) |
 | `bun db:migrate` | Apply pending database migrations |

@@ -129,7 +129,7 @@ Remove `beforeLoad: requireGuest` from the route definition. Replace with inline
 - [ ] Clicking an expired magic link shows "This link has expired. Request a new one." + button
 - [ ] Clicking an already-used magic link shows "This link is invalid or has already been used."
 - [ ] Visiting `/magic-link/verify` with no token shows "No verification link found."
-- [ ] Visiting `/magic-link/verify?token=xxx` while signed in shows "You're already signed in as {email}"
+- [ ] Visiting `/magic-link/verify?token=xxx` while signed in shows "You're already signed in as `\{email\}`"
 - [ ] All new strings have EN and FR translations
 - [ ] `bun run lint && bun run typecheck && bun run test` passes
 

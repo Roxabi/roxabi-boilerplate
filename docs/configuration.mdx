@@ -106,6 +106,7 @@ Override these when running multiple projects on the same machine to avoid conta
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `POSTGRES_CONTAINER` | Docker container name for Postgres | `roxabi-postgres` |
+| `POSTGRES_PORT` | Host port mapped to Postgres container | `5432` |
 | `MAILPIT_CONTAINER` | Docker container name for Mailpit | `roxabi-mailpit` |
 | `POSTGRES_VOLUME` | Named Docker volume for Postgres data | `postgres_data` |
 | `DB_BRANCH_PREFIX` | Prefix for per-worktree branch databases | `POSTGRES_DB` value (`roxabi`) |
@@ -209,6 +210,7 @@ Agent definitions are in `.claude/agents/*.md`. See the [Agent Teams Guide](./gu
 | Variable | App | Required | Default | Scope | Description |
 |----------|-----|----------|---------|-------|-------------|
 | `POSTGRES_CONTAINER` | — | No | `roxabi-postgres` | Local | Postgres Docker container name |
+| `POSTGRES_PORT` | — | No | `5432` | Local | Host port mapped to Postgres container |
 | `MAILPIT_CONTAINER` | — | No | `roxabi-mailpit` | Local | Mailpit Docker container name |
 | `POSTGRES_VOLUME` | — | No | `postgres_data` | Local | Named Docker volume for Postgres data |
 | `DB_BRANCH_PREFIX` | — | No | `POSTGRES_DB` | Local | Prefix for worktree branch databases |

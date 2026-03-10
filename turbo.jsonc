@@ -21,6 +21,9 @@
     "RATE_LIMIT_API_TTL",
     "RATE_LIMIT_API_LIMIT",
     "RESEND_API_KEY",
+    "SMTP_HOST",
+    "SMTP_PORT",
+    "SMTP_SECURE",
     "SWAGGER_ENABLED",
     // OAuth providers
     "GITHUB_CLIENT_ID",
@@ -56,7 +59,7 @@
       "persistent": true
     },
     "codegen": {
-      "outputs": ["src/routeTree.gen.ts", "src/paraglide/**"],
+      "outputs": ["src/routeTree.gen.ts", "src/paraglide/**", ".source/**"],
       "env": ["API_URL", "APP_URL", "VITE_*"]
     },
     "build": {

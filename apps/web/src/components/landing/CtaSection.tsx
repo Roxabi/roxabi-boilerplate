@@ -1,5 +1,6 @@
 import { Button } from '@repo/ui'
 import { SectionHeading } from '@/components/landing/SectionHeading'
+import { clientEnv } from '@/lib/env.shared'
 import { m } from '@/paraglide/messages'
 
 export function CtaSection() {
@@ -11,9 +12,13 @@ export function CtaSection() {
       <div className="relative mx-auto max-w-7xl px-6 text-center">
         <SectionHeading title={m.cta_title()} subtitle={m.cta_subtitle()} />
         <div className="mt-8">
-          <Button size="lg" asChild>
-            <a href="/docs">{m.cta_button()}</a>
-          </Button>
+          {clientEnv.VITE_DOCS_URL && (
+            <Button size="lg" asChild>
+              <a href={clientEnv.VITE_DOCS_URL} target="_blank" rel="noopener noreferrer">
+                {m.cta_button()}
+              </a>
+            </Button>
+          )}
         </div>
       </div>
     </section>

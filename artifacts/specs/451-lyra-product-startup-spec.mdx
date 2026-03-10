@@ -1,0 +1,218 @@
+---
+title: "feat(talks): Lyra origin story — Product/Startup audience (52 Days)"
+issue: 451
+status: approved
+tier: F-lite
+promoted-from: artifacts/frames/451-lyra-product-startup-frame.mdx
+date: 2026-03-06
+---
+
+## Context
+
+Part of the Lyra Origin Talks trilogy. `/talks/lyra-dev` (#450) is done. This is the second
+talk — same 52-day journey, but told through product/startup decision-making: wrong bets,
+iteration speed, killing darlings, ecosystem emergence.
+
+Route: `/talks/lyra-product`. Source material: `histoire-2ndbrain-lyra.md`.
+Pattern reference: `apps/web/src/components/presentation/lyra-dev/`.
+
+## Goal
+
+Deliver a scroll-snap presentation at `/talks/lyra-product` — 18 sections, i18n FR/EN — that
+tells the 52-day story (2ndBrain → Lyra ecosystem) to a startup/product/indie-hacker audience
+through the lens of product decisions and iteration velocity.
+
+## Users
+
+- **Primary:** Startup founders, indie hackers, product-minded devs at meetups/conferences.
+  They care about: decisions, speed, killing features, ecosystem thinking.
+- **Secondary:** Anyone on the product/build side who's pivoted or watched a side project
+  outgrow its original form.
+
+## Expected Behavior
+
+A visitor navigating to `/talks/lyra-product` sees a full-screen dark-warm presentation.
+Sections snap on scroll (desktop). The Lyra avatar companion tracks progress in the corner.
+Nav dots on the right allow jumping between sections. Keyboard arrows + Escape (→ `/talks`) work.
+Locale switcher (FR/EN) and theme toggle live in the top-right. A warm amber/orange accent
+palette distinguishes this talk visually from `lyra-dev` (emerald terminal) and `lyra-story`
+(neutral theme-aware).
+
+Each section tells one beat of the arc. Copy comes from `histoire-2ndbrain-lyra.md`. A
+`SectionChrome` decorates each section with a phase label + day counter (amber/orange/cyan/rose
+depending on phase). No mode toggle — single narrative mode throughout.
+
+## Breadboard
+
+### Routes
+
+| ID | Element | Handler | Notes |
+|----|---------|---------|-------|
+| R1 | `GET /talks/lyra-product` | Route + search schema | `avatar`, `avatarSize`, `avatarPos` params |
+
+### UI Affordances → Handlers
+
+| ID | Element | Handler | Data |
+|----|---------|---------|------|
+| U1 | Roxabi wordmark (top-left) | `navigate('/')` | Static |
+| U2 | `LocaleSwitcher` (top-right) | toggle `locale` cookie | `en` / `fr` |
+| U3 | `ThemeToggle` (top-right) | toggle `theme` cookie | `light` / `dark` |
+| U4 | `PresentationNav` dots | scroll to section | `sections[]` + `scrollContainerRef` |
+| U5 | Keyboard → / ← | scroll next/prev section | `IntersectionObserver` on section IDs |
+| U6 | Keyboard `Esc` | `navigate('/talks')` | — |
+| U7 | `LyraCompanion` | display avatar | `stage = currentSectionIndex`, `variant`, `size` |
+| U8 | Keyboard `V` | cycle avatar variant | `AVATAR_VARIANTS` array |
+| U9 | Keyboard `[` / `]` | resize avatar | `AVATAR_SIZES` array |
+| U10 | Keyboard `P` | cycle avatar position | `AVATAR_POSITIONS` array |
+| U11 | Avatar hover chips | set variant / size inline | `setAvatarParam()` |
+| U12 | Section content (×18) | display only | i18n keys `talk_lp_*` |
+| U13 | Progress counter (bottom-left) | display only | `{idx+1} / {total}` |
+| U14 | Day counter in `SectionChrome` | display only | `productSections[id].day` |
+
+### Data
+
+| Key | Type | Source |
+|-----|------|--------|
+| `currentSectionIndex` | `number` | `IntersectionObserver` on section DOM nodes |
+| `avatar` | `AvatarVariant` (URL param) | `AVATAR_VARIANTS` from lyra-story constants |
+| `avatarSize` | `number` (URL param) | `AVATAR_SIZES` |
+| `avatarPos` | `AvatarPosition` (URL param) | `AVATAR_POSITIONS` |
+| Section copy | `string` | i18n `m.talk_lp_*()` calls |
+| Section config | `ProductSectionConfig` | `productConfig.ts` |
+
+## Slices
+
+| # | Slice | Files | Demo-able when |
+|---|-------|-------|---------------|
+| S1 | Route shell + nav skeleton | `lyra-product.tsx`, `lyra-product.lazy.tsx`, `productConfig.ts` | Route loads, 18 empty snap sections scroll |
+| S2 | Visual theme + `SectionChrome` | `SectionChrome.tsx`, `productConfig.ts` colors | Phase labels + day counters appear |
+| S3 | i18n keys skeleton | `messages/en.json`, `messages/fr.json` | All `talk_lp_*` keys present, placeholder text |
+| S4 | Sections 1–6: title → knowledge-radar | `TitleSection` through `KnowledgeRadarSection` | First half of talk scrollable with content |
+| S5 | Sections 7–12: telegram → the-night | `TelegramSection` through `TheNightSection` | Industrial arc + explosion + voice night |
+| S6 | Sections 13–18: identity → closing | `LyraNotSoleneSection` through `ClosingSection` | Full presentation end-to-end |
+| S7 | French translations | `messages/fr.json` (complete `talk_lp_*`) | FR locale shows translated copy |
+| S8 | Avatar companion + keyboard nav | wired in `.lazy.tsx` | Avatar tracks scroll, V/[/]/P shortcuts work |
+
+## Section Map
+
+| # | Section ID | Phase label | Day | Color | Key moment from source |
+|---|-----------|-------------|-----|-------|----------------------|
+| 1 | `title` | `INTRO` | D00 | amber | Hook: "52 days. 6 repos. 1 ecosystem." |
+| 2 | `wrong-bet` | `WRONG_BET` | D01-05 | rose | MCP: 5 days lost on "la bonne façon" |
+| 3 | `pivot-speed` | `PIVOT` | D05 | orange | Kill MCP → Python direct → everything accelerates |
+| 4 | `kill-darlings` | `KILL_IT` | D12 | rose | `linkedin-jobs` deleted, commit `cfa0ce3` |
+| 5 | `shared-foundation` | `COMPOUND` | D09-12 | amber | `_shared/`: 240 lines → 10 lines |
+| 6 | `knowledge-radar` | `RADAR` | D22 | cyan | Knowledge base: 389 entries, your intelligence in a DB |
+| 7 | `telegram-anywhere` | `SHIP_IT` | D22-24 | orange | Bot Telegram: off the desk, always on |
+| 8 | `industrial-turn` | `PROCESS` | D26-31 | amber | Specs ROX-xxx, tests, process tiers S/M/L |
+| 9 | `patch-notes` | `CHANGELOG` | D31 | amber | Linear → GitHub: what you delete defines what you are |
+| 10 | `the-day` | `EXPLOSION` | D47 | orange | Feb 28: voiceCLI + roxabi-plugins + claude-config in 1 day |
+| 11 | `voice` | `NEW_MODE` | D47 | cyan | Qwen-fast: 15s → 2s. A new modality unlocked. |
+| 12 | `the-night` | `TURNING_PT` | D50 | rose | March 1st: 38 sessions · 266 msgs · designing identity at midnight |
+| 13 | `lyra-not-solene` | `IDENTITY` | D50 | amber | Solene lasted hours. Lyra = the free electron. Names matter. |
+| 14 | `the-ecosystem` | `ECOSYSTEM` | D47-54 | cyan | 6 repos · all feeding each other · emergence not planning |
+| 15 | `the-numbers` | `METRICS` | — | amber | 52d · 462 commits · 389 saves · 194 sessions · 3 migrations |
+| 16 | `lyra-in-4-days` | `OUTCOME` | D52-55 | orange | 52d of learnings → Lyra hub E2E functional in 4 days |
+| 17 | `the-lesson` | `LESSON` | — | amber | "2ndBrain was a laboratory. Everything else is the engine." |
+| 18 | `closing` | `NEXT` | — | amber | What's next — and why you should build your lab |
+
+## File Structure
+
+```
+apps/web/src/
+  routes/talks/
+    lyra-product.tsx              # route def + search schema (avatar/size/pos params)
+    lyra-product.lazy.tsx         # main presentation component
+  components/presentation/lyra-product/
+    productConfig.ts              # ProductSectionConfig, colorMap, PRODUCT_SECTION_IDS
+    SectionChrome.tsx             # phase label + day counter (top-left, hidden mobile)
+    TitleSection.tsx
+    WrongBetSection.tsx
+    PivotSpeedSection.tsx
+    KillDarlingsSection.tsx
+    SharedFoundationSection.tsx
+    KnowledgeRadarSection.tsx
+    TelegramSection.tsx
+    IndustrialTurnSection.tsx
+    PatchNotesSection.tsx
+    TheDaySection.tsx
+    VoiceSection.tsx
+    TheNightSection.tsx
+    LyraNotSoleneSection.tsx
+    TheEcosystemSection.tsx
+    TheNumbersSection.tsx
+    LyraIn4DaysSection.tsx
+    TheLessonSection.tsx
+    ClosingSection.tsx
+```
+
+## Visual Identity
+
+- **Background:** `bg-[#0d0a07]` (very dark warm, distinct from lyra-dev's `#060d08` cold green)
+- **Accent primary:** `amber-400` (decisions, key insights)
+- **Accent kill/pivot:** `orange-500` / `rose-400` (wrong bets, kills, hard moments)
+- **Accent ecosystem:** `cyan-400` (connections, emergence)
+- **Wordmark:** `font-mono text-xs text-amber-400/50 hover:text-amber-400` (warm echo of lyra-dev)
+- **Section Chrome:** phase label top-left + day counter (e.g. `D01-05`)
+- **Progress counter:** bottom-left `{idx+1} / {total}` in `text-amber-400/40`
+- **data-mode:** `"product"` (for potential CSS targeting)
+
+### ProductSectionConfig shape
+
+```ts
+type ProductPhaseColor = 'amber' | 'orange' | 'rose' | 'cyan'
+
+type ProductSectionConfig = {
+  phase: string       // e.g. 'WRONG_BET'
+  day: string         // e.g. 'D01-05' | 'D47' | '—'
+  color: ProductPhaseColor
+}
+```
+
+## i18n Key Convention
+
+Prefix: `talk_lp_` (lyra product).
+
+Nav keys (18 total):
+```
+talk_lp_nav_title
+talk_lp_nav_wrong_bet
+talk_lp_nav_pivot
+talk_lp_nav_kill
+talk_lp_nav_foundation
+talk_lp_nav_radar
+talk_lp_nav_telegram
+talk_lp_nav_process
+talk_lp_nav_changelog
+talk_lp_nav_explosion
+talk_lp_nav_voice
+talk_lp_nav_night
+talk_lp_nav_identity
+talk_lp_nav_ecosystem
+talk_lp_nav_numbers
+talk_lp_nav_four_days
+talk_lp_nav_lesson
+talk_lp_nav_closing
+```
+
+Section content keys: `talk_lp_{section_short}_{field}` (title, subtitle, body, quote, label,
+stat_*, etc.) — exact keys defined per-section in the plan.
+
+## Success Criteria
+
+- [ ] `/talks/lyra-product` route loads without errors in dev and prod build
+- [ ] All 18 sections render with correct content (FR and EN)
+- [ ] Scroll-snap works on desktop (md+); linear scroll on mobile
+- [ ] `PresentationNav` dots highlight the correct section on scroll
+- [ ] Keyboard navigation: arrow keys scroll sections, Esc → `/talks`
+- [ ] Avatar companion (`LyraCompanion`) renders at all 4 positions, all 7 variants, 4 sizes
+- [ ] Keyboard shortcuts V / [ / ] / P cycle variant/size/position correctly
+- [ ] Hover chips on avatar set variant/size via URL params
+- [ ] `SectionChrome` shows correct phase label + day for each section (hidden on mobile)
+- [ ] Background color is `#0d0a07` (warm dark, visually distinct from lyra-dev's cold green)
+- [ ] Locale switcher switches copy between EN and FR without page reload
+- [ ] All `talk_lp_*` i18n keys present in both `en.json` and `fr.json`
+- [ ] `bun run typecheck` passes with no new errors
+- [ ] `bun run i18n:check` passes (no missing translations)
+- [ ] `/talks` index links to the new `/talks/lyra-product` route
+- [ ] Route appears in `routeTree.gen.ts` (auto-generated after codegen)

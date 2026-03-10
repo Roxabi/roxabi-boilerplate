@@ -4,7 +4,7 @@ services:
     container_name: ${POSTGRES_CONTAINER:-${APP_SLUG:-app}-postgres}
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-${APP_SLUG:-app}}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-${APP_SLUG:-app}}

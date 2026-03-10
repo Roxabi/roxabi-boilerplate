@@ -39,6 +39,7 @@ vi.mock('drizzle-orm', () => ({
 const mockRenderVerificationEmail = vi.fn()
 const mockRenderResetEmail = vi.fn()
 const mockRenderMagicLinkEmail = vi.fn()
+const mockRenderExistingAccountEmail = vi.fn()
 
 function escapeHtml(str: string): string {
   return str
@@ -54,6 +55,7 @@ vi.mock('@repo/email', () => ({
   renderVerificationEmail: (...args: unknown[]) => mockRenderVerificationEmail(...args),
   renderResetEmail: (...args: unknown[]) => mockRenderResetEmail(...args),
   renderMagicLinkEmail: (...args: unknown[]) => mockRenderMagicLinkEmail(...args),
+  renderExistingAccountEmail: (...args: unknown[]) => mockRenderExistingAccountEmail(...args),
 }))
 
 vi.mock('@nestjs/common', () => {
@@ -1146,5 +1148,151 @@ describe('createBetterAuth configuration', () => {
 
     // Assert
     expect(capturedConfig.config?.trustedOrigins).toEqual([])
+  })
+})
+
+// ---------------------------------------------------------------------------
+// onExistingUserSignUp handler
+// ---------------------------------------------------------------------------
+
+describe('createBetterAuth onExistingUserSignUp', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    capturedConfig.config = null
+    capturedMagicLinkConfig.config = null
+  })
+
+  function getExistingUserSignUpHandler() {
+    const emailAndPassword = capturedConfig.config?.emailAndPassword as {
+      onExistingUserSignUp: (params: { user: { email: string; locale?: string } }) => Promise<void>
+    }
+    return emailAndPassword.onExistingUserSignUp
+  }
+
+  it('should render and send existing account notification with user locale', async () => {
+    // Arrange
+    const mockDb = createMockDb()
+    const mockEmail = createMockEmailProvider()
+    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    const handler = getExistingUserSignUpHandler()
+
+    mockRenderExistingAccountEmail.mockResolvedValueOnce({
+      html: '<p>Notification</p>',
+      text: 'Someone tried to sign up',
+      subject: 'Someone tried to sign up with your email',
+    })
+
+    // Act
+    await handler({ user: { email: 'existing@example.com', locale: 'fr' } })
+
+    // Assert — should use login URL and user locale
+    expect(mockRenderExistingAccountEmail).toHaveBeenCalledWith(
+      'http://localhost:3000/login',
+      'fr',
+      'http://localhost:3000'
+    )
+    expect(mockEmail.send).toHaveBeenCalledWith({
+      to: 'existing@example.com',
+      subject: 'Someone tried to sign up with your email',
+      html: '<p>Notification</p>',
+      text: 'Someone tried to sign up',
+    })
+  })
+
+  it('should default to "en" locale when user has no locale', async () => {
+    // Arrange
+    const mockDb = createMockDb()
+    const mockEmail = createMockEmailProvider()
+    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    const handler = getExistingUserSignUpHandler()
+
+    mockRenderExistingAccountEmail.mockResolvedValueOnce({
+      html: '<p>Notification</p>',
+      text: 'Someone tried to sign up',
+      subject: 'Someone tried to sign up with your email',
+    })
+
+    // Act
+    await handler({ user: { email: 'existing@example.com' } })
+
+    // Assert
+    expect(mockRenderExistingAccountEmail).toHaveBeenCalledWith(
+      'http://localhost:3000/login',
+      'en',
+      'http://localhost:3000'
+    )
+  })
+
+  it('should send fallback email when renderExistingAccountEmail throws', async () => {
+    // Arrange
+    const mockDb = createMockDb()
+    const mockEmail = createMockEmailProvider()
+    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    const handler = getExistingUserSignUpHandler()
+
+    mockRenderExistingAccountEmail.mockRejectedValueOnce(new Error('Render failed'))
+
+    // Act
+    await handler({ user: { email: 'existing@example.com' } })
+
+    // Assert — fallback email sent, does not throw
+    expect(mockEmail.send).toHaveBeenCalledWith({
+      to: 'existing@example.com',
+      subject: 'Someone tried to sign up with your email',
+      html: '<p>Someone tried to create an account using your email. <a href="http://localhost:3000/login">Sign in</a> to your existing account instead.</p>',
+      text: 'Someone tried to create an account using your email. Sign in instead: http://localhost:3000/login',
+    })
+  })
+
+  it('should not throw when emailProvider.send fails', async () => {
+    // Arrange — send failure must be non-critical (must not affect registration response)
+    const mockDb = createMockDb()
+    const mockEmail = { send: vi.fn().mockRejectedValue(new Error('Resend down')) }
+    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    const handler = getExistingUserSignUpHandler()
+
+    mockRenderExistingAccountEmail.mockResolvedValueOnce({
+      html: '<p>Notification</p>',
+      text: 'Someone tried to sign up',
+      subject: 'Someone tried to sign up with your email',
+    })
+
+    // Act & Assert — must NOT throw, failure is logged only
+    await expect(handler({ user: { email: 'existing@example.com' } })).resolves.toBeUndefined()
+  })
+
+  it('should use /login fallback when appURL is not configured', async () => {
+    // Arrange
+    const mockDb = createMockDb()
+    const mockEmail = createMockEmailProvider()
+    const configNoApp = { secret: 'test-secret', baseURL: 'http://localhost:4000' }
+    createBetterAuth(mockDb as never, mockEmail as never, configNoApp)
+    const handler = getExistingUserSignUpHandler()
+
+    mockRenderExistingAccountEmail.mockResolvedValueOnce({
+      html: '<p>Notification</p>',
+      text: 'Someone tried to sign up',
+      subject: 'Someone tried to sign up with your email',
+    })
+
+    // Act
+    await handler({ user: { email: 'existing@example.com' } })
+
+    // Assert — login URL falls back to relative path
+    expect(mockRenderExistingAccountEmail).toHaveBeenCalledWith('/login', 'en', undefined)
+    expect(mockEmail.send).toHaveBeenCalled()
+  })
+
+  it('should not throw when both render and send fail', async () => {
+    // Arrange
+    const mockDb = createMockDb()
+    const mockEmail = { send: vi.fn().mockRejectedValue(new Error('Resend down')) }
+    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    const handler = getExistingUserSignUpHandler()
+
+    mockRenderExistingAccountEmail.mockRejectedValueOnce(new Error('Render failed'))
+
+    // Act & Assert — double failure still resolves (not an unhandled exception)
+    await expect(handler({ user: { email: 'existing@example.com' } })).resolves.toBeUndefined()
   })
 })
