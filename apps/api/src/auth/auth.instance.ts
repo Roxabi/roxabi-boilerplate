@@ -73,12 +73,10 @@ function buildEmailAndPasswordConfig(emailProvider: EmailProvider, config: AuthI
 
       let emailContent: { html: string; text?: string; subject: string }
       try {
-        const { html, text, subject } = await renderExistingAccountEmail(
-          loginUrl,
-          locale,
-          config.appURL,
-          APP_NAME
-        )
+        const { html, text, subject } = await renderExistingAccountEmail(loginUrl, locale, {
+          appUrl: config.appURL,
+          appName: APP_NAME,
+        })
         emailContent = { html, text, subject }
       } catch {
         logger.warn('Failed to render existing account email template, using plain fallback')
@@ -109,12 +107,10 @@ function buildEmailAndPasswordConfig(emailProvider: EmailProvider, config: AuthI
       let emailContent: { html: string; text?: string; subject: string }
       try {
         const locale = (user as UserWithLocale).locale ?? 'en'
-        const { html, text, subject } = await renderResetEmail(
-          emailUrl,
-          locale,
-          config.appURL,
-          APP_NAME
-        )
+        const { html, text, subject } = await renderResetEmail(emailUrl, locale, {
+          appUrl: config.appURL,
+          appName: APP_NAME,
+        })
         emailContent = { html, text, subject }
       } catch {
         logger.warn('Failed to render reset password email template, using plain fallback')
@@ -155,12 +151,10 @@ function buildEmailVerificationConfig(emailProvider: EmailProvider, config: Auth
       let emailContent: { html: string; text?: string; subject: string }
       try {
         const locale = (user as UserWithLocale).locale ?? 'en'
-        const { html, text, subject } = await renderVerificationEmail(
-          emailUrl,
-          locale,
-          config.appURL,
-          APP_NAME
-        )
+        const { html, text, subject } = await renderVerificationEmail(emailUrl, locale, {
+          appUrl: config.appURL,
+          appName: APP_NAME,
+        })
         emailContent = { html, text, subject }
       } catch {
         logger.warn('Failed to render verification email template, using plain fallback')
@@ -203,19 +197,17 @@ function buildMagicLinkPlugin(
       let emailContent: { html: string; text?: string; subject: string }
       try {
         const locale = userData.locale ?? 'en'
-        const { html, text, subject } = await renderMagicLinkEmail(
-          emailUrl,
-          locale,
-          config.appURL,
-          APP_NAME
-        )
+        const { html, text, subject } = await renderMagicLinkEmail(emailUrl, locale, {
+          appUrl: config.appURL,
+          appName: APP_NAME,
+        })
         emailContent = { html, text, subject }
       } catch {
         logger.warn('Failed to render magic link email template, using plain fallback')
         emailContent = {
-          subject: `Sign in to ${APP_NAME}`,
+          subject: `Sign in to ${escapeHtml(APP_NAME)}`,
           html: `<p>Click <a href="${escapeHtml(emailUrl)}">here</a> to sign in.</p>`,
-          text: `Sign in to ${APP_NAME}: ${emailUrl}`,
+          text: `Sign in to ${escapeHtml(APP_NAME)}: ${emailUrl}`,
         }
       }
 

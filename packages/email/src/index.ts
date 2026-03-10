@@ -12,6 +12,11 @@ export type EmailRenderResult = {
   subject: string
 }
 
+export type EmailRenderOptions = {
+  appUrl?: string
+  appName?: string
+}
+
 export function escapeHtml(str: string): string {
   return str
     .replace(/&/g, '&amp;')
@@ -24,9 +29,9 @@ export function escapeHtml(str: string): string {
 export async function renderVerificationEmail(
   url: string,
   locale: string,
-  appUrl?: string,
-  appName?: string
+  options: EmailRenderOptions = {}
 ): Promise<EmailRenderResult> {
+  const { appUrl, appName } = options
   const translations = getTranslations(locale)
 
   const element = createElement(VerificationEmail, {
@@ -45,9 +50,9 @@ export async function renderVerificationEmail(
 export async function renderResetEmail(
   url: string,
   locale: string,
-  appUrl?: string,
-  appName?: string
+  options: EmailRenderOptions = {}
 ): Promise<EmailRenderResult> {
+  const { appUrl, appName } = options
   const translations = getTranslations(locale)
 
   const element = createElement(ResetPasswordEmail, {
@@ -66,9 +71,9 @@ export async function renderResetEmail(
 export async function renderMagicLinkEmail(
   url: string,
   locale: string,
-  appUrl?: string,
-  appName?: string
+  options: EmailRenderOptions = {}
 ): Promise<EmailRenderResult> {
+  const { appUrl, appName } = options
   const translations = getTranslations(locale)
 
   const element = createElement(MagicLinkEmail, {
@@ -87,9 +92,9 @@ export async function renderMagicLinkEmail(
 export async function renderExistingAccountEmail(
   loginUrl: string,
   locale: string,
-  appUrl?: string,
-  appName?: string
+  options: EmailRenderOptions = {}
 ): Promise<EmailRenderResult> {
+  const { appUrl, appName } = options
   const translations = getTranslations(locale)
 
   const element = createElement(ExistingAccountEmail, {

@@ -165,7 +165,11 @@ export function Header() {
     <Collapsible.Root open={mobileOpen} onOpenChange={setMobileOpen} asChild>
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur">
         <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
-          <Link to="/" className="text-foreground hover:opacity-80 transition-opacity">
+          <Link
+            to="/"
+            className="text-foreground hover:opacity-80 transition-opacity"
+            data-testid="brand-link"
+          >
             <Logo />
           </Link>
           <DesktopNavLinks />

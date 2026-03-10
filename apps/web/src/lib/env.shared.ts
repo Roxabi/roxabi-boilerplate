@@ -1,7 +1,11 @@
 import { z } from 'zod'
 
 export const clientEnvSchema = z.object({
-  VITE_APP_NAME: z.string().optional(),
+  VITE_APP_NAME: z
+    .string()
+    .max(64)
+    .regex(/^[\w\s\-.]+$/)
+    .optional(),
   VITE_GITHUB_REPO_URL: z.string().url().optional(),
   VITE_TALKS_URL: z
     .string()

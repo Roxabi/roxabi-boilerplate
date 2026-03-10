@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { GdprController } from './gdpr.controller.js'
 import type { GdprService } from './gdpr.service.js'
 
@@ -56,6 +56,10 @@ describe('GdprController', () => {
     vi.restoreAllMocks()
   })
 
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
   describe('exportUserData (GET /api/gdpr/export)', () => {
     it('should call gdprService.exportUserData with the authenticated user id', async () => {
       // Arrange
@@ -82,7 +86,7 @@ describe('GdprController', () => {
       // Assert
       expect(reply.header).toHaveBeenCalledWith(
         'Content-Disposition',
-        expect.stringMatching(/attachment; filename="\w+-data-export-\d{4}-\d{2}-\d{2}\.json"/)
+        expect.stringMatching(/attachment; filename="app-data-export-\d{4}-\d{2}-\d{2}\.json"/)
       )
     })
 
@@ -148,6 +152,23 @@ describe('GdprController', () => {
       expect(resultStr).toContain('name')
       expect(resultStr).toContain('email')
       expect(resultStr).toContain('providerId')
+    })
+
+    it('should use custom APP_NAME as slug in the Content-Disposition filename', async () => {
+      // Arrange — stub APP_NAME at request time (controller reads process.env directly)
+      vi.stubEnv('APP_NAME', 'My App')
+      const session = { user: { id: 'user-1' } }
+      const reply = { header: vi.fn().mockReturnThis() }
+      vi.mocked(mockGdprService.exportUserData).mockResolvedValue(mockExportData)
+
+      // Act
+      await controller.exportUserData(session, reply as never)
+
+      // Assert — slugified APP_NAME used in filename: 'My App' → 'my-app'
+      expect(reply.header).toHaveBeenCalledWith(
+        'Content-Disposition',
+        expect.stringMatching(/attachment; filename="my-app-data-export-\d{4}-\d{2}-\d{2}\.json"/)
+      )
     })
   })
 })

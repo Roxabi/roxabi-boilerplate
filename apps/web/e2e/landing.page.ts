@@ -61,7 +61,7 @@ export class LandingPage {
   }
 
   get brandLink(): Locator {
-    return this.page.getByRole('link', { name: 'Roxabi' })
+    return this.page.getByTestId('brand-link')
   }
 
   // ---------------------------------------------------------------------------
@@ -73,7 +73,7 @@ export class LandingPage {
   }
 
   get footerBrand(): Locator {
-    return this.footer.getByText('Roxabi')
+    return this.footer.getByText(/Roxabi/)
   }
 
   get footerGithubLink(): Locator {
