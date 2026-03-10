@@ -223,4 +223,37 @@ describe('ThrottlerExceptionFilter', () => {
     expect(retryAfterValue).toBeGreaterThanOrEqual(1)
     expect(retryAfterValue).toBeLessThanOrEqual(45)
   })
+
+  it('should clamp Retry-After to 1 when meta.reset is in the past', () => {
+    // Arrange
+    const pastReset = Math.floor(Date.now() / 1000) - 10
+    const throttlerMeta = {
+      limit: 10,
+      remaining: 0,
+      reset: pastReset,
+      tierName: 'global',
+      tracker: 'ip:1.2.3.4',
+    }
+    const { host, headerFn } = createMockHost({ url: '/api/data', throttlerMeta })
+    const exception = new ThrottlerException()
+
+    // Act
+    filter.catch(exception, host as never)
+
+    // Assert
+    expect(headerFn).toHaveBeenCalledWith('Retry-After', '1')
+  })
+
+  it('should strip query string from path in error response', () => {
+    // Arrange
+    const { host, getSentBody } = createMockHost({ url: '/api/test?token=secret' })
+    const exception = new ThrottlerException()
+
+    // Act
+    filter.catch(exception, host as never)
+
+    // Assert
+    const body = getSentBody()
+    expect(body.path).toBe('/api/test')
+  })
 })

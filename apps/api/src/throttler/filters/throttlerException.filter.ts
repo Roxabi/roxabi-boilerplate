@@ -3,6 +3,7 @@ import { ThrottlerException } from '@nestjs/throttler'
 import type { FastifyReply, FastifyRequest } from 'fastify'
 import { ClsService } from 'nestjs-cls'
 import { ErrorCode } from '../../common/errorCodes.js'
+import { buildErrorResponse } from '../../common/filters/buildErrorResponse.js'
 import { AUTH_SENSITIVE_PATHS, type ThrottlerMeta } from '../index.js'
 
 @Catch(ThrottlerException)
@@ -38,14 +39,13 @@ export class ThrottlerExceptionFilter implements ExceptionFilter {
       response.header('X-RateLimit-Reset', String(meta.reset))
     }
 
-    const errorResponse = {
+    const errorResponse = buildErrorResponse({
       statusCode: status,
-      timestamp: new Date().toISOString(),
-      path: request.url,
+      path,
       correlationId,
       message: 'Too Many Requests',
       errorCode: ErrorCode.RATE_LIMIT_EXCEEDED,
-    }
+    })
 
     // Log at warn level (not error) with structured context
     const tracker = meta?.tracker ?? 'unknown'
