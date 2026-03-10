@@ -126,7 +126,7 @@ Better Auth uses **cookie-based sessions**:
 
 ### Same-origin cookies
 
-The frontend (port 3000) and API (port 4000) run on different ports in development. To keep cookies on the same origin (avoiding `SameSite=None`), the frontend uses a **Nitro dev proxy**:
+The frontend (port 3000) and API (port 4000) run on different ports in development. To keep cookies on the same origin (avoiding `SameSite=None`), the frontend uses a **Nitro server route** (`server/routes/api/[...path].ts`):
 
 ```
 /api/* → http://localhost:4000

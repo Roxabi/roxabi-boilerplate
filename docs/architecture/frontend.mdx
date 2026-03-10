@@ -62,22 +62,18 @@ The Vite configuration (`vite.config.ts`) chains several plugins in order:
 
 ### API Proxy
 
-Nitro proxies `/api/**` requests to the NestJS backend. The target is read from the `API_URL` environment variable (defaulting to `http://localhost:4000`):
+Nitro proxies `/api/**` requests to the NestJS backend via a runtime server route (`server/routes/api/[...path].ts`). The target is read from the `API_URL` environment variable (defaulting to `http://localhost:4000`):
 
 ```ts
-nitro({
-  config: {
-    devProxy: {
-      '/api/**': { target: apiTarget, changeOrigin: true },
-    },
-    routeRules: {
-      '/api/**': { proxy: `${apiTarget}/api/**` },
-    },
-  },
+// apps/web/server/routes/api/[...path].ts
+export default defineEventHandler((event) => {
+  const apiTarget = process.env.API_URL ?? `http://localhost:${process.env.API_PORT ?? 4000}`
+  const path = event.context.params?.path ?? ''
+  return proxyRequest(event, `${apiTarget}/api/${path}`)
 })
 ```
 
-This means the frontend never calls the API directly across origins -- all requests go through the same domain.
+This means the frontend never calls the API directly across origins -- all requests go through the same domain. In preview environments, the server route also injects the `x-vercel-protection-bypass` header to reach SSO-protected API previews.
 
 ## File-Based Routing
 

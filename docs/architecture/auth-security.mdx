@@ -288,23 +288,20 @@ Credentials are always enabled (`credentials: true`) because authentication reli
 
 ### Same-Origin Cookie Strategy
 
-In development, the frontend (port 3000) and API (port 4000) run on different ports. Cross-port cookies would require `SameSite=None` and HTTPS, which is impractical for local development. Instead, the frontend uses a **Nitro dev proxy**:
+In development, the frontend (port 3000) and API (port 4000) run on different ports. Cross-port cookies would require `SameSite=None` and HTTPS, which is impractical for local development. Instead, the frontend uses a **Nitro server route** (`server/routes/api/[...path].ts`) that proxies `/api/**` requests to the API using h3's `proxyRequest()`:
 
 ```ts
-// apps/web/vite.config.ts
-nitro({
-  config: {
-    devProxy: {
-      '/api/**': { target: apiTarget, changeOrigin: true },
-    },
-    routeRules: {
-      '/api/**': { proxy: `${apiTarget}/api/**` },
-    },
-  },
+// apps/web/server/routes/api/[...path].ts
+export default defineEventHandler((event) => {
+  const apiTarget = process.env.API_URL ?? `http://localhost:${process.env.API_PORT ?? 4000}`
+  const path = event.context.params?.path ?? ''
+  return proxyRequest(event, `${apiTarget}/api/${path}`)
 })
 ```
 
 The browser sends requests to `localhost:3000/api/*`, which Nitro proxies to the API. Cookies are set on `localhost:3000` (same origin as the frontend), avoiding cross-origin cookie issues entirely.
+
+> **Note:** Do not use Nitro's `devProxy` — it uses `http-proxy` via h3's `fromNodeHandler`, which merges multiple `Set-Cookie` headers into a single comma-joined string, corrupting multi-cookie responses (e.g. better-auth's session + activeOrganizationId).
 
 In production, both apps deploy to Vercel on the same domain, so cookies work natively without proxying.
 

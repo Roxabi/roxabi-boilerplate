@@ -94,7 +94,7 @@ bun run typecheck && bun run build
 
 **Symptom:** Login succeeds (API returns 200) but the frontend still shows the user as unauthenticated. `useSession()` returns `null`. Requests to protected routes return `401 Unauthorized`.
 
-**Cause:** Better Auth uses cookie-based sessions. In development, the frontend (port 3000) and API (port 4000) run on different ports. The dev proxy configured in `vite.config.ts` at `/api/**` forwards requests to the API so that cookies stay on the same origin (`localhost:3000`). If the proxy is not active or the frontend client sends requests directly to `localhost:4000`, cookies are set on a different origin and the browser will not include them in subsequent requests.
+**Cause:** Better Auth uses cookie-based sessions. In development, the frontend (port 3000) and API (port 4000) run on different ports. The Nitro server route at `server/routes/api/[...path].ts` proxies `/api/**` requests to the API so that cookies stay on the same origin (`localhost:3000`). If the proxy is not active or the frontend client sends requests directly to `localhost:4000`, cookies are set on a different origin and the browser will not include them in subsequent requests.
 
 Another common cause is a missing or default `BETTER_AUTH_SECRET` in `.env`. If the secret is not set, session tokens cannot be signed correctly.
 
@@ -116,7 +116,7 @@ For a full explanation of the cookie-based auth architecture, see the [Authentic
 
 **Cause:** The API's `CORS_ORIGIN` environment variable does not include the origin the browser is sending requests from. In development, `CORS_ORIGIN` defaults to `http://localhost:3000`. If you are accessing the frontend on a different host (e.g., `127.0.0.1:3000` or a custom domain), the origins will not match.
 
-Another cause is making requests directly to the API (port 4000) from frontend code instead of going through the dev proxy. The proxy eliminates CORS entirely in development because both the page and the API appear to be on the same origin.
+Another cause is making requests directly to the API (port 4000) from frontend code instead of going through the Nitro proxy. The proxy eliminates CORS entirely in development because both the page and the API appear to be on the same origin.
 
 **Fix:**
 

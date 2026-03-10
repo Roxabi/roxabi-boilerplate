@@ -64,7 +64,7 @@ bun run codegen    # paraglide compile + tsr generate
 
 ## Key Dependencies
 
-TanStack Router + Start + Query + Form + Table | shadcn/ui (Radix) | Lucide icons | Sonner toasts | better-auth | Nitro (dev proxy to API :4000)
+TanStack Router + Start + Query + Form + Table | shadcn/ui (Radix) | Lucide icons | Sonner toasts | better-auth | Nitro (proxy to API via server route)
 
 ## Standards
 
@@ -78,5 +78,5 @@ Vercel (TanStack/Nitro) — `main` = prod, `staging` = preview.
 
 - Paraglide i18n: compiled during codegen, `src/paraglide/` is gitignored. Run `bun run codegen` after changing messages.
 - `routeTree.gen.ts` is auto-generated — never edit manually. Run `bun run codegen` or `tsr generate`.
-- Nitro dev proxy forwards `/api` to `localhost:4000` — API must be running.
+- Nitro server route (`server/routes/api/[...path].ts`) proxies `/api` to `localhost:4000` — API must be running.
 - Env validation: `VITE_*` vars validated at build time via Zod schema in `vite.config.ts`.
