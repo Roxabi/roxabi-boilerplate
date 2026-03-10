@@ -84,12 +84,15 @@ export class AdminSettingsController {
           actorType: 'user',
           action: 'settings.updated',
           resource: 'system_setting',
-          resourceId: u.key as string,
-          before: { value: (beforeState as Record<string, unknown>)[u.key as string] },
+          resourceId: u.key,
+          before: { value: beforeState[u.key] },
           after: { value: u.value },
         })
         .catch((err) => {
-          this.logger.error('[audit] Failed to log system_settings.updated', err)
+          this.logger.error(
+            '[audit] Failed to log system_settings.updated',
+            err instanceof Error ? err.stack : String(err)
+          )
         })
     }
 

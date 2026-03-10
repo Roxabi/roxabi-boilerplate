@@ -37,73 +37,92 @@ function createMockDb() {
 describe('DrizzleSystemSettingsRepository', () => {
   describe('findByKey', () => {
     it('should return the row when found', async () => {
+      // Arrange
       const { db, chains } = createMockDb()
       chains.select.limit.mockResolvedValue([mockRow])
       const repo = new DrizzleSystemSettingsRepository(db as never)
 
+      // Act
       const result = await repo.findByKey('app.name')
 
+      // Assert
       expect(result).toEqual(mockRow)
       expect(chains.select.limit).toHaveBeenCalledWith(1)
     })
 
     it('should return null when not found', async () => {
+      // Arrange
       const { db, chains } = createMockDb()
       chains.select.limit.mockResolvedValue([])
       const repo = new DrizzleSystemSettingsRepository(db as never)
 
+      // Act
       const result = await repo.findByKey('nonexistent')
 
+      // Assert
       expect(result).toBeNull()
     })
   })
 
   describe('findAll', () => {
     it('should return all settings', async () => {
+      // Arrange
       const { db, chains } = createMockDb()
       // findAll uses select().from() — no where/limit
       chains.select.from.mockResolvedValue([mockRow])
       const repo = new DrizzleSystemSettingsRepository(db as never)
 
+      // Act
       const result = await repo.findAll()
 
+      // Assert
       expect(result).toEqual([mockRow])
     })
   })
 
   describe('findByCategory', () => {
     it('should return settings for the given category', async () => {
+      // Arrange
       const { db, chains } = createMockDb()
       // findByCategory uses select().from().where() — no limit
       chains.select.where.mockResolvedValue([mockRow])
       const repo = new DrizzleSystemSettingsRepository(db as never)
 
+      // Act
       const result = await repo.findByCategory('General')
 
+      // Assert
       expect(result).toEqual([mockRow])
+      expect(chains.select.where).toHaveBeenCalled()
     })
   })
 
   describe('updateByKey', () => {
     it('should update and return the row', async () => {
+      // Arrange
       const { db, chains } = createMockDb()
       const updated = { ...mockRow, value: 'NewName' }
       chains.update.returning.mockResolvedValue([updated])
       const repo = new DrizzleSystemSettingsRepository(db as never)
 
+      // Act
       const result = await repo.updateByKey('app.name', 'NewName')
 
+      // Assert
       expect(result).toEqual(updated)
       expect(db.update).toHaveBeenCalled()
     })
 
     it('should return null when key not found', async () => {
+      // Arrange
       const { db, chains } = createMockDb()
       chains.update.returning.mockResolvedValue([])
       const repo = new DrizzleSystemSettingsRepository(db as never)
 
+      // Act
       const result = await repo.updateByKey('nonexistent', 'value')
 
+      // Assert
       expect(result).toBeNull()
     })
   })

@@ -45,69 +45,88 @@ function createMockDb() {
 describe('DrizzleFeatureFlagRepository', () => {
   describe('findByKey', () => {
     it('should return the row when found', async () => {
+      // Arrange
       const { db, chains } = createMockDb()
       chains.select.limit.mockResolvedValue([mockRow])
       const repo = new DrizzleFeatureFlagRepository(db as never)
 
+      // Act
       const result = await repo.findByKey('new-dashboard')
 
+      // Assert
       expect(result).toEqual(mockRow)
       expect(chains.select.limit).toHaveBeenCalledWith(1)
     })
 
     it('should return null when not found', async () => {
+      // Arrange
       const { db, chains } = createMockDb()
       chains.select.limit.mockResolvedValue([])
       const repo = new DrizzleFeatureFlagRepository(db as never)
 
+      // Act
       const result = await repo.findByKey('unknown')
 
+      // Assert
       expect(result).toBeNull()
     })
   })
 
   describe('findAll', () => {
     it('should return all rows ordered by createdAt DESC', async () => {
+      // Arrange
       const { db, chains } = createMockDb()
       chains.select.orderBy.mockResolvedValue([mockRow])
       const repo = new DrizzleFeatureFlagRepository(db as never)
 
+      // Act
       const result = await repo.findAll()
 
+      // Assert
       expect(result).toEqual([mockRow])
+      expect(chains.select.orderBy).toHaveBeenCalled()
     })
   })
 
   describe('findById', () => {
     it('should return the row when found', async () => {
+      // Arrange
       const { db, chains } = createMockDb()
       chains.select.limit.mockResolvedValue([mockRow])
       const repo = new DrizzleFeatureFlagRepository(db as never)
 
+      // Act
       const result = await repo.findById('flag-1')
 
+      // Assert
       expect(result).toEqual(mockRow)
     })
 
     it('should return null when not found', async () => {
+      // Arrange
       const { db, chains } = createMockDb()
       chains.select.limit.mockResolvedValue([])
       const repo = new DrizzleFeatureFlagRepository(db as never)
 
+      // Act
       const result = await repo.findById('unknown')
 
+      // Assert
       expect(result).toBeNull()
     })
   })
 
   describe('create', () => {
     it('should insert and return the created row', async () => {
+      // Arrange
       const { db, chains } = createMockDb()
       chains.insert.returning.mockResolvedValue([mockRow])
       const repo = new DrizzleFeatureFlagRepository(db as never)
 
+      // Act
       const result = await repo.create({ name: 'New Dashboard', key: 'new-dashboard' })
 
+      // Assert
       expect(result).toEqual(mockRow)
       expect(db.insert).toHaveBeenCalled()
     })
@@ -115,45 +134,57 @@ describe('DrizzleFeatureFlagRepository', () => {
 
   describe('update', () => {
     it('should update and return the row', async () => {
+      // Arrange
       const { db, chains } = createMockDb()
       const updated = { ...mockRow, enabled: false }
       chains.update.returning.mockResolvedValue([updated])
       const repo = new DrizzleFeatureFlagRepository(db as never)
 
+      // Act
       const result = await repo.update('flag-1', { enabled: false })
 
+      // Assert
       expect(result).toEqual(updated)
     })
 
     it('should return null when row not found', async () => {
+      // Arrange
       const { db, chains } = createMockDb()
       chains.update.returning.mockResolvedValue([])
       const repo = new DrizzleFeatureFlagRepository(db as never)
 
+      // Act
       const result = await repo.update('unknown', { enabled: true })
 
+      // Assert
       expect(result).toBeNull()
     })
   })
 
   describe('delete', () => {
     it('should delete and return the row', async () => {
+      // Arrange
       const { db, chains } = createMockDb()
       chains.delete.returning.mockResolvedValue([mockRow])
       const repo = new DrizzleFeatureFlagRepository(db as never)
 
+      // Act
       const result = await repo.delete('flag-1')
 
+      // Assert
       expect(result).toEqual(mockRow)
     })
 
     it('should return null when row not found', async () => {
+      // Arrange
       const { db, chains } = createMockDb()
       chains.delete.returning.mockResolvedValue([])
       const repo = new DrizzleFeatureFlagRepository(db as never)
 
+      // Act
       const result = await repo.delete('unknown')
 
+      // Assert
       expect(result).toBeNull()
     })
   })

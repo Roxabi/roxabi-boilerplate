@@ -26,7 +26,7 @@ export class SystemSettingsService {
   }
 
   async batchUpdate(updates: Array<{ key: string; value: unknown }>): Promise<{
-    updated: Array<Record<string, unknown>>
+    updated: SystemSettingRow[]
     beforeState: Record<string, unknown>
   }> {
     if (updates.length === 0) {
@@ -52,7 +52,7 @@ export class SystemSettingsService {
       beforeState[existing.key] = existing.value
     }
 
-    const updated: Array<Record<string, unknown>> = []
+    const updated: SystemSettingRow[] = []
     for (const update of updates) {
       const result = await this.repo.updateByKey(update.key, update.value)
       if (result) {

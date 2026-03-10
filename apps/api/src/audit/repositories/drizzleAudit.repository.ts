@@ -3,7 +3,7 @@ import { DRIZZLE, type DrizzleDB, type DrizzleTx } from '../../database/drizzle.
 import { auditLogs } from '../../database/schema/audit.schema.js'
 import type { AuditLogEntry, AuditRepository } from '../audit.repository.js'
 
-// RLS-BYPASS: repository adapter — DRIZZLE scoped to this adapter only
+// RLS-BYPASS: audit log writes must succeed regardless of tenant context — append-only, no read API
 @Injectable()
 export class DrizzleAuditRepository implements AuditRepository {
   constructor(@Inject(DRIZZLE) private readonly db: DrizzleDB) {}

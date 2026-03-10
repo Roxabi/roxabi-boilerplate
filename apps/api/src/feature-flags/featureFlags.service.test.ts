@@ -133,6 +133,25 @@ describe('FeatureFlagService', () => {
       expect(mockRepo.findByKey).toHaveBeenCalledTimes(2)
     })
 
+    it('should clear the cache for a key after create() so next isEnabled() reads from DB', async () => {
+      // Arrange
+      mockRepo.findByKey.mockResolvedValue({ ...mockFlag, key: 'new-feature', enabled: true })
+      mockRepo.create.mockResolvedValue({ ...mockFlag, key: 'new-feature', enabled: false })
+
+      // Populate cache
+      await service.isEnabled('new-feature')
+      expect(mockRepo.findByKey).toHaveBeenCalledOnce()
+
+      // Act — create should clear the cache entry
+      await service.create({ name: 'New Feature', key: 'new-feature' })
+
+      // Call isEnabled again — must hit repo a second time
+      await service.isEnabled('new-feature')
+
+      // Assert
+      expect(mockRepo.findByKey).toHaveBeenCalledTimes(2)
+    })
+
     it('should clear the cache for a key after delete()', async () => {
       // Arrange
       mockRepo.findByKey

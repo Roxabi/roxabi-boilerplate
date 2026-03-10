@@ -109,7 +109,10 @@ export class AdminFeatureFlagsController {
         after: result,
       })
       .catch((err) => {
-        this.logger.error('[audit] Failed to log flag.created', err)
+        this.logger.error(
+          '[audit] Failed to log flag.created',
+          err instanceof Error ? err.stack : String(err)
+        )
       })
 
     return result
@@ -149,7 +152,10 @@ export class AdminFeatureFlagsController {
         after: result,
       })
       .catch((err) => {
-        this.logger.error(`[audit] Failed to log ${action}`, err)
+        this.logger.error(
+          `[audit] Failed to log ${action}`,
+          err instanceof Error ? err.stack : String(err)
+        )
       })
 
     return result
@@ -181,7 +187,10 @@ export class AdminFeatureFlagsController {
         before: existing,
       })
       .catch((err) => {
-        this.logger.error('[audit] Failed to log flag.deleted', err)
+        this.logger.error(
+          '[audit] Failed to log flag.deleted',
+          err instanceof Error ? err.stack : String(err)
+        )
       })
   }
 }

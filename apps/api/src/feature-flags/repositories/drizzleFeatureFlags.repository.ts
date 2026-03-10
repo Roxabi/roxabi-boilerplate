@@ -1,4 +1,4 @@
-// RLS-BYPASS: repository adapter — DRIZZLE scoped to this adapter only
+// RLS-BYPASS: superadmin-only endpoint — @Roles('superadmin') enforced at controller level
 import { Inject, Injectable } from '@nestjs/common'
 import { desc, eq } from 'drizzle-orm'
 import { DRIZZLE, type DrizzleDB, type DrizzleTx } from '../../database/drizzle.provider.js'
@@ -39,7 +39,9 @@ export class DrizzleFeatureFlagRepository implements FeatureFlagRepository {
         description: data.description,
       })
       .returning()
-    return rows[0] as FeatureFlagRow
+    const row = rows[0]
+    if (!row) throw new Error('Feature flag insert returned no rows')
+    return row
   }
 
   async update(

@@ -74,7 +74,7 @@ describe('AuditService', () => {
       })
     })
 
-    it('should default impersonatorId to null when not provided', async () => {
+    it('should pass entry as-is to repo — impersonatorId undefined when omitted', async () => {
       // Arrange
       const mockRepo = createMockRepo()
       const service = new AuditService(mockRepo as AuditRepository)
@@ -88,12 +88,12 @@ describe('AuditService', () => {
         resourceId: 'member-1',
       })
 
-      // Assert — service passes the entry through as-is; null-coalescing is the adapter's responsibility
+      // Assert
       const calledWith = mockRepo.create.mock.calls[0]?.[0] as Record<string, unknown>
       expect(calledWith.impersonatorId).toBeUndefined()
     })
 
-    it('should default organizationId to null when not provided', async () => {
+    it('should pass entry as-is to repo — organizationId undefined when omitted', async () => {
       // Arrange
       const mockRepo = createMockRepo()
       const service = new AuditService(mockRepo as AuditRepository)
@@ -107,12 +107,12 @@ describe('AuditService', () => {
         resourceId: 'member-1',
       })
 
-      // Assert — service passes the entry through as-is; null-coalescing is the adapter's responsibility
+      // Assert
       const calledWith = mockRepo.create.mock.calls[0]?.[0] as Record<string, unknown>
       expect(calledWith.organizationId).toBeUndefined()
     })
 
-    it('should default before, after, and metadata to null when not provided', async () => {
+    it('should pass entry as-is to repo — before, after, metadata undefined when omitted', async () => {
       // Arrange
       const mockRepo = createMockRepo()
       const service = new AuditService(mockRepo as AuditRepository)
@@ -126,7 +126,7 @@ describe('AuditService', () => {
         resourceId: 'inv-1',
       })
 
-      // Assert — service passes the entry through as-is; null-coalescing is the adapter's responsibility
+      // Assert
       const calledWith = mockRepo.create.mock.calls[0]?.[0] as Record<string, unknown>
       expect(calledWith.before).toBeUndefined()
       expect(calledWith.after).toBeUndefined()

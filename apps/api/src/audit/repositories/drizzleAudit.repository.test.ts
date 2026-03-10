@@ -11,6 +11,7 @@ function createMockDb() {
 describe('DrizzleAuditRepository', () => {
   describe('create', () => {
     it('should insert an audit log entry with null-coalesced optional fields', async () => {
+      // Arrange
       const { db, chains } = createMockDb()
       const repo = new DrizzleAuditRepository(db as never)
 
@@ -22,8 +23,10 @@ describe('DrizzleAuditRepository', () => {
         resourceId: 'inv-1',
       }
 
+      // Act
       await repo.create(entry)
 
+      // Assert
       expect(db.insert).toHaveBeenCalled()
       expect(chains.insert.values).toHaveBeenCalledWith({
         actorId: 'user-1',
@@ -41,6 +44,7 @@ describe('DrizzleAuditRepository', () => {
     })
 
     it('should pass through provided optional fields', async () => {
+      // Arrange
       const { db, chains } = createMockDb()
       const repo = new DrizzleAuditRepository(db as never)
 
@@ -58,8 +62,10 @@ describe('DrizzleAuditRepository', () => {
         apiKeyId: 'key-1',
       }
 
+      // Act
       await repo.create(entry)
 
+      // Assert
       expect(chains.insert.values).toHaveBeenCalledWith({
         actorId: 'admin-1',
         actorType: 'impersonation',
@@ -76,10 +82,12 @@ describe('DrizzleAuditRepository', () => {
     })
 
     it('should propagate database errors', async () => {
+      // Arrange
       const { db, chains } = createMockDb()
       chains.insert.values.mockRejectedValue(new Error('DB connection lost'))
       const repo = new DrizzleAuditRepository(db as never)
 
+      // Act & Assert
       await expect(
         repo.create({
           actorId: 'user-1',

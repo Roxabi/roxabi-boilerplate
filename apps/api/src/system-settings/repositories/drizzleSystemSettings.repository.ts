@@ -4,7 +4,7 @@ import { DRIZZLE, type DrizzleDB, type DrizzleTx } from '../../database/drizzle.
 import { systemSettings } from '../../database/schema/systemSettings.schema.js'
 import type { SystemSettingRow, SystemSettingsRepository } from '../systemSettings.repository.js'
 
-// RLS-BYPASS: repository adapter — DRIZZLE scoped to this adapter only
+// RLS-BYPASS: superadmin-only endpoint — @Roles('superadmin') enforced at controller level
 @Injectable()
 export class DrizzleSystemSettingsRepository implements SystemSettingsRepository {
   constructor(@Inject(DRIZZLE) private readonly db: DrizzleDB) {}
