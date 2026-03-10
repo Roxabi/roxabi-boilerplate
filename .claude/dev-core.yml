@@ -1,10 +1,11 @@
-# Dev-core configuration — GitHub Projects issue triage
-# Auto-populated by /init skill. Committed to repo (non-sensitive).
-github_repo: Roxabi/roxabi-boilerplate
-gh_project_id: ''
-status_field_id: ''
-size_field_id: ''
-priority_field_id: ''
-status_options_json: '{}'
-size_options_json: '{}'
-priority_options_json: '{}'
+# dev-core plugin configuration
+# Values here replace the old GH_PROJECT_ID / STATUS_FIELD_ID / etc. env vars.
+# 3-tier fallback: this file → process.env → gh CLI (github_repo only)
+github_repo: MickaelV0/roxabi_boilerplate
+gh_project_id: PVT_kwHODEqYK84BOId3
+status_field_id: PVTSSF_lAHODEqYK84BOId3zg87HNM
+size_field_id: PVTSSF_lAHODEqYK84BOId3zg87HYo
+priority_field_id: PVTSSF_lAHODEqYK84BOId3zg87HYs
+status_options_json: '{"Backlog":"df6ee93b","Analysis":"bec91bb0","Specs":"ad9a9195","In Progress":"331d27a4","Review":"ee30a001","Done":"bfdc35bd"}'
+size_options_json: '{"XS":"dfcde6df","S":"4390f522","M":"e2c52fb1","L":"f8ea3803","XL":"228a917d"}'
+priority_options_json: '{"P0 - Urgent":"ed739db3","P1 - High":"742ac87b","P2 - Medium":"723e7784","P3 - Low":"796f973f"}'

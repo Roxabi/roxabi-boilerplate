@@ -23,7 +23,7 @@
     "test": "turbo test",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:e2e": "playwright test",
+    "test:e2e": "set -a; [ -f .env ] && . .env; set +a; playwright test",
     "clean": "turbo clean && rm -rf node_modules",
     "clean:cache": "rm -rf apps/web/node_modules/.vite .turbo apps/*/.turbo packages/*/.turbo",
     "i18n:check": "bun run scripts/validateTranslations.ts",
