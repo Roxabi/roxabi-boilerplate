@@ -10,8 +10,6 @@ import viteTsConfigPaths from 'vite-tsconfig-paths'
 import { z } from 'zod'
 
 const apiTarget = process.env.API_URL ?? `http://localhost:${process.env.API_PORT ?? 4000}`
-const apiBypassSecret =
-  process.env.VERCEL_ENV !== 'production' ? process.env.VERCEL_AUTOMATION_BYPASS_SECRET : undefined
 
 // Duplicated from env.shared.ts — Vite config runs outside the app bundle
 // and cannot import app source. Keep in sync manually; check-env-sync.ts
@@ -60,18 +58,10 @@ async function getPlugins() {
         // appends each Set-Cookie header separately and works correctly. It is active
         // in both dev and production, giving full dev/prod parity.
         routeRules: {
-          '/api/**': {
-            proxy: {
-              to: `${apiTarget}/api/**`,
-              // In preview environments the API is protected by Vercel Deployment Protection
-              // (SSO). The Nitro proxy runs server-side, so it can bypass protection using
-              // the automation bypass secret injected at deploy time by the preview workflow.
-              // No-op in local dev (secret is undefined) and in production (no SSO on API).
-              ...(apiBypassSecret && {
-                headers: { 'x-vercel-protection-bypass': apiBypassSecret },
-              }),
-            },
-          },
+          // /api/** is handled by server/routes/api/[...path].ts — a runtime Nitro route
+          // that reads VERCEL_AUTOMATION_BYPASS_SECRET from process.env per request, so
+          // the secret is never serialised into the .output/ bundle artifact.
+          '/api/**': { proxy: `${apiTarget}/api/**` },
         },
       },
     }),

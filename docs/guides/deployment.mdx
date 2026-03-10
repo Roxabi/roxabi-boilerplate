@@ -73,7 +73,7 @@ The **Deploy Preview** workflow requires these repository secrets:
 | `VERCEL_PROJECT_ID_DOCS` | Vercel project ID for docs | `apps/docs/.vercel/project.json` → `projectId` |
 | `NEON_API_KEY` | Neon API key (for preview DB branches) | [console.neon.tech](https://console.neon.tech) → Account → API Keys |
 | `NEON_PROJECT_ID` | Neon project ID | [console.neon.tech](https://console.neon.tech) → Project Settings |
-| `VERCEL_AUTOMATION_BYPASS_SECRET` | API project's Protection Bypass for Automation secret — injected into the web preview build so the Nitro proxy can forward requests to the SSO-protected API preview URL | Vercel dashboard → API project → Settings → Deployment Protection → Protection Bypass for Automation → Generate |
+| `VERCEL_AUTOMATION_BYPASS_SECRET` | API project's Protection Bypass for Automation secret — stored as a Vercel preview env var on the **web** project so the Nitro server route can read it at runtime and forward it to the SSO-protected API preview | Vercel dashboard → API project → Settings → Deployment Protection → Protection Bypass for Automation → Generate |
 
 Add them at **Settings** → **Secrets and variables** → **Actions** → **New repository secret**.
 
@@ -360,7 +360,7 @@ Add these 8 secrets at **Settings** &gt; **Secrets and variables** &gt; **Action
 | `VERCEL_PROJECT_ID_DOCS` | Vercel project ID for docs | `apps/docs/.vercel/project.json` &gt; `projectId` |
 | `NEON_API_KEY` | Neon API key (for preview DB branches) | [console.neon.tech](https://console.neon.tech) &gt; Account &gt; API Keys |
 | `NEON_PROJECT_ID` | Neon project ID | [console.neon.tech](https://console.neon.tech) &gt; Project Settings |
-| `VERCEL_AUTOMATION_BYPASS_SECRET` | API project's Protection Bypass for Automation secret — injected into the web preview build so the Nitro proxy can forward requests to the SSO-protected API preview URL | Vercel dashboard &gt; API project &gt; Settings &gt; Deployment Protection &gt; Protection Bypass for Automation &gt; Generate |
+| `VERCEL_AUTOMATION_BYPASS_SECRET` | API project's Protection Bypass for Automation secret — stored as a Vercel preview env var on the **web** project so the Nitro server route can read it at runtime and forward it to the SSO-protected API preview | Vercel dashboard &gt; API project &gt; Settings &gt; Deployment Protection &gt; Protection Bypass for Automation &gt; Generate |
 
 ### 4. Provision Upstash Redis (Rate Limiting)
 
@@ -698,12 +698,12 @@ The Deploy Preview workflow integrates with Vercel's [Protection Bypass for Auto
 **How it works:**
 
 1. Generate a bypass secret on the **API project**: Vercel dashboard → API project → Settings → Deployment Protection → Protection Bypass for Automation → **Generate**
-2. Add it as a GitHub Actions secret: `VERCEL_AUTOMATION_BYPASS_SECRET`
-3. The Deploy Preview workflow injects the secret at web build time via `--build-env`
-4. The Nitro proxy in `vite.config.ts` reads the secret and adds `x-vercel-protection-bypass` to every outgoing `/api/**` request (server-side, invisible to clients)
+2. Add it as a GitHub Actions secret: `VERCEL_AUTOMATION_BYPASS_SECRET` (used by the health check step)
+3. Add it as a Vercel preview env var on the **web** project: `vercel env add VERCEL_AUTOMATION_BYPASS_SECRET preview --cwd apps/web`
+4. The Nitro server route (`server/routes/api/[...path].ts`) reads the secret at **runtime** from `process.env` and adds `x-vercel-protection-bypass` to every outgoing `/api/**` request (server-side, invisible to clients). The secret is never baked into the build artifact.
 5. The health check step also uses the secret to verify API preview accessibility
 
-The bypass secret is **only** active in preview environments (`VERCEL_ENV !== 'production'`), so production deployments are unaffected.
+The bypass secret is **only** forwarded in preview environments (`VERCEL_ENV === 'preview'`), so local dev and production deployments are unaffected.
 
 **Option C — Keep the default:** No configuration needed. All team members log in via Vercel SSO to access preview URLs, but web→API communication in previews will fail (401 errors).
 
