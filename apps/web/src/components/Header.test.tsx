@@ -111,7 +111,7 @@ describe('Header', () => {
     render(<Header />)
 
     // Assert
-    expect(screen.getByText('Roxabi')).toBeInTheDocument()
+    expect(screen.getByText('App')).toBeInTheDocument()
   })
 
   it('should render navigation links', () => {
@@ -148,7 +148,7 @@ describe('Header', () => {
     render(<Header />)
 
     // Assert
-    const logoLink = screen.getByRole('link', { name: 'Roxabi' })
+    const logoLink = screen.getByRole('link', { name: /app/i })
     expect(logoLink).toHaveAttribute('href', '/')
   })
 
