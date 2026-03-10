@@ -62,9 +62,9 @@ const INSECURE_SECRETS: readonly string[] = [
   'change-me-to-a-random-32-char-string',
 ]
 
-function deriveFallbacks(config: Record<string, unknown>): void {
-  const appUrl = config.APP_URL as string | undefined
-  const fallbackUrl = appUrl ?? 'http://localhost:3000'
+function deriveFallbacks(config: z.infer<typeof envSchema>): void {
+  // BetterAuth base URL points at the web origin (Nitro proxies /api/** to the API)
+  const fallbackUrl = config.APP_URL ?? 'http://localhost:3000'
   if (config.CORS_ORIGIN === undefined) config.CORS_ORIGIN = fallbackUrl
   if (config.BETTER_AUTH_URL === undefined) config.BETTER_AUTH_URL = fallbackUrl
 }
@@ -99,12 +99,23 @@ const RATE_LIMIT_PRESETS = {
   },
 } as const
 
-function applyRateLimitPreset(config: Record<string, unknown>): void {
-  const preset = (config.RATE_LIMIT_PRESET as keyof typeof RATE_LIMIT_PRESETS) ?? 'default'
+function applyRateLimitPreset(config: z.infer<typeof envSchema>): void {
+  const preset = config.RATE_LIMIT_PRESET ?? 'default'
   const defaults = RATE_LIMIT_PRESETS[preset]
-  for (const [key, value] of Object.entries(defaults)) {
-    if (config[key] === undefined) config[key] = value
-  }
+  if (config.RATE_LIMIT_GLOBAL_TTL === undefined)
+    config.RATE_LIMIT_GLOBAL_TTL = defaults.RATE_LIMIT_GLOBAL_TTL
+  if (config.RATE_LIMIT_GLOBAL_LIMIT === undefined)
+    config.RATE_LIMIT_GLOBAL_LIMIT = defaults.RATE_LIMIT_GLOBAL_LIMIT
+  if (config.RATE_LIMIT_AUTH_TTL === undefined)
+    config.RATE_LIMIT_AUTH_TTL = defaults.RATE_LIMIT_AUTH_TTL
+  if (config.RATE_LIMIT_AUTH_LIMIT === undefined)
+    config.RATE_LIMIT_AUTH_LIMIT = defaults.RATE_LIMIT_AUTH_LIMIT
+  if (config.RATE_LIMIT_AUTH_BLOCK_DURATION === undefined)
+    config.RATE_LIMIT_AUTH_BLOCK_DURATION = defaults.RATE_LIMIT_AUTH_BLOCK_DURATION
+  if (config.RATE_LIMIT_API_TTL === undefined)
+    config.RATE_LIMIT_API_TTL = defaults.RATE_LIMIT_API_TTL
+  if (config.RATE_LIMIT_API_LIMIT === undefined)
+    config.RATE_LIMIT_API_LIMIT = defaults.RATE_LIMIT_API_LIMIT
 }
 
 export function validate(config: Record<string, unknown>): EnvironmentVariables {
@@ -119,7 +130,7 @@ export function validate(config: Record<string, unknown>): EnvironmentVariables 
   deriveFallbacks(result.data)
   applyRateLimitPreset(result.data)
 
-  const validatedConfig = result.data as EnvironmentVariables
+  const validatedConfig = result.data
   validateAuthSecret(validatedConfig)
   validateResendApiKey(validatedConfig)
   validateSecurityWarnings(validatedConfig)

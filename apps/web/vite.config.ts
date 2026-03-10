@@ -81,10 +81,10 @@ async function getPlugins() {
   ] as PluginOption[]
 }
 
-const config = defineConfig(async () => {
+const config = defineConfig(async ({ mode }) => {
   // Derive VITE_APP_NAME from APP_NAME if not explicitly set in .env
   const envDir = '../..'
-  const env = loadEnv('development', envDir, '')
+  const env = loadEnv(mode, envDir, '')
   process.env.VITE_APP_NAME ??= env.APP_NAME ?? 'App'
 
   return {

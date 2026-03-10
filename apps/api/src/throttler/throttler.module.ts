@@ -28,6 +28,8 @@ import { UpstashThrottlerStorage } from './upstashThrottlerStorage.js'
           logger.warn('Rate limiting using in-memory storage — not suitable for production')
         }
 
+        // Values always defined — applyRateLimitPreset() in env.validation.ts guarantees concrete values
+        // RATE_LIMIT_API_TTL / RATE_LIMIT_API_LIMIT are reserved for a future API-key throttler tier
         return {
           throttlers: [
             {

@@ -166,7 +166,7 @@ Agent definitions are in `.claude/agents/*.md`. See the [Agent Teams Guide](./gu
 | Variable | App | Required | Default | Scope | Description |
 |----------|-----|----------|---------|-------|-------------|
 | `BETTER_AUTH_SECRET` | API | Yes (non-dev) | `dev-secret-...` | Server | Auth session secret |
-| `BETTER_AUTH_URL` | API | No | `http://localhost:4000` | Server | Auth base URL |
+| `BETTER_AUTH_URL` | API | No | Derived from `APP_URL` | Server | Auth base URL (auto-derived — see [Derived Variables](#derived-variables)) |
 | `GOOGLE_CLIENT_ID` | API | No | — | Server | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | API | No | — | Server | Google OAuth client secret |
 | `GITHUB_CLIENT_ID` | API | No | — | Server | GitHub OAuth client ID |
@@ -353,9 +353,7 @@ Configure in Vercel dashboard under **Settings &gt; Environment Variables** (man
 |----------|-------------|--------|---------|
 | `DATABASE_URL` | PostgreSQL connection (Neon) | Auto-injected by Neon Marketplace integration | `postgresql://user:pass@host/neondb?sslmode=require` |
 | `DATABASE_APP_URL` | App user connection URL (RLS enforced) | Manual | `postgresql://app_user:pass@host/neondb?sslmode=require` |
-| `CORS_ORIGIN` | Web project URL | Manual | `https://app.roxabi.vercel.app` |
 | `BETTER_AUTH_SECRET` | Auth secret (random 32+ chars) | Manual | `&lt;random-string&gt;` |
-| `BETTER_AUTH_URL` | This project's URL | Manual | `https://api.roxabi.vercel.app` |
 | `APP_URL` | Web project URL | Manual | `https://app.roxabi.vercel.app` |
 | `API_URL` | This project's URL | Manual | `https://api.roxabi.vercel.app` |
 | `EMAIL_FROM` | Sender email address | Manual | `noreply@example.com` |
@@ -363,14 +361,8 @@ Configure in Vercel dashboard under **Settings &gt; Environment Variables** (man
 | `KV_REST_API_URL` | Upstash Redis REST URL | Auto-injected by Upstash Marketplace integration | `https://...upstash.io` |
 | `KV_REST_API_TOKEN` | Upstash Redis REST token | Auto-injected by Upstash Marketplace integration | `AX...` |
 | `RATE_LIMIT_ENABLED` | Enable/disable rate limiting (kill switch) | Manual | `true` |
+| `RATE_LIMIT_PRESET` | Rate limit preset (`default` / `strict` / `relaxed`) — see [Rate Limit Presets](#rate-limit-presets) | Manual | `default` |
 | `SWAGGER_ENABLED` | Enable Swagger UI at `/api/docs` | Manual | `false` |
-| `RATE_LIMIT_GLOBAL_TTL` | Global rate limit window in ms | Manual | `60000` |
-| `RATE_LIMIT_GLOBAL_LIMIT` | Global max requests per window | Manual | `60` |
-| `RATE_LIMIT_AUTH_TTL` | Auth rate limit window in ms | Manual | `60000` |
-| `RATE_LIMIT_AUTH_LIMIT` | Auth max requests per window | Manual | `5` |
-| `RATE_LIMIT_AUTH_BLOCK_DURATION` | Auth tier block duration in ms | Manual | `300000` |
-| `RATE_LIMIT_API_TTL` | API key tier rate limit window in ms (reserved for future use) | Manual | `60000` |
-| `RATE_LIMIT_API_LIMIT` | API key tier max requests per window (reserved for future use) | Manual | `100` |
 
 > **Auto-injected vars** are managed by their respective Vercel Marketplace integrations and do not need manual configuration. They appear with an integration badge in the Vercel dashboard. For local development, these vars still need to be set manually in `.env`.
 

@@ -450,6 +450,20 @@ describe('env validation', () => {
       expect(result.CORS_ORIGIN).toBe('https://override.example.com')
     })
 
+    it('explicit BETTER_AUTH_URL overrides APP_URL derivation', () => {
+      // Arrange
+      const config = {
+        APP_URL: 'https://example.com',
+        BETTER_AUTH_URL: 'https://auth.example.com',
+      }
+
+      // Act
+      const result = validate(config)
+
+      // Assert
+      expect(result.BETTER_AUTH_URL).toBe('https://auth.example.com')
+    })
+
     it('CORS_ORIGIN and BETTER_AUTH_URL default to http://localhost:3000 when APP_URL is not set', () => {
       // Arrange — no APP_URL, no CORS_ORIGIN, no BETTER_AUTH_URL
 
@@ -463,7 +477,26 @@ describe('env validation', () => {
   })
 
   describe('rate limit presets', () => {
-    it('RATE_LIMIT_PRESET=default applies default values', () => {
+    it('should throw on invalid RATE_LIMIT_PRESET value', () => {
+      expect(() => validate({ RATE_LIMIT_PRESET: 'aggressive' })).toThrow()
+    })
+
+    it('applies default preset values when RATE_LIMIT_PRESET is omitted', () => {
+      // Act
+      const result = validate({})
+
+      // Assert
+      expect(result.RATE_LIMIT_PRESET).toBe('default')
+      expect(result.RATE_LIMIT_GLOBAL_TTL).toBe(60_000)
+      expect(result.RATE_LIMIT_GLOBAL_LIMIT).toBe(60)
+      expect(result.RATE_LIMIT_AUTH_TTL).toBe(60_000)
+      expect(result.RATE_LIMIT_AUTH_LIMIT).toBe(5)
+      expect(result.RATE_LIMIT_AUTH_BLOCK_DURATION).toBe(300_000)
+      expect(result.RATE_LIMIT_API_TTL).toBe(60_000)
+      expect(result.RATE_LIMIT_API_LIMIT).toBe(100)
+    })
+
+    it('RATE_LIMIT_PRESET=default applies all default values', () => {
       // Arrange
       const config = { RATE_LIMIT_PRESET: 'default' }
 
@@ -471,11 +504,16 @@ describe('env validation', () => {
       const result = validate(config)
 
       // Assert
+      expect(result.RATE_LIMIT_GLOBAL_TTL).toBe(60_000)
       expect(result.RATE_LIMIT_GLOBAL_LIMIT).toBe(60)
+      expect(result.RATE_LIMIT_AUTH_TTL).toBe(60_000)
       expect(result.RATE_LIMIT_AUTH_LIMIT).toBe(5)
+      expect(result.RATE_LIMIT_AUTH_BLOCK_DURATION).toBe(300_000)
+      expect(result.RATE_LIMIT_API_TTL).toBe(60_000)
+      expect(result.RATE_LIMIT_API_LIMIT).toBe(100)
     })
 
-    it('RATE_LIMIT_PRESET=strict applies strict values', () => {
+    it('RATE_LIMIT_PRESET=strict applies all strict values', () => {
       // Arrange
       const config = { RATE_LIMIT_PRESET: 'strict' }
 
@@ -483,11 +521,16 @@ describe('env validation', () => {
       const result = validate(config)
 
       // Assert
+      expect(result.RATE_LIMIT_GLOBAL_TTL).toBe(60_000)
       expect(result.RATE_LIMIT_GLOBAL_LIMIT).toBe(30)
+      expect(result.RATE_LIMIT_AUTH_TTL).toBe(60_000)
       expect(result.RATE_LIMIT_AUTH_LIMIT).toBe(3)
+      expect(result.RATE_LIMIT_AUTH_BLOCK_DURATION).toBe(600_000)
+      expect(result.RATE_LIMIT_API_TTL).toBe(60_000)
+      expect(result.RATE_LIMIT_API_LIMIT).toBe(50)
     })
 
-    it('RATE_LIMIT_PRESET=relaxed applies relaxed values', () => {
+    it('RATE_LIMIT_PRESET=relaxed applies all relaxed values', () => {
       // Arrange
       const config = { RATE_LIMIT_PRESET: 'relaxed' }
 
@@ -495,11 +538,16 @@ describe('env validation', () => {
       const result = validate(config)
 
       // Assert
+      expect(result.RATE_LIMIT_GLOBAL_TTL).toBe(60_000)
       expect(result.RATE_LIMIT_GLOBAL_LIMIT).toBe(120)
+      expect(result.RATE_LIMIT_AUTH_TTL).toBe(60_000)
       expect(result.RATE_LIMIT_AUTH_LIMIT).toBe(10)
+      expect(result.RATE_LIMIT_AUTH_BLOCK_DURATION).toBe(60_000)
+      expect(result.RATE_LIMIT_API_TTL).toBe(60_000)
+      expect(result.RATE_LIMIT_API_LIMIT).toBe(200)
     })
 
-    it('explicit RATE_LIMIT_AUTH_LIMIT overrides preset value', () => {
+    it('explicit RATE_LIMIT_AUTH_LIMIT overrides preset; non-overridden keys retain preset values', () => {
       // Arrange
       const config = {
         RATE_LIMIT_PRESET: 'strict',
@@ -509,8 +557,11 @@ describe('env validation', () => {
       // Act
       const result = validate(config)
 
-      // Assert
+      // Assert — overridden
       expect(result.RATE_LIMIT_AUTH_LIMIT).toBe(10)
+      // Assert — non-overridden keys still use strict preset
+      expect(result.RATE_LIMIT_GLOBAL_LIMIT).toBe(30)
+      expect(result.RATE_LIMIT_AUTH_BLOCK_DURATION).toBe(600_000)
     })
 
     it('RATE_LIMIT_ENABLED is unaffected by preset', () => {

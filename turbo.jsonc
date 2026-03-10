@@ -70,7 +70,7 @@
         "!**/*.stories.{tsx,mdx}"
       ],
       "outputs": ["dist/**", ".output/**", ".vercel/output/**", ".next/**", "build/**"],
-      "env": ["API_URL", "APP_URL", "KV_*", "REDIS_*", "VITE_*"]
+      "env": ["API_URL", "APP_NAME", "APP_URL", "KV_*", "REDIS_*", "VITE_*"]
     },
     "typecheck": {
       "dependsOn": ["codegen", "^typecheck", "^build"],
