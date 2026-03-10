@@ -8,6 +8,7 @@ export class InMemoryConsentRepository implements ConsentRepository {
   private readonly store = new Map<string, ConsentRecord[]>()
 
   async saveConsent(userId: string, dto: SaveConsentDto, _tx?: DrizzleTx): Promise<ConsentRecord> {
+    // ipAddress and userAgent are audit-only DB fields — not part of ConsentRecord; intentionally omitted
     const now = new Date().toISOString()
     const record: ConsentRecord = {
       id: crypto.randomUUID(),

@@ -30,7 +30,9 @@ export class DrizzleConsentRepository implements ConsentRepository {
       .insert(consentRecords)
       .values({
         userId,
-        ...dto,
+        categories: dto.categories,
+        policyVersion: dto.policyVersion,
+        action: dto.action,
         ipAddress: dto.ipAddress ?? null,
         userAgent: dto.userAgent ?? null,
       })

@@ -162,7 +162,7 @@ export interface ConsentRepository {
 
 - Method names mirror actual service queries, not generic CRUD (`getLatestByUserId`, not `findOne`)
 - No speculative methods — only what the service currently calls
-- All methods accept `tx?: DrizzleTx` for optional transaction pass-through
+- All methods accept `tx?: DrizzleTx` for optional transaction pass-through — this is a type-only import with no runtime cost; the service never passes a `tx`, but the parameter lets the adapter participate in caller-initiated transactions. This is a deliberate trade-off against the complexity of an ORM-agnostic `Transaction<T>` generic
 
 **Drizzle adapter** — implements the port, lives in `repositories/`:
 

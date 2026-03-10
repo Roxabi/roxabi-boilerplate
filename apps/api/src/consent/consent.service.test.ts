@@ -48,15 +48,10 @@ describe('ConsentService (with InMemoryConsentRepository)', () => {
       expect(result.createdAt).toBeTruthy()
     })
 
-    it('should store ipAddress and userAgent fields', async () => {
-      // Arrange
-      // (validDto includes ipAddress and userAgent)
-
-      // Act
+    it('should accept optional ipAddress and userAgent without error', async () => {
       const result = await service.saveConsent('user-1', validDto)
 
-      // Assert
-      expect(result).toBeDefined()
+      expect(result.userId).toBe('user-1')
     })
   })
 
