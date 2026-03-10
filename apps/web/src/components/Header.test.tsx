@@ -106,7 +106,7 @@ vi.mock('next-themes', () => ({
 import { Header } from './Header'
 
 describe('Header', () => {
-  it('should render the Roxabi logo', () => {
+  it('should render the app name in the header', () => {
     // Arrange & Act
     render(<Header />)
 

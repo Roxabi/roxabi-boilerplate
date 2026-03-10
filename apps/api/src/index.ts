@@ -78,10 +78,10 @@ function configureCors(
 function configureSwagger(
   app: NestFastifyApplication,
   logger: Logger,
-  swaggerEnabled: boolean
+  swaggerEnabled: boolean,
+  appName: string
 ): void {
   if (swaggerEnabled) {
-    const appName = process.env.APP_NAME ?? 'App'
     const config = new DocumentBuilder()
       .setTitle(appName + ' API')
       .setDescription(appName + ' SaaS Backend API')
@@ -137,7 +137,8 @@ async function bootstrap() {
   )
 
   configureCors(app, configService, logger, nodeEnv)
-  configureSwagger(app, logger, swaggerEnabled)
+  const appName = configService.get<string>('APP_NAME', 'App')
+  configureSwagger(app, logger, swaggerEnabled, appName)
 
   // API_PORT for local dev; fall back to Vercel-injected PORT at runtime
   const port = parseInt(process.env.PORT || '', 10) || configService.get<number>('API_PORT', 4000)

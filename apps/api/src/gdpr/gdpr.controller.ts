@@ -22,7 +22,7 @@ export class GdprController {
     const data = await this.gdprService.exportUserData(session.user.id)
 
     const date = new Date().toISOString().split('T')[0]
-    const slug = (process.env.APP_NAME ?? 'app').toLowerCase()
+    const slug = (process.env.APP_NAME ?? 'App').toLowerCase().replace(/[^\w-]/g, '-')
     reply.header('Content-Disposition', `attachment; filename="${slug}-data-export-${date}.json"`)
 
     return data

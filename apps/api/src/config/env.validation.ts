@@ -36,6 +36,11 @@ export const envSchema = z.object({
   KV_REST_API_URL: z.string().optional(),
   KV_REST_API_TOKEN: z.string().optional(),
   RATE_LIMIT_ENABLED: booleanFromEnv.default(true),
+  APP_NAME: z
+    .string()
+    .max(64)
+    .regex(/^[\w\s\-.]+$/)
+    .default('App'),
   SWAGGER_ENABLED: booleanFromEnv.optional(),
   RATE_LIMIT_GLOBAL_TTL: z.coerce.number().positive().default(60_000),
   RATE_LIMIT_GLOBAL_LIMIT: z.coerce.number().positive().default(60),

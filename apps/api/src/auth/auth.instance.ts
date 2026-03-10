@@ -21,6 +21,7 @@ import type { EmailProvider } from '../email/email.provider.js'
 
 const logger = new Logger('AuthInstance')
 
+const APP_NAME = process.env.APP_NAME ?? 'App'
 const SUPPORTED_LOCALES = ['en', 'fr']
 
 // Better Auth does not infer additionalFields on callback user parameters.
@@ -62,7 +63,6 @@ function buildSocialProviders(config: AuthInstanceConfig): Record<string, unknow
 }
 
 function buildEmailAndPasswordConfig(emailProvider: EmailProvider, config: AuthInstanceConfig) {
-  const appName = process.env.APP_NAME ?? 'App'
   return {
     enabled: true,
     requireEmailVerification: true,
@@ -77,7 +77,7 @@ function buildEmailAndPasswordConfig(emailProvider: EmailProvider, config: AuthI
           loginUrl,
           locale,
           config.appURL,
-          appName
+          APP_NAME
         )
         emailContent = { html, text, subject }
       } catch {
@@ -113,7 +113,7 @@ function buildEmailAndPasswordConfig(emailProvider: EmailProvider, config: AuthI
           emailUrl,
           locale,
           config.appURL,
-          appName
+          APP_NAME
         )
         emailContent = { html, text, subject }
       } catch {
@@ -137,7 +137,6 @@ function buildEmailAndPasswordConfig(emailProvider: EmailProvider, config: AuthI
 }
 
 function buildEmailVerificationConfig(emailProvider: EmailProvider, config: AuthInstanceConfig) {
-  const appName = process.env.APP_NAME ?? 'App'
   return {
     // Better Auth applies server-side rate limiting on verification email sends
     // (rateLimit plugin). Client-side cooldown (60s) is UX guidance only.
@@ -160,7 +159,7 @@ function buildEmailVerificationConfig(emailProvider: EmailProvider, config: Auth
           emailUrl,
           locale,
           config.appURL,
-          appName
+          APP_NAME
         )
         emailContent = { html, text, subject }
       } catch {
@@ -188,7 +187,6 @@ function buildMagicLinkPlugin(
   emailProvider: EmailProvider,
   config: AuthInstanceConfig
 ) {
-  const appName = process.env.APP_NAME ?? 'App'
   return magicLink({
     async sendMagicLink({ email, url }) {
       const emailUrl = buildFrontendUrl(url, config.appURL, '/magic-link/verify')
@@ -209,15 +207,15 @@ function buildMagicLinkPlugin(
           emailUrl,
           locale,
           config.appURL,
-          appName
+          APP_NAME
         )
         emailContent = { html, text, subject }
       } catch {
         logger.warn('Failed to render magic link email template, using plain fallback')
         emailContent = {
-          subject: `Sign in to ${appName}`,
+          subject: `Sign in to ${APP_NAME}`,
           html: `<p>Click <a href="${escapeHtml(emailUrl)}">here</a> to sign in.</p>`,
-          text: `Sign in to ${appName}: ${emailUrl}`,
+          text: `Sign in to ${APP_NAME}: ${emailUrl}`,
         }
       }
 
