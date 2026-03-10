@@ -23,6 +23,7 @@ apps/web/.content-collections/
 
 # Environment
 .env
+.env.save
 .env.local
 .env.*.local
 
