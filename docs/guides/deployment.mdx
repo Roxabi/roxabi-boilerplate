@@ -58,6 +58,19 @@ The workflow builds and deploys a Vercel preview. The preview URL appears in the
 - To share a preview URL with stakeholders for review
 - To smoke-test a specific branch without deploying to production
 
+### Custom domain mapping
+
+By default, preview deploys compute `APP_URL` from the Vercel branch alias (e.g., `roxabi-app-git-staging-roxabi.vercel.app`). Branches with a custom domain alias (e.g., `app.staging.roxabi.com`) need `APP_URL` set to the custom domain so better-auth's CSRF origin check passes.
+
+The workflow handles this automatically for known branches:
+
+| Branch | `APP_URL` | `CORS_ORIGIN` |
+|--------|-----------|---------------|
+| `staging` | `https://app.staging.roxabi.com` | `https://app.staging.roxabi.com,https://roxabi-app-git-staging-roxabi.vercel.app` |
+| Other branches | Branch alias | Branch alias |
+
+To add a custom domain for a new branch, add a `case` entry in the `deploy-preview.yml` workflow's "Deploy API preview" step.
+
 ---
 
 ## GitHub Actions Secrets
@@ -659,7 +672,7 @@ Both Vercel projects have SSO deployment protection enabled by default:
 }
 ```
 
-This requires **Vercel team SSO authentication** to access any deployment URL that is not a custom domain. Since preview deployments have no custom domain, they are always gated behind SSO login.
+This requires **Vercel team SSO authentication** to access any deployment URL that is not a custom domain. The `staging` branch has custom domains (`app.staging.roxabi.com`, `api.staging.roxabi.com`) which bypass SSO. Other preview deployments use Vercel-generated URLs and are gated behind SSO login.
 
 ### Options for Preview Access
 
