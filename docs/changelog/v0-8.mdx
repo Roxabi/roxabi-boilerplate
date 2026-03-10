@@ -3,6 +3,17 @@ title: v0.8.x
 description: All v0.8 releases
 ---
 
+## v0.8.1 — March 10, 2026
+
+### Fixes
+- fix(preview): move bypass secret to runtime Nitro server route — secret is now read at request time, never baked into the build artifact (#489)
+- fix(docs): use turbo-ignore for Vercel ignoreCommand — fixes docs production deploy being skipped when no prior successful deploy exists (#490)
+
+### Documentation
+- docs: sync proxy and ignoreCommand references across architecture, auth, and troubleshooting docs (#491)
+
+---
+
 ## v0.8.0 — March 10, 2026
 
 ### Features
