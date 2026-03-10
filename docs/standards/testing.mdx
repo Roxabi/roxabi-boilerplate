@@ -34,6 +34,7 @@ Use this table to decide which layer to write a test at. Write at the lowest lay
 | React component with real hooks and context | Integration | Vitest + Testing Library |
 | `queryOptions()` factory + component consuming it | Integration | Vitest + Testing Library + `QueryClientProvider` |
 | Auth flow, onboarding, checkout end-to-end | E2E | Playwright |
+| NestJS service with repository port (in-memory adapter) | Integration | Vitest + `Test.createTestingModule()` |
 
 **Unit — isolated logic:** Write unit tests for services, utilities, validators, and pure functions. Instantiate the class directly and pass `vi.fn()` stubs through the constructor. No module-level mocking, no NestJS DI.
 
@@ -326,6 +327,50 @@ describe('UsersService', () => {
 - Delete: `delete().where()` — terminal is `where()`
 
 Use `vi.fn().mockResolvedValueOnce([])` for multi-call sequences within a single test.
+
+### Service Testing — Repository Port (In-Memory Adapter)
+
+Use this pattern when a service has been refactored to inject a repository via a port token (e.g., `CONSENT_REPO`). Provide an `InMemoryConsentRepository` as the `useValue` instead of the real Drizzle adapter. Reserve the Drizzle mock pattern above for adapter-level tests — i.e., tests that verify the Drizzle adapter itself.
+
+```typescript
+import { Test, type TestingModule } from '@nestjs/testing'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { CONSENT_REPO } from './consent.repository.js'
+import { ConsentService, type SaveConsentDto } from './consent.service.js'
+import { InMemoryConsentRepository } from './repositories/inMemoryConsent.repository.js'
+
+describe('ConsentService (with InMemoryConsentRepository)', () => {
+  let module: TestingModule
+  let service: ConsentService
+  let repo: InMemoryConsentRepository
+
+  beforeEach(async () => {
+    repo = new InMemoryConsentRepository()
+    module = await Test.createTestingModule({
+      providers: [
+        ConsentService,
+        { provide: CONSENT_REPO, useValue: repo },
+      ],
+    }).compile()
+    service = module.get(ConsentService)
+  })
+
+  afterEach(async () => {
+    repo.clear()
+    await module.close()
+  })
+
+  // ... test cases
+})
+```
+
+**`{ provide: CONSENT_REPO, useValue: repo }` pattern:** The in-memory repository is instantiated directly (not via DI) so test code has full access to `clear()` and can inspect internal state when needed. NestJS resolves the `CONSENT_REPO` token to the provided instance at compile time.
+
+**`afterEach(() => repo.clear())` for test isolation:** Calling `repo.clear()` before each test ensures every test starts with an empty store. Without this, tests become order-dependent — a record inserted by test A will appear in test B if they share the same repository instance.
+
+**Note:** `InMemoryConsentRepository` must not be decorated with `@Injectable()`. It is registered only via `useValue` or `useClass` in test modules; the decorator would add NestJS metadata that belongs to DI-managed classes only.
+
+**Drizzle adapter tests:** Testing the Drizzle adapter in isolation (verifying that SQL queries are formed correctly) is an optional follow-up. For now, the Drizzle adapter is exercised via integration and E2E tests.
 
 ### When to Use `Test.createTestingModule()` (Integration)
 

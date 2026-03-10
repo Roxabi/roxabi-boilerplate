@@ -4,6 +4,7 @@ import { AuthController } from './auth.controller.js'
 import { AuthGuard } from './auth.guard.js'
 import { AuthModule } from './auth.module.js'
 import { AuthService } from './auth.service.js'
+import { SessionEnrichmentService } from './sessionEnrichment.service.js'
 
 describe('AuthModule', () => {
   const imports: unknown[] = Reflect.getMetadata('imports', AuthModule) ?? []
@@ -39,8 +40,18 @@ describe('AuthModule', () => {
     expect((guardProvider as { useClass: unknown }).useClass).toBe(AuthGuard)
   })
 
+  it('should provide SessionEnrichmentService', () => {
+    // Assert
+    expect(providers).toContainEqual(SessionEnrichmentService)
+  })
+
   it('should export AuthService', () => {
     // Assert
     expect(exports_).toContain(AuthService)
+  })
+
+  it('should export SessionEnrichmentService', () => {
+    // Assert
+    expect(exports_).toContain(SessionEnrichmentService)
   })
 })

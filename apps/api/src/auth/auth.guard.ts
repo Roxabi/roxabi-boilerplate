@@ -16,7 +16,7 @@ import { ApiKeyInvalidException } from '../api-key/exceptions/apiKeyInvalid.exce
 import { ErrorCode } from '../common/errorCodes.js'
 import { PermissionService } from '../rbac/permission.service.js'
 import { UserService } from '../user/user.service.js'
-import { AuthService } from './auth.service.js'
+import { SessionEnrichmentService } from './sessionEnrichment.service.js'
 import type { AuthenticatedSession } from './types.js'
 
 function isAuthenticatedSession(value: unknown): value is AuthenticatedSession {
@@ -51,7 +51,7 @@ export class AuthGuard implements CanActivate {
   private readonly logger = new Logger(AuthGuard.name)
 
   constructor(
-    private readonly authService: AuthService,
+    private readonly sessionEnrichmentService: SessionEnrichmentService,
     private readonly reflector: Reflector,
     @Inject(forwardRef(() => UserService))
     private readonly userService: UserService,
@@ -116,7 +116,7 @@ export class AuthGuard implements CanActivate {
         throw err
       }
     }
-    const raw = await this.authService.getSession(request)
+    const raw = await this.sessionEnrichmentService.getEnrichedSession(request)
     if (!isAuthenticatedSession(raw)) return null
     return { ...raw, actorType: 'user' as const }
   }
@@ -232,7 +232,7 @@ export class AuthGuard implements CanActivate {
     // Superadmin bypass is suppressed for API key auth — scope checks always apply
     if (session.user.role === 'superadmin' && session.actorType !== 'api_key') return
 
-    // Permissions are already resolved by AuthService.getSession() and attached to the session
+    // Permissions are already resolved by SessionEnrichmentService and attached to the session
     const hasAll = requiredPermissions.every((p) => session.permissions.includes(p))
     if (!hasAll) {
       if (session.actorType === 'api_key') {

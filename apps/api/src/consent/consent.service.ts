@@ -1,66 +1,18 @@
 import { Inject, Injectable } from '@nestjs/common'
 import type { ConsentRecord } from '@repo/types'
-import { desc, eq } from 'drizzle-orm'
-import { DRIZZLE, type DrizzleDB } from '../database/drizzle.provider.js'
-import { consentRecords } from '../database/schema/consent.schema.js'
-import { ConsentInsertFailedException } from './exceptions/consentInsertFailed.exception.js'
-import { ConsentNotFoundException } from './exceptions/consentNotFound.exception.js'
+import { CONSENT_REPO, type ConsentRepository, type SaveConsentDto } from './consent.repository.js'
 
-export interface SaveConsentDto {
-  categories: { necessary: true; analytics: boolean; marketing: boolean }
-  policyVersion: string
-  action: 'accepted' | 'rejected' | 'customized'
-  ipAddress?: string | null
-  userAgent?: string | null
-}
-
-function toConsentRecord(row: typeof consentRecords.$inferSelect): ConsentRecord {
-  return {
-    id: row.id,
-    userId: row.userId,
-    categories: row.categories as ConsentRecord['categories'],
-    policyVersion: row.policyVersion,
-    action: row.action as ConsentRecord['action'],
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-  }
-}
+export type { SaveConsentDto } from './consent.repository.js'
 
 @Injectable()
 export class ConsentService {
-  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDB) {}
+  constructor(@Inject(CONSENT_REPO) private readonly repo: ConsentRepository) {}
 
   async saveConsent(userId: string, dto: SaveConsentDto): Promise<ConsentRecord> {
-    const rows = await this.db
-      .insert(consentRecords)
-      .values({
-        userId,
-        categories: dto.categories,
-        policyVersion: dto.policyVersion,
-        action: dto.action,
-        ipAddress: dto.ipAddress ?? null,
-        userAgent: dto.userAgent ?? null,
-      })
-      .returning()
-
-    const row = rows[0]
-    if (!row) {
-      throw new ConsentInsertFailedException(userId)
-    }
-    return toConsentRecord(row)
+    return this.repo.saveConsent(userId, dto)
   }
 
   async getLatestConsent(userId: string): Promise<ConsentRecord> {
-    const [row] = await this.db
-      .select()
-      .from(consentRecords)
-      .where(eq(consentRecords.userId, userId))
-      .orderBy(desc(consentRecords.createdAt))
-      .limit(1)
-
-    if (!row) {
-      throw new ConsentNotFoundException(userId)
-    }
-    return toConsentRecord(row)
+    return this.repo.getLatestByUserId(userId)
   }
 }

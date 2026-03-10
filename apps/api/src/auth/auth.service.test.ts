@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { PermissionService } from '../rbac/permission.service.js'
 import { AuthService } from './auth.service.js'
 
 const mockHandler = vi.fn()
@@ -26,9 +25,6 @@ function createMockConfig(values: Record<string, string | undefined> = {}) {
 }
 
 const mockEventEmitter = { emit: vi.fn(), emitAsync: vi.fn().mockResolvedValue([]) }
-const mockPermissionService = {
-  getPermissions: vi.fn().mockResolvedValue([]),
-} as unknown as PermissionService
 
 const baseConfigValues = {
   BETTER_AUTH_SECRET: 'test-secret',
@@ -37,13 +33,7 @@ const baseConfigValues = {
 }
 
 function createService(config: ReturnType<typeof createMockConfig>) {
-  return new AuthService(
-    {} as never,
-    {} as never,
-    config as never,
-    mockEventEmitter as never,
-    mockPermissionService
-  )
+  return new AuthService({} as never, {} as never, config as never, mockEventEmitter as never)
 }
 
 describe('AuthService', () => {
@@ -52,9 +42,6 @@ describe('AuthService', () => {
     mockGetSession.mockReset()
     mockEventEmitter.emit.mockReset()
     mockEventEmitter.emitAsync.mockReset().mockResolvedValue([])
-    ;(mockPermissionService.getPermissions as ReturnType<typeof vi.fn>)
-      .mockReset()
-      .mockResolvedValue([])
   })
 
   describe('constructor', () => {
@@ -132,7 +119,7 @@ describe('AuthService', () => {
     })
   })
 
-  describe('getSession', () => {
+  describe('getRawSession', () => {
     it('should convert Fastify headers and delegate to BetterAuth API', async () => {
       // Arrange
       const config = createMockConfig(baseConfigValues)
@@ -147,7 +134,7 @@ describe('AuthService', () => {
       mockGetSession.mockResolvedValue(mockSession)
 
       // Act
-      const result = await service.getSession(mockFastifyRequest as never)
+      const result = await service.getRawSession(mockFastifyRequest as never)
 
       // Assert
       expect(mockGetSession).toHaveBeenCalledWith({
@@ -155,49 +142,7 @@ describe('AuthService', () => {
       })
       const calledHeaders = mockGetSession.mock.calls[0]?.[0]?.headers as Headers
       expect(calledHeaders.get('cookie')).toBe('session=abc123')
-      expect(result).toEqual({ ...mockSession, permissions: [] })
-    })
-
-    it('should enrich session with permissions when activeOrganizationId and user.id exist', async () => {
-      // Arrange
-      const config = createMockConfig(baseConfigValues)
-      const service = createService(config)
-      const mockFastifyRequest = { headers: { cookie: 'session=abc' } }
-      const mockSession = {
-        user: { id: 'user-1' },
-        session: { id: 'sess-1', activeOrganizationId: 'org-1' },
-      }
-      mockGetSession.mockResolvedValue(mockSession)
-      ;(mockPermissionService.getPermissions as ReturnType<typeof vi.fn>).mockResolvedValue([
-        'roles:read',
-        'members:write',
-      ])
-
-      // Act
-      const result = await service.getSession(mockFastifyRequest as never)
-
-      // Assert
-      expect(mockPermissionService.getPermissions).toHaveBeenCalledWith('user-1', 'org-1')
-      expect(result).toEqual({ ...mockSession, permissions: ['roles:read', 'members:write'] })
-    })
-
-    it('should return empty permissions when activeOrganizationId exists but user.id is missing', async () => {
-      // Arrange
-      const config = createMockConfig(baseConfigValues)
-      const service = createService(config)
-      const mockFastifyRequest = { headers: { cookie: 'session=abc' } }
-      const mockSession = {
-        user: {},
-        session: { id: 'sess-1', activeOrganizationId: 'org-1' },
-      }
-      mockGetSession.mockResolvedValue(mockSession)
-
-      // Act
-      const result = await service.getSession(mockFastifyRequest as never)
-
-      // Assert
-      expect(mockPermissionService.getPermissions).not.toHaveBeenCalled()
-      expect(result).toEqual({ ...mockSession, permissions: [] })
+      expect(result).toBe(mockSession)
     })
 
     it('should return null when no session exists', async () => {
@@ -208,7 +153,7 @@ describe('AuthService', () => {
       mockGetSession.mockResolvedValue(null)
 
       // Act
-      const result = await service.getSession(mockFastifyRequest as never)
+      const result = await service.getRawSession(mockFastifyRequest as never)
 
       // Assert
       expect(result).toBeNull()

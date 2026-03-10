@@ -1,36 +1,32 @@
 import { Inject, Injectable } from '@nestjs/common'
-import { eq } from 'drizzle-orm'
-import { DRIZZLE, type DrizzleDB } from '../database/drizzle.provider.js'
-import { systemSettings } from '../database/schema/systemSettings.schema.js'
 import { SettingNotFoundException } from './exceptions/settingNotFound.exception.js'
 import { SettingValidationException } from './exceptions/settingValidation.exception.js'
+import {
+  SYSTEM_SETTINGS_REPO,
+  type SystemSettingRow,
+  type SystemSettingsRepository,
+} from './systemSettings.repository.js'
 
 @Injectable()
 export class SystemSettingsService {
-  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDB) {}
+  constructor(@Inject(SYSTEM_SETTINGS_REPO) private readonly repo: SystemSettingsRepository) {}
 
   async getValue<T = unknown>(key: string): Promise<T | null> {
-    const rows = await this.db
-      .select()
-      .from(systemSettings)
-      .where(eq(systemSettings.key, key))
-      .limit(1)
-
-    const row = rows[0]
+    const row = await this.repo.findByKey(key)
     if (!row) return null
     return row.value as T
   }
 
   async getAll() {
-    return this.db.select().from(systemSettings)
+    return this.repo.findAll()
   }
 
   async getByCategory(category: string) {
-    return this.db.select().from(systemSettings).where(eq(systemSettings.category, category))
+    return this.repo.findByCategory(category)
   }
 
   async batchUpdate(updates: Array<{ key: string; value: unknown }>): Promise<{
-    updated: Array<Record<string, unknown>>
+    updated: SystemSettingRow[]
     beforeState: Record<string, unknown>
   }> {
     if (updates.length === 0) {
@@ -38,21 +34,10 @@ export class SystemSettingsService {
     }
 
     // Phase 1: Read all settings and validate before any writes
-    const existingSettings: Array<{
-      key: string
-      value: unknown
-      type: string
-      metadata: { options?: string[] } | null
-    }> = []
+    const existingSettings: SystemSettingRow[] = []
 
     for (const update of updates) {
-      const rows = await this.db
-        .select()
-        .from(systemSettings)
-        .where(eq(systemSettings.key, update.key))
-        .limit(1)
-
-      const existing = rows[0]
+      const existing = await this.repo.findByKey(update.key)
       if (!existing) {
         throw new SettingNotFoundException(update.key)
       }
@@ -67,14 +52,9 @@ export class SystemSettingsService {
       beforeState[existing.key] = existing.value
     }
 
-    const updated: Array<Record<string, unknown>> = []
+    const updated: SystemSettingRow[] = []
     for (const update of updates) {
-      const [result] = await this.db
-        .update(systemSettings)
-        .set({ value: update.value })
-        .where(eq(systemSettings.key, update.key))
-        .returning()
-
+      const result = await this.repo.updateByKey(update.key, update.value)
       if (result) {
         updated.push(result)
       }

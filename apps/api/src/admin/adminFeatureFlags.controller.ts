@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   HttpCode,
+  Logger,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -60,6 +61,8 @@ const updateFlagSchema = z
 @SkipOrg()
 @Controller('api/admin/feature-flags')
 export class AdminFeatureFlagsController {
+  private readonly logger = new Logger(AdminFeatureFlagsController.name)
+
   constructor(
     private readonly featureFlagService: FeatureFlagService,
     private readonly auditService: AuditService
@@ -96,14 +99,21 @@ export class AdminFeatureFlagsController {
       throw error
     }
 
-    this.auditService.log({
-      actorId: session.user.id,
-      actorType: 'user',
-      action: 'flag.created',
-      resource: 'feature_flag',
-      resourceId: result.id,
-      after: result,
-    })
+    this.auditService
+      .log({
+        actorId: session.user.id,
+        actorType: 'user',
+        action: 'flag.created',
+        resource: 'feature_flag',
+        resourceId: result.id,
+        after: result,
+      })
+      .catch((err) => {
+        this.logger.error(
+          '[audit] Failed to log flag.created',
+          err instanceof Error ? err.stack : String(err)
+        )
+      })
 
     return result
   }
@@ -131,15 +141,22 @@ export class AdminFeatureFlagsController {
     const action =
       bodyKeys.length === 1 && bodyKeys[0] === 'enabled' ? 'flag.toggled' : 'flag.updated'
 
-    this.auditService.log({
-      actorId: session.user.id,
-      actorType: 'user',
-      action,
-      resource: 'feature_flag',
-      resourceId: id,
-      before,
-      after: result,
-    })
+    this.auditService
+      .log({
+        actorId: session.user.id,
+        actorType: 'user',
+        action,
+        resource: 'feature_flag',
+        resourceId: id,
+        before,
+        after: result,
+      })
+      .catch((err) => {
+        this.logger.error(
+          `[audit] Failed to log ${action}`,
+          err instanceof Error ? err.stack : String(err)
+        )
+      })
 
     return result
   }
@@ -160,13 +177,20 @@ export class AdminFeatureFlagsController {
 
     await this.featureFlagService.delete(id)
 
-    this.auditService.log({
-      actorId: session.user.id,
-      actorType: 'user',
-      action: 'flag.deleted',
-      resource: 'feature_flag',
-      resourceId: id,
-      before: existing,
-    })
+    this.auditService
+      .log({
+        actorId: session.user.id,
+        actorType: 'user',
+        action: 'flag.deleted',
+        resource: 'feature_flag',
+        resourceId: id,
+        before: existing,
+      })
+      .catch((err) => {
+        this.logger.error(
+          '[audit] Failed to log flag.deleted',
+          err instanceof Error ? err.stack : String(err)
+        )
+      })
   }
 }

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Patch, UseFilters } from '@nestjs/common'
+import { Body, Controller, Get, Logger, Patch, UseFilters } from '@nestjs/common'
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger'
 import { Throttle } from '@nestjs/throttler'
 import type { SettingsUpdatePayload } from '@repo/types'
@@ -44,6 +44,8 @@ export const settingsUpdateSchema = z.object({
 @SkipOrg()
 @Controller('api/admin/settings')
 export class AdminSettingsController {
+  private readonly logger = new Logger(AdminSettingsController.name)
+
   constructor(
     private readonly systemSettingsService: SystemSettingsService,
     private readonly auditService: AuditService
@@ -76,15 +78,22 @@ export class AdminSettingsController {
     const { updated, beforeState } = await this.systemSettingsService.batchUpdate(body.updates)
 
     for (const u of updated) {
-      this.auditService.log({
-        actorId: session.user.id,
-        actorType: 'user',
-        action: 'settings.updated',
-        resource: 'system_setting',
-        resourceId: u.key as string,
-        before: { value: (beforeState as Record<string, unknown>)[u.key as string] },
-        after: { value: u.value },
-      })
+      this.auditService
+        .log({
+          actorId: session.user.id,
+          actorType: 'user',
+          action: 'settings.updated',
+          resource: 'system_setting',
+          resourceId: u.key,
+          before: { value: beforeState[u.key] },
+          after: { value: u.value },
+        })
+        .catch((err) => {
+          this.logger.error(
+            '[audit] Failed to log system_settings.updated',
+            err instanceof Error ? err.stack : String(err)
+          )
+        })
     }
 
     return updated

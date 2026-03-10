@@ -22,9 +22,9 @@ function createMockPermissionService(permissions: string[] = []) {
   }
 }
 
-function createMockAuthService(session: Record<string, unknown> | null = null) {
+function createMockSessionEnrichmentService(session: Record<string, unknown> | null = null) {
   return {
-    getSession: vi.fn().mockResolvedValue(session),
+    getEnrichedSession: vi.fn().mockResolvedValue(session),
   }
 }
 
@@ -64,12 +64,12 @@ function createGuard(
   apiKeyService?: Record<string, unknown>,
   permissionService?: Record<string, unknown>
 ) {
-  const authService = createMockAuthService(session)
+  const sessionEnrichmentService = createMockSessionEnrichmentService(session)
   const reflector = createMockReflector(metadata)
   const resolvedApiKeyService = apiKeyService ?? createMockApiKeyService()
   const resolvedPermissionService = permissionService ?? createMockPermissionService()
   const guard = new AuthGuard(
-    authService as never,
+    sessionEnrichmentService as never,
     reflector as never,
     userService as never,
     resolvedApiKeyService as never,
@@ -78,7 +78,7 @@ function createGuard(
 
   return {
     guard,
-    authService,
+    sessionEnrichmentService,
     reflector,
     apiKeyService: resolvedApiKeyService,
     permissionService: resolvedPermissionService,

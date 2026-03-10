@@ -1,7 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common'
-import { desc, eq } from 'drizzle-orm'
-import { DRIZZLE, type DrizzleDB } from '../database/drizzle.provider.js'
-import { featureFlags } from '../database/schema/featureFlags.schema.js'
+import {
+  FEATURE_FLAG_REPO,
+  type FeatureFlagRepository,
+  type FeatureFlagRow,
+} from './featureFlags.repository.js'
 
 @Injectable()
 export class FeatureFlagService {
@@ -14,7 +16,7 @@ export class FeatureFlagService {
    */
   private cache = new Map<string, { value: boolean; expiresAt: number }>()
 
-  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDB) {}
+  constructor(@Inject(FEATURE_FLAG_REPO) private readonly repo: FeatureFlagRepository) {}
 
   async isEnabled(key: string): Promise<boolean> {
     const cached = this.cache.get(key)
@@ -22,9 +24,7 @@ export class FeatureFlagService {
       return cached.value
     }
 
-    const rows = await this.db.select().from(featureFlags).where(eq(featureFlags.key, key)).limit(1)
-
-    const row = rows[0]
+    const row = await this.repo.findByKey(key)
     if (!row) return false
 
     this.cache.set(key, {
@@ -35,49 +35,38 @@ export class FeatureFlagService {
     return row.enabled
   }
 
-  async getAll() {
-    return this.db.select().from(featureFlags).orderBy(desc(featureFlags.createdAt))
+  async getAll(): Promise<FeatureFlagRow[]> {
+    return this.repo.findAll()
   }
 
-  async getById(id: string) {
-    const rows = await this.db.select().from(featureFlags).where(eq(featureFlags.id, id)).limit(1)
-    return rows[0]
+  async getById(id: string): Promise<FeatureFlagRow | null> {
+    return this.repo.findById(id)
   }
 
-  async create(data: { name: string; key: string; description?: string }) {
-    const rows = await this.db
-      .insert(featureFlags)
-      .values({
-        name: data.name,
-        key: data.key,
-        description: data.description,
-      })
-      .returning()
-
+  async create(data: { name: string; key: string; description?: string }): Promise<FeatureFlagRow> {
+    const row = await this.repo.create(data)
     this.cache.delete(data.key)
-
-    return rows[0]
+    return row
   }
 
-  async update(id: string, data: { name?: string; description?: string; enabled?: boolean }) {
-    const rows = await this.db
-      .update(featureFlags)
-      .set(data)
-      .where(eq(featureFlags.id, id))
-      .returning()
+  async update(
+    id: string,
+    data: { name?: string; description?: string; enabled?: boolean }
+  ): Promise<FeatureFlagRow | null> {
+    const row = await this.repo.update(id, data)
 
-    if (rows[0]?.key) {
-      this.cache.delete(rows[0].key)
+    if (row?.key) {
+      this.cache.delete(row.key)
     }
 
-    return rows[0]
+    return row
   }
 
   async delete(id: string): Promise<void> {
-    const rows = await this.db.delete(featureFlags).where(eq(featureFlags.id, id)).returning()
+    const row = await this.repo.delete(id)
 
-    if (rows[0]?.key) {
-      this.cache.delete(rows[0].key)
+    if (row?.key) {
+      this.cache.delete(row.key)
     }
   }
 }

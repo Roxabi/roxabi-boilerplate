@@ -1,3 +1,5 @@
+import type { AuditLogEntry } from './audit'
+
 /** Org member as returned by the admin members API */
 export type Member = {
   id: string
@@ -50,7 +52,7 @@ export type AdminUser = {
 /** Extended user detail with activity summary */
 export type AdminUserDetail = AdminUser & {
   image: string | null
-  activitySummary: import('./audit').AuditLogEntry[]
+  activitySummary: AuditLogEntry[]
   /** True when this user is the only active (non-banned, non-deleted) superadmin */
   isLastActiveSuperadmin: boolean
 }

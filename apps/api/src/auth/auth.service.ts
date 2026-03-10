@@ -8,7 +8,6 @@ import {
 } from '../common/events/organizationCreated.event.js'
 import { DRIZZLE, type DrizzleDB } from '../database/drizzle.provider.js'
 import { EMAIL_PROVIDER, type EmailProvider } from '../email/email.provider.js'
-import { PermissionService } from '../rbac/permission.service.js'
 import { type BetterAuthInstance, createBetterAuth } from './auth.instance.js'
 import { toFetchHeaders } from './fastifyHeaders.js'
 
@@ -21,8 +20,7 @@ export class AuthService {
     @Inject(DRIZZLE) db: DrizzleDB, // RLS-BYPASS: better-auth-adapter
     @Inject(EMAIL_PROVIDER) emailProvider: EmailProvider,
     config: ConfigService,
-    private readonly eventEmitter: EventEmitter2,
-    private readonly permissionService: PermissionService
+    private readonly eventEmitter: EventEmitter2
   ) {
     const googleClientId = config.get<string>('GOOGLE_CLIENT_ID')
     const googleClientSecret = config.get<string>('GOOGLE_CLIENT_SECRET')
@@ -59,19 +57,8 @@ export class AuthService {
     return this.auth.handler(request)
   }
 
-  async getSession(request: FastifyRequest) {
+  async getRawSession(request: FastifyRequest) {
     const headers = toFetchHeaders(request)
-    const session = await this.auth.api.getSession({ headers })
-
-    if (!session) return session
-
-    const orgId = session.session?.activeOrganizationId
-    let permissions: string[] = []
-
-    if (orgId && session.user?.id) {
-      permissions = await this.permissionService.getPermissions(session.user.id, orgId)
-    }
-
-    return { ...session, permissions }
+    return this.auth.api.getSession({ headers })
   }
 }

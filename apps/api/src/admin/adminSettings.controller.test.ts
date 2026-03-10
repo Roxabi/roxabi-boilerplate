@@ -18,7 +18,7 @@ const mockSystemSettingsService: SystemSettingsService = {
 } as unknown as SystemSettingsService
 
 const mockAuditService: AuditService = {
-  log: vi.fn(),
+  log: vi.fn().mockResolvedValue(undefined),
 } as unknown as AuditService
 
 // ---------------------------------------------------------------------------
@@ -96,7 +96,9 @@ describe('AdminSettingsController', () => {
           updatedAt: '2026-01-01',
         },
       ]
-      vi.mocked(mockSystemSettingsService.getAll).mockResolvedValue(allSettings as never)
+      ;(mockSystemSettingsService.getAll as ReturnType<typeof vi.fn>).mockResolvedValue(
+        allSettings as never
+      )
 
       // Act
       const result = await controller.getSettings()
@@ -111,7 +113,7 @@ describe('AdminSettingsController', () => {
 
     it('should return an empty object when no settings exist', async () => {
       // Arrange
-      vi.mocked(mockSystemSettingsService.getAll).mockResolvedValue([])
+      ;(mockSystemSettingsService.getAll as ReturnType<typeof vi.fn>).mockResolvedValue([])
 
       // Act
       const result = await controller.getSettings()
@@ -161,11 +163,11 @@ describe('AdminSettingsController', () => {
         'app.name': 'Roxabi',
         'app.support_email': 'support@roxabi.com',
       }
-      vi.mocked(mockSystemSettingsService.batchUpdate).mockResolvedValue({
+      ;(mockSystemSettingsService.batchUpdate as ReturnType<typeof vi.fn>).mockResolvedValue({
         updated: updatedSettings,
         beforeState,
       } as never)
-      vi.mocked(mockAuditService.log).mockResolvedValue(undefined)
+      ;(mockAuditService.log as ReturnType<typeof vi.fn>).mockResolvedValue(undefined)
 
       // Act
       const result = await controller.updateSettings(mockSession as never, { updates })
@@ -179,6 +181,8 @@ describe('AdminSettingsController', () => {
           action: 'settings.updated',
           resource: 'system_setting',
           resourceId: 'app.name',
+          before: { value: 'Roxabi' },
+          after: { value: 'NewName' },
         })
       )
       expect(mockAuditService.log).toHaveBeenCalledWith(
@@ -207,11 +211,11 @@ describe('AdminSettingsController', () => {
         createdAt: '2026-01-01',
         updatedAt: '2026-01-01',
       }
-      vi.mocked(mockSystemSettingsService.batchUpdate).mockResolvedValue({
+      ;(mockSystemSettingsService.batchUpdate as ReturnType<typeof vi.fn>).mockResolvedValue({
         updated: [updatedSetting],
         beforeState: { 'app.name': 'Roxabi' },
       } as never)
-      vi.mocked(mockAuditService.log).mockResolvedValue(undefined)
+      ;(mockAuditService.log as ReturnType<typeof vi.fn>).mockResolvedValue(undefined)
 
       // Act
       const result = await controller.updateSettings(mockSession as never, { updates })
@@ -223,7 +227,7 @@ describe('AdminSettingsController', () => {
     it('should propagate SettingValidationException when service throws it', async () => {
       // Arrange
       const updates = [{ key: 'app.max_users', value: 'not-a-number' }]
-      vi.mocked(mockSystemSettingsService.batchUpdate).mockRejectedValue(
+      ;(mockSystemSettingsService.batchUpdate as ReturnType<typeof vi.fn>).mockRejectedValue(
         new SettingValidationException('app.max_users', 'number', 'string')
       )
 
@@ -236,7 +240,7 @@ describe('AdminSettingsController', () => {
     it('should propagate SettingNotFoundException when service throws it', async () => {
       // Arrange
       const updates = [{ key: 'nonexistent.key', value: 'value' }]
-      vi.mocked(mockSystemSettingsService.batchUpdate).mockRejectedValue(
+      ;(mockSystemSettingsService.batchUpdate as ReturnType<typeof vi.fn>).mockRejectedValue(
         new SettingNotFoundException('nonexistent.key')
       )
 
@@ -249,7 +253,7 @@ describe('AdminSettingsController', () => {
     it('should not call auditService.log when service throws', async () => {
       // Arrange
       const updates = [{ key: 'app.name', value: 'NewName' }]
-      vi.mocked(mockSystemSettingsService.batchUpdate).mockRejectedValue(
+      ;(mockSystemSettingsService.batchUpdate as ReturnType<typeof vi.fn>).mockRejectedValue(
         new SettingNotFoundException('app.name')
       )
 
