@@ -1,0 +1,267 @@
+---
+title: "Backend Design Quality — Deep Analysis"
+issue: 501
+status: analyzed
+created: 2026-03-10
+---
+
+# Analysis: Backend Design Quality
+
+## Context
+
+External review feedback: "god classes, SRP violations, coupling." This analysis audits the actual codebase against these claims, identifies root causes, and proposes a target architecture.
+
+## Audit Summary
+
+| Metric | Value | Assessment |
+|--------|-------|------------|
+| NestJS modules | 17 | Well-decomposed |
+| Services | 24 | Good granularity |
+| Controllers | 15 | 1:1 with services |
+| Max methods/service | 10 (ApiKeyService) | Acceptable |
+| Max deps/service | 5 (AuthService) | Watch |
+| Circular dependencies | 1 (Auth↔User via forwardRef) | Resolved |
+| Shared packages | 4 (@repo/types, config, email, ui) | 1 problematic |
+| Services >8 methods | 2 (ApiKeyService:10, AdminMembers:9) | Watch |
+| Services >4 deps | 1 (AuthService:5) | Watch |
+
+## Finding F1: No Repository Abstraction (DIP Violation)
+
+**Severity: HIGH** — Structural, affects entire backend.
+
+### Current State
+
+All 24 services inject `@Inject(DRIZZLE) private db: DrizzleDB` directly and write raw Drizzle queries:
+
+```typescript
+// Every service does this:
+constructor(@Inject(DRIZZLE) private db: DrizzleDB) {}
+
+async findUser(id: string) {
+  return this.db.query.users.findFirst({ where: eq(users.id, id) })
+}
+```
+
+### Why This Matters
+
+1. **Provider swap:** Changing from Drizzle to Prisma/TypeORM requires modifying all 24 services
+2. **Testability:** Unit tests must mock the entire Drizzle API surface (complex, brittle)
+3. **Separation of concerns:** Business logic is interleaved with query construction
+4. **The reviewer's #1 concern** about provider swap difficulty stems directly from this
+
+### Documentation Gap
+
+`docs/standards/backend-patterns.mdx` mentions "repository ports" as a future migration path. The DDD vision document (`artifacts/analyses/317-backend-architecture-vision.mdx`) sketches hexagonal architecture. Neither is implemented.
+
+### Proposed Design
+
+```
+┌─────────────────────────────────────────────────┐
+│  Domain Layer (ports)                            │
+│  UserRepository (interface)                      │
+│  OrganizationRepository (interface)              │
+│  ...per module                                   │
+├─────────────────────────────────────────────────┤
+│  Application Layer (services)                    │
+│  UserService(userRepo: UserRepository)           │
+│  No Drizzle imports, no DB knowledge             │
+├─────────────────────────────────────────────────┤
+│  Infrastructure Layer (adapters)                 │
+│  DrizzleUserRepository implements UserRepository │
+│  All Drizzle queries live here                   │
+├─────────────────────────────────────────────────┤
+│  Module Binding                                  │
+│  { provide: USER_REPO, useClass: DrizzleUserRepo}│
+│  One-line swap for tests or provider change      │
+└─────────────────────────────────────────────────┘
+```
+
+### Migration Strategy
+
+Incremental, module-by-module:
+1. Start with a small module (Consent — 2 methods, 1 table)
+2. Define `ConsentRepository` interface
+3. Create `DrizzleConsentRepository` adapter
+4. Refactor `ConsentService` to inject interface
+5. Validate pattern, document, then roll out to other modules
+6. Priority order: Consent → FeatureFlags → Audit → User → RBAC → Auth → Admin → ApiKey → Org
+
+---
+
+## Finding F2: AuthService Dual Responsibility
+
+**Severity: MEDIUM** — Localized, straightforward fix.
+
+### Current State
+
+`AuthService` (apps/api/src/auth/auth.service.ts) has 5 constructor dependencies:
+- DRIZZLE (database)
+- EmailProvider (sending emails)
+- ConfigService (reading config)
+- EventEmitter2 (domain events)
+- PermissionService (permission resolution)
+
+It handles two concerns:
+1. **Auth handler:** Better Auth initialization, email provider integration
+2. **Session enrichment:** `getSession()` fetches session AND enriches with permissions
+
+### Proposed Split
+
+```
+AuthService (3 deps: DRIZZLE, EmailProvider, ConfigService)
+  → initAuth(): Better Auth instance
+  → handleAuthRequest(): route to Better Auth
+
+SessionEnrichmentService (2 deps: AuthService, PermissionService)
+  → getEnrichedSession(): session + permissions
+  → Used by AuthGuard for enriched session context
+```
+
+---
+
+## Finding F3: @repo/types Mixed Concerns
+
+**Severity: MEDIUM** — Package-level SRP violation.
+
+### Current State
+
+`packages/types/src/` contains 13 files mixing:
+- **Shared types** (used by both apps): User, Role, Permission, ApiKey, Consent, Pagination
+- **Backend-only types**: AuditAction, SENSITIVE_FIELDS, ERROR_CODES
+- **UI-only constants**: DICEBEAR_CDN_BASE, AVATAR_STYLES, AvatarStyle
+
+Both apps import freely — no import boundary enforcement.
+
+### Proposed Namespace Split
+
+```
+packages/types/src/
+  shared/          → Types used by both apps (User, Permission, ApiKey, Consent, Pagination)
+  api/             → Backend-only types (AuditAction, SENSITIVE_FIELDS, ERROR_CODES)
+  ui/              → UI-only types/constants (DICEBEAR_CDN_BASE, AVATAR_STYLES)
+  index.ts         → Re-exports shared/ only (breaking change: api/ and ui/ must be imported explicitly)
+```
+
+Package.json exports:
+```json
+{
+  "exports": {
+    ".": "./src/shared/index.ts",
+    "./api": "./src/api/index.ts",
+    "./ui": "./src/ui/index.ts"
+  }
+}
+```
+
+This enables lint rules: `apps/web` can only import from `@repo/types` and `@repo/types/ui`, not `@repo/types/api`.
+
+---
+
+## Finding F4: Admin RLS Bypass Without Enforcement
+
+**Severity: MEDIUM** — Security concern.
+
+### Current State
+
+- All admin services use raw DRIZZLE injection (no tenant context)
+- Documentation lists only 2 "sanctioned" bypass services (PermissionService, AdminMembersService)
+- In reality, ALL 9 admin services + PermissionService bypass RLS
+- No lint rule prevents new services from doing the same
+
+### Proposed Solution
+
+1. **Document all sanctioned bypasses** (not just 2 — all admin services)
+2. **Custom Biome/ESLint rule** that flags `@Inject(DRIZZLE)` outside of:
+   - Files in `admin/` directory
+   - `permission.service.ts`
+   - Repository adapter files (when repo pattern is adopted)
+3. **Require explicit `// RLS-BYPASS: reason` comment** for any raw DRIZZLE usage
+
+---
+
+## Finding F5: AllExceptionsFilter OCP Violation
+
+**Severity: LOW** — Currently manageable, grows linearly.
+
+### Current State
+
+Global `AllExceptionsFilter` contains:
+```typescript
+if (exception instanceof ThrottlerException) { ... }
+if (exception instanceof HttpException) { ... }
+// More instanceof checks as new exception types are added
+```
+
+### Proposed Solution
+
+Replace with per-domain `@Catch()` filters:
+```typescript
+@Catch(ThrottlerException)
+export class ThrottlerExceptionFilter { ... }
+
+@Catch(DomainException)  // base class for all domain exceptions
+export class DomainExceptionFilter { ... }
+```
+
+Each module registers its own exception filters. `AllExceptionsFilter` becomes a thin fallback for truly unexpected errors only.
+
+---
+
+## Finding F6: Documentation vs Enforcement Gap
+
+**Severity: LOW** — No immediate bug risk; grows with team size.
+
+### Gaps Identified
+
+| Pattern | Documented | Enforced |
+|---------|-----------|----------|
+| Service <100 lines | Yes (backend-patterns) | No lint rule |
+| Repository abstraction | Mentioned (DDD vision) | Not implemented |
+| TanStack Query factories | Yes (frontend-patterns) | No lint rule |
+| Client/server boundary | Yes (naming convention) | No build enforcement |
+| RLS bypass restrictions | Partially (2 services) | No lint rule |
+| Module import limits | "If >2 imports, too much" | No lint rule |
+
+### Proposed Solution
+
+Phase 1: Add custom Biome rules for measurable patterns (service line count, import depth)
+Phase 2: Add TypeScript path restrictions for @repo/types sub-paths
+Phase 3: Consider eslint-plugin-boundaries for module import enforcement
+
+---
+
+## What Needs to Be Updated
+
+### Code Changes
+
+| # | Change | Files | Effort |
+|---|--------|-------|--------|
+| 1 | Repository ports + Drizzle adapters | All 24 services + 17 new adapter files | L |
+| 2 | Split AuthService → Auth + SessionEnrichment | auth.service.ts, auth.module.ts, auth.guard.ts | S |
+| 3 | Namespace @repo/types | packages/types/src/* (restructure), all importers | M |
+| 4 | Per-type exception filters | common/filters/*, each module | S |
+| 5 | RLS bypass lint rule | biome.json or custom rule | M |
+| 6 | Delete or define @repo/config | packages/config/ | XS |
+
+### Documentation Updates
+
+| Doc | Update |
+|-----|--------|
+| backend-patterns.mdx | Add repository pattern section; update SOLID examples |
+| code-review.mdx | Add RLS bypass review checklist |
+| testing.mdx | Add in-memory repository testing pattern |
+| CLAUDE.md | Update gotchas with new @repo/types import paths |
+
+---
+
+## Root Cause Summary
+
+The reviewer's feedback maps to **three structural decisions** made early in the project:
+
+1. **Pragmatic DIP skip:** Injecting DrizzleDB directly was faster than defining repository interfaces for every domain. Correct trade-off for a young project, but now at the point where the cost of NOT having repositories is growing.
+
+2. **Monolithic shared types:** `@repo/types` started as a convenience package. As the codebase grew, UI and backend concerns accumulated without namespace separation.
+
+3. **Documentation-first enforcement:** The team documented patterns extensively but relied on code review (not tooling) for enforcement. This works with small teams but doesn't scale.
+
+None of these are bugs or immediate risks. They're **architectural debt** that the reviewer correctly identified as future pain points. The proposed changes are incremental improvements that can be phased over multiple sprints.

@@ -1,0 +1,252 @@
+---
+title: "ADR-005: Repository Port Design for FeatureFlags, Audit, and SystemSettings (Slice 4)"
+description: Architectural decisions for mapping three NestJS service modules to the repository port pattern established in Slice 1 (Consent exemplar)
+---
+
+## Status
+
+Proposed
+
+## Context
+
+Issue #505 (child of #501 "Backend Design Quality") introduces repository ports for three modules as Slice 4 of the repository pattern rollout. The Consent exemplar (#502, Slice 1) established the concrete pattern: port interface, Drizzle adapter, in-memory adapter, service refactor, module binding, tests.
+
+The parent spec (#501) included a class diagram with aspirational port signatures (e.g., `findAll(orgId, tx?)` for FeatureFlags, `findByOrg(orgId, filters, tx?)` for Audit) that do not match the actual service code. Per the spec's own port design rule: "port interfaces must match the actual data access patterns of the current service -- no speculative methods."
+
+This ADR documents seven design decisions required before implementation can begin.
+
+## Decisions
+
+### D1: FeatureFlagRepository -- Port Interface Design
+
+**Decision:** The port interface mirrors the six actual data access patterns in `FeatureFlagService`, with method names that reflect the query semantics.
+
+```typescript
+export interface FeatureFlagRepository {
+  findByKey(key: string, tx?: DrizzleTx): Promise<FeatureFlagRow | null>
+  findAll(tx?: DrizzleTx): Promise<FeatureFlagRow[]>
+  findById(id: string, tx?: DrizzleTx): Promise<FeatureFlagRow | null>
+  create(data: { name: string; key: string; description?: string }, tx?: DrizzleTx): Promise<FeatureFlagRow>
+  update(id: string, data: { name?: string; description?: string; enabled?: boolean }, tx?: DrizzleTx): Promise<FeatureFlagRow | null>
+  delete(id: string, tx?: DrizzleTx): Promise<FeatureFlagRow | null>
+}
+```
+
+Where `FeatureFlagRow` is the inferred select type from the `featureFlags` schema table (`typeof featureFlags.$inferSelect`). This avoids introducing a separate domain type for a table that has no mapping layer today.
+
+**Rationale:**
+
+- `findByKey` returns `FeatureFlagRow | null` (not `boolean`) because the service needs the full row to populate the cache with `row.enabled`. Returning `null` when not found lets the service apply the "default false" semantic, keeping that business rule in the service where it belongs.
+- `create`, `update`, and `delete` all return `FeatureFlagRow | null` because the service uses the returned `key` field for cache invalidation after write operations. If the port returned `void`, the service would need a separate read query or store the key redundantly.
+- No `orgId` parameter. The actual service has no organization scoping -- feature flags are global. The spec diagram was aspirational.
+- `findAll` has no `orgId` either, no ordering parameter. Ordering by `createdAt DESC` is a presentation concern currently baked into the query; it moves into the adapter unchanged. If ordering becomes caller-controlled in the future, a `sort` parameter can be added then.
+
+**Alternatives considered:**
+
+- *Option: Return `boolean` from a `isEnabled` port method.* Rejected. This mixes business logic (cache + default-false) with data access. The port should expose raw reads.
+- *Option: Return `void` from write methods and let the service pre-read the key.* Rejected. Requires an extra query for cache invalidation, increasing complexity for no benefit.
+
+### D2: AuditRepository -- Port Interface Design
+
+**Decision:** The port exposes a single `create` method matching the current `AuditService.log()` data access pattern. No read methods.
+
+```typescript
+export interface AuditRepository {
+  create(entry: AuditLogEntry, tx?: DrizzleTx): Promise<void>
+}
+```
+
+Where `AuditLogEntry` is a type alias for the entry parameter currently inline in `AuditService.log()`:
+
+```typescript
+export type AuditLogEntry = {
+  actorId: string
+  actorType: AuditActorType
+  impersonatorId?: string
+  organizationId?: string
+  action: AuditAction
+  resource: string
+  resourceId: string
+  before?: Record<string, unknown> | null
+  after?: Record<string, unknown> | null
+  metadata?: Record<string, unknown> | null
+  apiKeyId?: string
+}
+```
+
+**No `findByOrg` method.** The spec diagram listed `findByOrg(orgId, filters, tx?)`, but:
+
+1. `AuditService` has no read methods -- it is write-only.
+2. Audit reads happen exclusively in `AdminAuditLogsService` (admin module), which uses direct `DRIZZLE` injection for cross-tenant access with `leftJoin` on `users`, cursor pagination, and field redaction. This is an admin-only, RLS-bypass query pattern that is architecturally distinct from the domain port.
+3. Adding `findByOrg` speculatively violates the spec's own design rule.
+
+If a non-admin audit read path is needed in the future, the port can be extended at that time with a method matching the actual query shape.
+
+**Return type:** `Promise<void>`, not `Promise<AuditLogRow>`. The current service discards the insert result (no `.returning()`), and no caller reads the created row. The adapter will call `.values()` without `.returning()` to match this fire-and-forget pattern.
+
+### D3: SystemSettingsRepository -- Port Interface Design
+
+**Decision:** The port exposes four low-level data access methods. The two-phase `batchUpdate` orchestration stays in the service.
+
+```typescript
+export interface SystemSettingsRepository {
+  findByKey(key: string, tx?: DrizzleTx): Promise<SystemSettingRow | null>
+  findAll(tx?: DrizzleTx): Promise<SystemSettingRow[]>
+  findByCategory(category: string, tx?: DrizzleTx): Promise<SystemSettingRow[]>
+  updateByKey(key: string, value: unknown, tx?: DrizzleTx): Promise<SystemSettingRow | null>
+}
+```
+
+Where `SystemSettingRow` is the inferred select type from the `systemSettings` schema table.
+
+**Rationale (Option A from the question -- decomposed primitives):**
+
+- `batchUpdate` contains domain logic: existence validation (`SettingNotFoundException`), type validation (`validateSettingValue`), and two-phase orchestration (read all then write all). These are service responsibilities, not data access.
+- If `batchUpdate` were on the port, the in-memory adapter or any future adapter would need to replicate the validation logic, violating DRY and the separation of concerns.
+- The service orchestrates: for each update, call `repo.findByKey()` to get the existing setting (including its `type` and `metadata` for validation), validate, then call `repo.updateByKey()`.
+- `updateByKey` returns `SystemSettingRow | null` because the service builds the `updated` array from the returned rows.
+
+**Alternatives considered:**
+
+- *Option B: `batchUpdate(updates)` on the port.* Rejected. Pushes domain validation into the adapter. Every adapter would need to understand setting types, select options, and the "validate all before writing any" invariant. This is service-layer logic.
+- *Option C: A `SettingsTransactionScope` that wraps the batch.* Rejected. Over-engineered for the current use case. The `tx` parameter on individual methods already enables transactional batching if needed.
+
+### D4: SystemSettings batchUpdate Atomicity
+
+**Decision:** Preserve the current non-atomic behavior as-is during the port refactoring. Document the gap. Do not add a transaction wrapper in this slice.
+
+**Rationale:**
+
+1. **Behavioral preservation is the priority.** The spec states "All existing API contracts unchanged (no breaking changes)" and "All existing transaction call sites audited and preserved." Changing the atomicity model in a refactoring slice introduces behavioral risk.
+2. **The current non-atomic behavior is a known trade-off, not a latent bug.** System settings are updated by admins in low-concurrency scenarios. The validate-all-then-write-all pattern already provides functional atomicity for the common case (validation failure aborts before any writes).
+3. **The `tx` parameter on `findByKey` and `updateByKey` enables atomicity when needed.** A future enhancement can wrap the `batchUpdate` loop in `db.transaction((tx) => { ... })` and pass `tx` through to each repo call. This is a one-line change in the service, not an architectural change.
+4. **Adding a transaction now would require a Drizzle `transaction()` callback, which introduces a new dependency shape** (the service would need either a `DRIZZLE` reference for `db.transaction()` or a separate `TransactionManager` abstraction). This is out of scope for Slice 4.
+
+**Follow-up recommendation:** Create a follow-up issue to wrap `batchUpdate` in a transaction after Slice 4 lands. The port's `tx` parameter makes this trivial.
+
+### D5: FeatureFlags Cache + Port Interaction
+
+**Decision:** Cache stays in `FeatureFlagService` above the port, as specified. The service calls `repo.findByKey(key)` and caches the `enabled` value extracted from the returned row. Write methods (`create`, `update`, `delete`) use the returned row's `key` field for cache invalidation.
+
+**Detailed interaction pattern:**
+
+```
+isEnabled(key):
+  1. Check cache -> hit? return cached.value
+  2. row = await repo.findByKey(key)
+  3. if (!row) return false
+  4. cache.set(key, { value: row.enabled, expiresAt: ... })
+  5. return row.enabled
+
+create(data):
+  1. row = await repo.create(data)
+  2. cache.delete(data.key)        // key is in the input
+  3. return row
+
+update(id, data):
+  1. row = await repo.update(id, data)
+  2. if (row?.key) cache.delete(row.key)  // key from returned row
+  3. return row
+
+delete(id):
+  1. row = await repo.delete(id)
+  2. if (row?.key) cache.delete(row.key)  // key from returned row
+```
+
+This preserves the existing cache invalidation pattern exactly. The port returning the full row (including `key`) from write methods is essential for this pattern to work without additional queries.
+
+### D6: Testing Strategy -- Port Mocks vs In-Memory Adapters
+
+**Decision:** Slice 4 tests use port token mocks (`vi.fn()` on the injection token), not full in-memory adapters. This follows the spec's explicit guidance: "Subsequent slices (4, 5) test via mocking the port interface directly -- full in-memory adapters are optional per module."
+
+**Rationale:**
+
+- The Consent exemplar (Slice 1) creates a full `InMemoryConsentRepository` as a reference implementation to demonstrate and document the pattern. That purpose is fulfilled by Slice 1.
+- FeatureFlags, Audit, and SystemSettings have straightforward data access patterns that do not benefit from a stateful in-memory adapter. Port mocks with `vi.fn()` are simpler, faster, and sufficient.
+- The mock approach also aligns with the existing test patterns already in use across the codebase (controller tests, filter tests).
+- Full in-memory adapters remain optional and can be added later if integration-style tests are desired for any of these modules.
+
+**Test structure after refactoring:**
+
+```typescript
+// Example: featureFlags.service.test.ts
+const mockRepo = {
+  findByKey: vi.fn(),
+  findAll: vi.fn(),
+  findById: vi.fn(),
+  create: vi.fn(),
+  update: vi.fn(),
+  delete: vi.fn(),
+} satisfies Record<keyof FeatureFlagRepository, Mock>
+
+const service = new FeatureFlagService(mockRepo)
+```
+
+This replaces the current `createSelectChain` / `createInsertChain` / etc. Drizzle chain mock factories with simple `vi.fn()` stubs. Tests become shorter, clearer, and decoupled from Drizzle internals.
+
+**Alternatives considered:**
+
+- *Full in-memory adapters for all three modules.* Rejected for Slice 4. The spec explicitly makes this optional. The added code (three adapter classes, each with Map-based storage, ID generation, and query simulation) adds maintenance cost without proportional testing value for these simple modules.
+
+### D7: Spec Diagram Corrections
+
+**Decision:** The implementation will deviate from the spec's class diagram in the following ways, all justified by the spec's own "match actual service queries" rule:
+
+| Spec diagram | Actual implementation | Reason |
+|---|---|---|
+| `FeatureFlagRepository.findAll(orgId, tx?)` | `findAll(tx?)` | No `orgId` in actual service; feature flags are global |
+| `FeatureFlagRepository.findByKey(key, orgId, tx?)` | `findByKey(key, tx?)` | No `orgId` in actual service |
+| `FeatureFlagRepository.upsert(data, tx?)` | `create(...)`, `update(...)`, `delete(...)` | Service has distinct create/update/delete with different signatures; `upsert` is not used |
+| `AuditRepository.findByOrg(orgId, filters, tx?)` | Not implemented | No read method in `AuditService`; reads are admin-only via `AdminAuditLogsService` (direct DRIZZLE, stays direct) |
+| `SystemSettingsRepository.upsert(data, tx?)` | `updateByKey(key, value, tx?)` | Service only updates existing settings (with validation); no upsert/create path exists |
+
+These deviations are consistent with the spec's design principles, not violations of them. The diagram was a high-level sketch; the implementation follows the "match actual code" rule.
+
+## Consequences
+
+### Positive
+
+- Port interfaces are minimal and precisely match current usage, reducing adapter implementation effort and avoiding dead code.
+- Cache logic stays in the service, keeping the port purely about data access and enabling straightforward testing of both cache behavior and data access independently.
+- Domain validation (`validateSettingValue`, `SettingNotFoundException`) stays in `SystemSettingsService`, maintaining clear separation between business rules and data access.
+- Write methods returning full rows for FeatureFlags enables the existing cache invalidation pattern without additional queries.
+- Port mock testing approach keeps tests simple and reduces the amount of new test infrastructure code.
+
+### Negative
+
+- `batchUpdate` remains non-atomic (no transaction wrapper). This is a known gap documented here and flagged for a follow-up issue.
+- The spec diagram is now known to be aspirational for these modules. Implementers of Slice 5 (User, RBAC, ApiKey, Org) should similarly audit actual service code rather than trusting the diagram.
+- Port mocks test the service in isolation but do not verify DI wiring the way the Consent exemplar's `InMemoryConsentRepository` + `Test.createTestingModule()` does. This is an acceptable trade-off given the simplicity of these modules.
+
+### Neutral
+
+- `AuditLogEntry` is extracted as a named type from the inline parameter, improving readability. The type stays in the audit module (not in `@repo/types`) since it is backend-only.
+- `FeatureFlagRow` and `SystemSettingRow` are schema-inferred types. If the project later introduces explicit domain types separate from the schema, the port signatures would need updating -- but that is a deliberate future decision, not an accidental coupling.
+- The `AdminAuditLogsService` continues using direct `DRIZZLE` injection with an `// RLS-BYPASS` comment, as specified for all admin services.
+
+## File Impact Summary
+
+New files (per module pattern from #502):
+
+| Module | File | Purpose |
+|---|---|---|
+| feature-flags | `featureFlags.repository.ts` | Port interface + `FEATURE_FLAG_REPO` token |
+| feature-flags | `repositories/drizzleFeatureFlags.repository.ts` | Drizzle adapter |
+| audit | `audit.repository.ts` | Port interface + `AUDIT_REPO` token |
+| audit | `repositories/drizzleAudit.repository.ts` | Drizzle adapter |
+| system-settings | `systemSettings.repository.ts` | Port interface + `SYSTEM_SETTINGS_REPO` token |
+| system-settings | `repositories/drizzleSystemSettings.repository.ts` | Drizzle adapter |
+
+Modified files:
+
+| File | Change |
+|---|---|
+| `featureFlags.service.ts` | Replace `@Inject(DRIZZLE)` with `@Inject(FEATURE_FLAG_REPO)`, remove Drizzle imports, delegate to port |
+| `audit.service.ts` | Replace `@Inject(DRIZZLE)` with `@Inject(AUDIT_REPO)`, remove Drizzle imports, delegate to port |
+| `systemSettings.service.ts` | Replace `@Inject(DRIZZLE)` with `@Inject(SYSTEM_SETTINGS_REPO)`, remove Drizzle imports, delegate to port. `validateSettingValue` stays in service. |
+| `featureFlags.module.ts` | Add `{ provide: FEATURE_FLAG_REPO, useClass: DrizzleFeatureFlagRepository }` |
+| `audit.module.ts` | Add `{ provide: AUDIT_REPO, useClass: DrizzleAuditRepository }` |
+| `systemSettings.module.ts` | Add `{ provide: SYSTEM_SETTINGS_REPO, useClass: DrizzleSystemSettingsRepository }` |
+| `featureFlags.service.test.ts` | Replace Drizzle chain mocks with port mocks |
+| `audit.service.test.ts` | Replace Drizzle chain mocks with port mocks |
+| `systemSettings.service.test.ts` | Replace Drizzle chain mocks with port mocks |

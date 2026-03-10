@@ -1,0 +1,55 @@
+---
+title: "Backend Design Quality — External Review Feedback"
+issue: 501
+tier: F-full
+status: approved
+created: 2026-03-10
+---
+
+# Frame: Backend Design Quality
+
+## Problem Statement
+
+An external reviewer audited the Roxabi codebase and identified three categories of design concerns:
+
+1. **God classes** — some classes doing too much
+2. **SRP violations** — single responsibility principle not always respected
+3. **Inter-class coupling** — tight coupling between some classes
+
+The reviewer noted these are **not severe** ("better than most enterprise codebases") but warned they could become problematic if:
+- The project grows complex (real-time features, many business rules, edge cases)
+- A major provider swap occurs (e.g., changing ORM or auth provider)
+- The architecture isn't cleaned up proactively
+
+## Scope
+
+- **In scope:** apps/api (NestJS backend), shared @repo packages (types, config, email, ui), documented patterns vs actual code
+- **Out of scope:** apps/web frontend architecture (separate issue #409), apps/docs, deployment infrastructure
+
+## Constraints
+
+- Must not break existing functionality
+- Changes should be incremental (not a big-bang refactor)
+- Must maintain backwards compatibility with existing API contracts
+- Must respect the existing test suite
+
+## Risk Assessment
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|-----------|--------|------------|
+| Provider swap becomes necessary | Medium | High | Repository abstraction pattern |
+| Growing services violate SRP | High | Medium | Service size limits + extraction guidelines |
+| @repo/types becomes a coupling bottleneck | Medium | Medium | Namespace separation |
+| New services accidentally bypass RLS | Medium | High | Lint rule enforcement |
+
+## Success Criteria
+
+- Repository ports defined for all domains
+- AuthService split into focused services
+- @repo/types namespaced with import boundaries
+- Lint rules for RLS bypass, module size, import boundaries
+- Zero regression in existing test suite
+
+## Next Phase
+
+→ `/analyze` for deep technical analysis of each finding
