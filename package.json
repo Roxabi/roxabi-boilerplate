@@ -39,7 +39,8 @@
     "db:migrate": "bash scripts/db.sh migrate",
     "db:reset": "bash scripts/db.sh reset",
     "db:seed": "bash scripts/db.sh seed",
-    "dashboard": "bun ~/projects/roxabi-plugins/plugins/dev-core/skills/issues/dashboard.ts"
+    "dashboard": "bun ~/projects/roxabi-plugins/plugins/dev-core/skills/issues/dashboard.ts",
+    "lint:custom": "bun run scripts/lint/checkDrizzleInjection.ts && bun run scripts/lint/checkTypeImports.ts"
   },
   "devDependencies": {
     "@types/node": "^24.11.0",

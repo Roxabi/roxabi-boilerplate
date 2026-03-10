@@ -79,6 +79,10 @@
     "lint": {
       "dependsOn": ["^lint"]
     },
+    "lint:custom": {
+      "inputs": ["apps/api/src/**", "apps/web/src/**", "packages/types/src/**", "scripts/lint/**"],
+      "cache": true
+    },
     "test": {
       "dependsOn": ["^build"],
       "inputs": ["src/**/*.ts", "src/**/*.tsx", "tests/**/*.ts", "vitest.config.ts"],
