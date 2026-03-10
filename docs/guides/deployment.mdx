@@ -349,7 +349,7 @@ DATABASE_URL="<your-neon-connection-string>" bun run db:migrate
 
 ### 3. Configure GitHub Actions Secrets
 
-Add these 7 secrets at **Settings** &gt; **Secrets and variables** &gt; **Actions** &gt; **New repository secret**:
+Add these 8 secrets at **Settings** &gt; **Secrets and variables** &gt; **Actions** &gt; **New repository secret**:
 
 | Secret | Description | Where to find |
 |--------|-------------|---------------|
@@ -360,7 +360,7 @@ Add these 7 secrets at **Settings** &gt; **Secrets and variables** &gt; **Action
 | `VERCEL_PROJECT_ID_DOCS` | Vercel project ID for docs | `apps/docs/.vercel/project.json` &gt; `projectId` |
 | `NEON_API_KEY` | Neon API key (for preview DB branches) | [console.neon.tech](https://console.neon.tech) &gt; Account &gt; API Keys |
 | `NEON_PROJECT_ID` | Neon project ID | [console.neon.tech](https://console.neon.tech) &gt; Project Settings |
-| `VERCEL_AUTOMATION_BYPASS_SECRET` | API project's Protection Bypass for Automation secret — injected into the web preview build so the Nitro proxy can forward requests to the SSO-protected API preview URL | Vercel dashboard → API project → Settings → Deployment Protection → Protection Bypass for Automation → Generate |
+| `VERCEL_AUTOMATION_BYPASS_SECRET` | API project's Protection Bypass for Automation secret — injected into the web preview build so the Nitro proxy can forward requests to the SSO-protected API preview URL | Vercel dashboard &gt; API project &gt; Settings &gt; Deployment Protection &gt; Protection Bypass for Automation &gt; Generate |
 
 ### 4. Provision Upstash Redis (Rate Limiting)
 
