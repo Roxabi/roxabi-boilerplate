@@ -10,7 +10,8 @@
     "dev-core@roxabi-marketplace": true,
     "web-intel@roxabi-marketplace": true,
     "1b1@roxabi-marketplace": true,
-    "compress@roxabi-marketplace": true
+    "compress@roxabi-marketplace": true,
+    "typescript-lsp@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "claude-plugins-official": {
