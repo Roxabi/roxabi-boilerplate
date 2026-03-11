@@ -2,6 +2,7 @@
 import { Inject, Injectable } from '@nestjs/common'
 import type { FeatureFlag } from '@repo/types'
 import { desc, eq } from 'drizzle-orm'
+import { FeatureFlagCreateFailedException } from '../../admin/exceptions/featureFlagCreateFailed.exception.js'
 import { DRIZZLE, type DrizzleDB, type DrizzleTx } from '../../database/drizzle.provider.js'
 import { featureFlags } from '../../database/schema/featureFlags.schema.js'
 import type { FeatureFlagRepository } from '../featureFlags.repository.js'
@@ -54,7 +55,7 @@ export class DrizzleFeatureFlagRepository implements FeatureFlagRepository {
       })
       .returning()
     const row = rows[0]
-    if (!row) throw new Error('Feature flag insert returned no rows')
+    if (!row) throw new FeatureFlagCreateFailedException()
     return toFeatureFlag(row)
   }
 

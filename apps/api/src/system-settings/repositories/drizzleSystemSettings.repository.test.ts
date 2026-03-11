@@ -75,6 +75,26 @@ describe('DrizzleSystemSettingsRepository', () => {
       // Assert
       expect(result).toBeNull()
     })
+
+    it('should map non-null description and metadata', async () => {
+      // Arrange
+      const { db, chains } = createMockDb()
+      chains.select.limit.mockResolvedValue([
+        {
+          ...mockRow,
+          description: 'App display name',
+          metadata: { options: ['light', 'dark'] },
+        },
+      ])
+      const repo = new DrizzleSystemSettingsRepository(db as never)
+
+      // Act
+      const result = await repo.findByKey('app.name')
+
+      // Assert
+      expect(result?.description).toBe('App display name')
+      expect(result?.metadata).toEqual({ options: ['light', 'dark'] })
+    })
   })
 
   describe('findAll', () => {

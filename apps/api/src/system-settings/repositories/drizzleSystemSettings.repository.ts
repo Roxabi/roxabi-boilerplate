@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common'
-import type { SystemSetting } from '@repo/types'
+import type { SettingType, SystemSetting } from '@repo/types'
 import { eq } from 'drizzle-orm'
 import { DRIZZLE, type DrizzleDB, type DrizzleTx } from '../../database/drizzle.provider.js'
 import { systemSettings } from '../../database/schema/systemSettings.schema.js'
@@ -7,16 +7,36 @@ import type { SystemSettingsRepository } from '../systemSettings.repository.js'
 
 // RLS-BYPASS: superadmin-only endpoint — @Roles('superadmin') enforced at controller level
 
+const VALID_SETTING_TYPES = [
+  'string',
+  'number',
+  'boolean',
+  'select',
+] as const satisfies readonly SettingType[]
+
+function parseSettingType(raw: string): SettingType {
+  if (!(VALID_SETTING_TYPES as readonly string[]).includes(raw)) {
+    throw new Error(`Unknown setting type in database: "${raw}"`)
+  }
+  return raw as SettingType
+}
+
+function parseMetadata(raw: unknown): SystemSetting['metadata'] {
+  if (raw === null || raw === undefined) return null
+  if (typeof raw !== 'object' || Array.isArray(raw)) return null
+  return raw as SystemSetting['metadata']
+}
+
 function toSystemSetting(row: typeof systemSettings.$inferSelect): SystemSetting {
   return {
     id: row.id,
     key: row.key,
     value: row.value,
-    type: row.type as SystemSetting['type'],
+    type: parseSettingType(row.type),
     name: row.name,
     description: row.description ?? null,
     category: row.category,
-    metadata: row.metadata as SystemSetting['metadata'],
+    metadata: parseMetadata(row.metadata),
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   }

@@ -80,6 +80,19 @@ describe('DrizzleFeatureFlagRepository', () => {
       // Assert
       expect(result).toBeNull()
     })
+
+    it('should map non-null description', async () => {
+      // Arrange
+      const { db, chains } = createMockDb()
+      chains.select.limit.mockResolvedValue([{ ...mockRow, description: 'Enable dark mode UI' }])
+      const repo = new DrizzleFeatureFlagRepository(db as never)
+
+      // Act
+      const result = await repo.findByKey('new-dashboard')
+
+      // Assert
+      expect(result?.description).toBe('Enable dark mode UI')
+    })
   })
 
   describe('findAll', () => {
