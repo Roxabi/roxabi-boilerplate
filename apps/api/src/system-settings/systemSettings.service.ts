@@ -89,6 +89,8 @@ export class SystemSettingsService {
           throw new SettingValidationException(key, 'select', actualType)
         }
         break
+      default:
+        throw new SettingValidationException(key, 'valid type', type)
     }
   }
 }
