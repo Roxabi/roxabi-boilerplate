@@ -1,5 +1,20 @@
 # Contributing
 
+## Dev environment setup
+
+**Prerequisites:** Node ≥ 24, Bun 1.3.9+, Docker
+
+```bash
+git clone https://github.com/Roxabi/roxabi-boilerplate.git
+cd roxabi-boilerplate
+cp .env.example .env
+bun install          # installs deps + registers Lefthook hooks
+bun run db:up        # start Postgres 16 via Docker
+bun run db:migrate   # apply migrations
+bun run db:seed      # seed development data
+bun run dev          # web :3000 · api :4000 · email :3001
+```
+
 ## Workflow
 
 All development uses **worktrees**. `main` is production, `staging` is the integration branch.
@@ -68,3 +83,9 @@ Lefthook hooks: pre-commit (Biome), commit-msg (Commitlint), pre-push (lint + ty
 ## Project structure
 
 See [README.md](README.md) for the full project tree. TurboRepo orchestrates builds; each app/package has its own `package.json`.
+
+## Code review
+
+Reviews use [Conventional Comments](https://conventionalcomments.org/). A PR is blocked only for security vulnerabilities, correctness bugs, or direct violations of project standards — style suggestions are non-blocking.
+
+All CI checks (lint, typecheck, tests, i18n, license) must pass before merge. At least one approval is required. For substantial changes, see [docs/standards/code-review.mdx](docs/standards/code-review.mdx).
