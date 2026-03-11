@@ -1,9 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common'
-import {
-  FEATURE_FLAG_REPO,
-  type FeatureFlagRepository,
-  type FeatureFlagRow,
-} from './featureFlags.repository.js'
+import type { FeatureFlag } from '@repo/types'
+import { FEATURE_FLAG_REPO, type FeatureFlagRepository } from './featureFlags.repository.js'
 
 @Injectable()
 export class FeatureFlagService {
@@ -35,15 +32,15 @@ export class FeatureFlagService {
     return row.enabled
   }
 
-  async getAll(): Promise<FeatureFlagRow[]> {
+  async getAll(): Promise<FeatureFlag[]> {
     return this.repo.findAll()
   }
 
-  async getById(id: string): Promise<FeatureFlagRow | null> {
+  async getById(id: string): Promise<FeatureFlag | null> {
     return this.repo.findById(id)
   }
 
-  async create(data: { name: string; key: string; description?: string }): Promise<FeatureFlagRow> {
+  async create(data: { name: string; key: string; description?: string }): Promise<FeatureFlag> {
     const row = await this.repo.create(data)
     this.cache.delete(data.key)
     return row
@@ -52,7 +49,7 @@ export class FeatureFlagService {
   async update(
     id: string,
     data: { name?: string; description?: string; enabled?: boolean }
-  ): Promise<FeatureFlagRow | null> {
+  ): Promise<FeatureFlag | null> {
     const row = await this.repo.update(id, data)
 
     if (row?.key) {

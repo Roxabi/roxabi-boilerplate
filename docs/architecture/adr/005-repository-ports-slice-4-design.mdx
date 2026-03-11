@@ -5,7 +5,7 @@ description: Architectural decisions for mapping three NestJS service modules to
 
 ## Status
 
-Proposed
+Accepted — amended by PR #516
 
 ## Context
 
@@ -23,16 +23,16 @@ This ADR documents seven design decisions required before implementation can beg
 
 ```typescript
 export interface FeatureFlagRepository {
-  findByKey(key: string, tx?: DrizzleTx): Promise<FeatureFlagRow | null>
-  findAll(tx?: DrizzleTx): Promise<FeatureFlagRow[]>
-  findById(id: string, tx?: DrizzleTx): Promise<FeatureFlagRow | null>
-  create(data: { name: string; key: string; description?: string }, tx?: DrizzleTx): Promise<FeatureFlagRow>
-  update(id: string, data: { name?: string; description?: string; enabled?: boolean }, tx?: DrizzleTx): Promise<FeatureFlagRow | null>
-  delete(id: string, tx?: DrizzleTx): Promise<FeatureFlagRow | null>
+  findByKey(key: string, tx?: DrizzleTx): Promise<FeatureFlag | null>
+  findAll(tx?: DrizzleTx): Promise<FeatureFlag[]>
+  findById(id: string, tx?: DrizzleTx): Promise<FeatureFlag | null>
+  create(data: { name: string; key: string; description?: string }, tx?: DrizzleTx): Promise<FeatureFlag>
+  update(id: string, data: { name?: string; description?: string; enabled?: boolean }, tx?: DrizzleTx): Promise<FeatureFlag | null>
+  delete(id: string, tx?: DrizzleTx): Promise<FeatureFlag | null>
 }
 ```
 
-Where `FeatureFlagRow` is the inferred select type from the `featureFlags` schema table (`typeof featureFlags.$inferSelect`). This avoids introducing a separate domain type for a table that has no mapping layer today.
+Where `FeatureFlag` is the domain type from `@repo/types`. The Drizzle adapter maps `$inferSelect` rows to `FeatureFlag` via `toFeatureFlag()` — following the consent exemplar pattern (PR #516). `Date` timestamps are converted to ISO strings at the adapter boundary.
 
 **Rationale:**
 
@@ -90,14 +90,14 @@ If a non-admin audit read path is needed in the future, the port can be extended
 
 ```typescript
 export interface SystemSettingsRepository {
-  findByKey(key: string, tx?: DrizzleTx): Promise<SystemSettingRow | null>
-  findAll(tx?: DrizzleTx): Promise<SystemSettingRow[]>
-  findByCategory(category: string, tx?: DrizzleTx): Promise<SystemSettingRow[]>
-  updateByKey(key: string, value: unknown, tx?: DrizzleTx): Promise<SystemSettingRow | null>
+  findByKey(key: string, tx?: DrizzleTx): Promise<SystemSetting | null>
+  findAll(tx?: DrizzleTx): Promise<SystemSetting[]>
+  findByCategory(category: string, tx?: DrizzleTx): Promise<SystemSetting[]>
+  updateByKey(key: string, value: unknown, tx?: DrizzleTx): Promise<SystemSetting | null>
 }
 ```
 
-Where `SystemSettingRow` is the inferred select type from the `systemSettings` schema table.
+Where `SystemSetting` is the domain type from `@repo/types`. The Drizzle adapter maps rows via `toSystemSetting()` — following the consent exemplar pattern (PR #516).
 
 **Rationale (Option A from the question -- decomposed primitives):**
 
@@ -221,7 +221,7 @@ These deviations are consistent with the spec's design principles, not violation
 ### Neutral
 
 - `AuditLogEntry` is extracted as a named type from the inline parameter, improving readability. The type stays in the audit module (not in `@repo/types`) since it is backend-only.
-- `FeatureFlagRow` and `SystemSettingRow` are schema-inferred types. If the project later introduces explicit domain types separate from the schema, the port signatures would need updating -- but that is a deliberate future decision, not an accidental coupling.
+- Port interfaces now use `FeatureFlag` / `SystemSetting` domain types from `@repo/types`, with `toFeatureFlag()` / `toSystemSetting()` mappers in the Drizzle adapters handling the `Date → string` conversion at the infrastructure boundary (PR #516). This supersedes the previous `FeatureFlagRow` / `SystemSettingRow` `$inferSelect` approach and aligns with the consent exemplar pattern.
 - The `AdminAuditLogsService` continues using direct `DRIZZLE` injection with an `// RLS-BYPASS` comment, as specified for all admin services.
 
 ## File Impact Summary

@@ -1,6 +1,7 @@
+import type { FeatureFlag } from '@repo/types'
 import type { Mock } from 'vitest'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { FeatureFlagRepository, FeatureFlagRow } from './featureFlags.repository.js'
+import type { FeatureFlagRepository } from './featureFlags.repository.js'
 import { FeatureFlagService } from './featureFlags.service.js'
 
 function createMockRepo() {
@@ -14,14 +15,14 @@ function createMockRepo() {
   } satisfies Record<keyof FeatureFlagRepository, Mock>
 }
 
-const mockFlag: FeatureFlagRow = {
+const mockFlag: FeatureFlag = {
   id: 'flag-1',
   key: 'new-dashboard',
   name: 'New Dashboard',
   description: null,
   enabled: true,
-  createdAt: new Date('2024-01-01'),
-  updatedAt: new Date('2024-01-01'),
+  createdAt: '2024-01-01T00:00:00.000Z',
+  updatedAt: '2024-01-01T00:00:00.000Z',
 }
 
 describe('FeatureFlagService', () => {
@@ -178,15 +179,15 @@ describe('FeatureFlagService', () => {
   describe('getAll()', () => {
     it('should return all flags ordered by createdAt DESC', async () => {
       // Arrange
-      const mockFlags: FeatureFlagRow[] = [
+      const mockFlags: FeatureFlag[] = [
         {
           id: 'flag-2',
           key: 'beta-mode',
           name: 'Beta Mode',
           description: null,
           enabled: true,
-          createdAt: new Date('2024-02-01'),
-          updatedAt: new Date('2024-02-01'),
+          createdAt: '2024-02-01T00:00:00.000Z',
+          updatedAt: '2024-02-01T00:00:00.000Z',
         },
         {
           ...mockFlag,
@@ -221,14 +222,14 @@ describe('FeatureFlagService', () => {
   describe('create()', () => {
     it('should insert a new flag and return the created record', async () => {
       // Arrange
-      const newFlag: FeatureFlagRow = {
+      const newFlag: FeatureFlag = {
         id: 'flag-3',
         key: 'dark-mode',
         name: 'Dark Mode',
         description: 'Enable dark mode UI',
         enabled: false,
-        createdAt: new Date('2024-01-01'),
-        updatedAt: new Date('2024-01-01'),
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
       }
       mockRepo.create.mockResolvedValue(newFlag)
       const input = { name: 'Dark Mode', key: 'dark-mode', description: 'Enable dark mode UI' }
@@ -244,14 +245,14 @@ describe('FeatureFlagService', () => {
 
     it('should create a flag without an optional description', async () => {
       // Arrange
-      const newFlag: FeatureFlagRow = {
+      const newFlag: FeatureFlag = {
         id: 'flag-4',
         key: 'no-desc',
         name: 'No Description',
         description: null,
         enabled: false,
-        createdAt: new Date('2024-01-01'),
-        updatedAt: new Date('2024-01-01'),
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
       }
       mockRepo.create.mockResolvedValue(newFlag)
 
@@ -266,7 +267,7 @@ describe('FeatureFlagService', () => {
   describe('update()', () => {
     it('should update flag fields and return the updated record', async () => {
       // Arrange
-      const updatedFlag: FeatureFlagRow = { ...mockFlag, enabled: true }
+      const updatedFlag: FeatureFlag = { ...mockFlag, enabled: true }
       mockRepo.update.mockResolvedValue(updatedFlag)
 
       // Act
@@ -280,7 +281,7 @@ describe('FeatureFlagService', () => {
 
     it('should allow updating only the name', async () => {
       // Arrange
-      const updatedFlag: FeatureFlagRow = { ...mockFlag, name: 'Renamed Dashboard', enabled: false }
+      const updatedFlag: FeatureFlag = { ...mockFlag, name: 'Renamed Dashboard', enabled: false }
       mockRepo.update.mockResolvedValue(updatedFlag)
 
       // Act

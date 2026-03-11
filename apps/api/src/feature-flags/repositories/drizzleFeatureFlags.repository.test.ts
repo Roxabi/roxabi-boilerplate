@@ -11,6 +11,16 @@ const mockRow = {
   updatedAt: new Date('2024-01-01'),
 }
 
+const expectedFlag = {
+  id: 'flag-1',
+  key: 'new-dashboard',
+  name: 'New Dashboard',
+  description: null,
+  enabled: true,
+  createdAt: '2024-01-01T00:00:00.000Z',
+  updatedAt: '2024-01-01T00:00:00.000Z',
+}
+
 function createMockDb() {
   const limitFn = vi.fn()
   const whereFn = vi.fn().mockReturnValue({ limit: limitFn })
@@ -44,7 +54,7 @@ function createMockDb() {
 
 describe('DrizzleFeatureFlagRepository', () => {
   describe('findByKey', () => {
-    it('should return the row when found', async () => {
+    it('should return mapped domain type when found', async () => {
       // Arrange
       const { db, chains } = createMockDb()
       chains.select.limit.mockResolvedValue([mockRow])
@@ -54,7 +64,7 @@ describe('DrizzleFeatureFlagRepository', () => {
       const result = await repo.findByKey('new-dashboard')
 
       // Assert
-      expect(result).toEqual(mockRow)
+      expect(result).toEqual(expectedFlag)
       expect(chains.select.limit).toHaveBeenCalledWith(1)
     })
 
@@ -70,10 +80,23 @@ describe('DrizzleFeatureFlagRepository', () => {
       // Assert
       expect(result).toBeNull()
     })
+
+    it('should map non-null description', async () => {
+      // Arrange
+      const { db, chains } = createMockDb()
+      chains.select.limit.mockResolvedValue([{ ...mockRow, description: 'Enable dark mode UI' }])
+      const repo = new DrizzleFeatureFlagRepository(db as never)
+
+      // Act
+      const result = await repo.findByKey('new-dashboard')
+
+      // Assert
+      expect(result?.description).toBe('Enable dark mode UI')
+    })
   })
 
   describe('findAll', () => {
-    it('should return all rows ordered by createdAt DESC', async () => {
+    it('should return all rows mapped to domain types ordered by createdAt DESC', async () => {
       // Arrange
       const { db, chains } = createMockDb()
       chains.select.orderBy.mockResolvedValue([mockRow])
@@ -83,13 +106,13 @@ describe('DrizzleFeatureFlagRepository', () => {
       const result = await repo.findAll()
 
       // Assert
-      expect(result).toEqual([mockRow])
+      expect(result).toEqual([expectedFlag])
       expect(chains.select.orderBy).toHaveBeenCalled()
     })
   })
 
   describe('findById', () => {
-    it('should return the row when found', async () => {
+    it('should return mapped domain type when found', async () => {
       // Arrange
       const { db, chains } = createMockDb()
       chains.select.limit.mockResolvedValue([mockRow])
@@ -99,7 +122,7 @@ describe('DrizzleFeatureFlagRepository', () => {
       const result = await repo.findById('flag-1')
 
       // Assert
-      expect(result).toEqual(mockRow)
+      expect(result).toEqual(expectedFlag)
     })
 
     it('should return null when not found', async () => {
@@ -117,7 +140,7 @@ describe('DrizzleFeatureFlagRepository', () => {
   })
 
   describe('create', () => {
-    it('should insert and return the created row', async () => {
+    it('should insert and return mapped domain type', async () => {
       // Arrange
       const { db, chains } = createMockDb()
       chains.insert.returning.mockResolvedValue([mockRow])
@@ -127,24 +150,24 @@ describe('DrizzleFeatureFlagRepository', () => {
       const result = await repo.create({ name: 'New Dashboard', key: 'new-dashboard' })
 
       // Assert
-      expect(result).toEqual(mockRow)
+      expect(result).toEqual(expectedFlag)
       expect(db.insert).toHaveBeenCalled()
     })
   })
 
   describe('update', () => {
-    it('should update and return the row', async () => {
+    it('should update and return mapped domain type', async () => {
       // Arrange
       const { db, chains } = createMockDb()
-      const updated = { ...mockRow, enabled: false }
-      chains.update.returning.mockResolvedValue([updated])
+      const updatedRow = { ...mockRow, enabled: false }
+      chains.update.returning.mockResolvedValue([updatedRow])
       const repo = new DrizzleFeatureFlagRepository(db as never)
 
       // Act
       const result = await repo.update('flag-1', { enabled: false })
 
       // Assert
-      expect(result).toEqual(updated)
+      expect(result).toEqual({ ...expectedFlag, enabled: false })
     })
 
     it('should return null when row not found', async () => {
@@ -162,7 +185,7 @@ describe('DrizzleFeatureFlagRepository', () => {
   })
 
   describe('delete', () => {
-    it('should delete and return the row', async () => {
+    it('should delete and return mapped domain type', async () => {
       // Arrange
       const { db, chains } = createMockDb()
       chains.delete.returning.mockResolvedValue([mockRow])
@@ -172,7 +195,7 @@ describe('DrizzleFeatureFlagRepository', () => {
       const result = await repo.delete('flag-1')
 
       // Assert
-      expect(result).toEqual(mockRow)
+      expect(result).toEqual(expectedFlag)
     })
 
     it('should return null when row not found', async () => {

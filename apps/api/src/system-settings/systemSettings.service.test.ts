@@ -1,8 +1,9 @@
+import type { SystemSetting } from '@repo/types'
 import type { Mock } from 'vitest'
 import { describe, expect, it, vi } from 'vitest'
 import { SettingNotFoundException } from './exceptions/settingNotFound.exception.js'
 import { SettingValidationException } from './exceptions/settingValidation.exception.js'
-import type { SystemSettingRow, SystemSettingsRepository } from './systemSettings.repository.js'
+import type { SystemSettingsRepository } from './systemSettings.repository.js'
 import { SystemSettingsService } from './systemSettings.service.js'
 
 function createMockRepo() {
@@ -19,7 +20,7 @@ describe('SystemSettingsService', () => {
     it('should return the typed value when the setting exists', async () => {
       // Arrange
       const mockRepo = createMockRepo()
-      const mockSetting: SystemSettingRow = {
+      const mockSetting: SystemSetting = {
         id: '1',
         key: 'app.name',
         value: 'Roxabi',
@@ -28,8 +29,8 @@ describe('SystemSettingsService', () => {
         description: null,
         category: 'General',
         metadata: null,
-        createdAt: new Date('2026-01-01'),
-        updatedAt: new Date('2026-01-01'),
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
       }
       mockRepo.findByKey.mockResolvedValue(mockSetting)
       const service = new SystemSettingsService(mockRepo as SystemSettingsRepository)
@@ -57,7 +58,7 @@ describe('SystemSettingsService', () => {
     it('should query by the provided key', async () => {
       // Arrange
       const mockRepo = createMockRepo()
-      const mockSetting: SystemSettingRow = {
+      const mockSetting: SystemSetting = {
         id: '1',
         key: 'app.name',
         value: 'Roxabi',
@@ -66,8 +67,8 @@ describe('SystemSettingsService', () => {
         description: null,
         category: 'General',
         metadata: null,
-        createdAt: new Date('2026-01-01'),
-        updatedAt: new Date('2026-01-01'),
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
       }
       mockRepo.findByKey.mockResolvedValue(mockSetting)
       const service = new SystemSettingsService(mockRepo as SystemSettingsRepository)
@@ -84,7 +85,7 @@ describe('SystemSettingsService', () => {
     it('should return all settings from the database', async () => {
       // Arrange
       const mockRepo = createMockRepo()
-      const mockSettings: SystemSettingRow[] = [
+      const mockSettings: SystemSetting[] = [
         {
           id: '1',
           key: 'app.name',
@@ -94,8 +95,8 @@ describe('SystemSettingsService', () => {
           description: null,
           category: 'General',
           metadata: null,
-          createdAt: new Date('2026-01-01'),
-          updatedAt: new Date('2026-01-01'),
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
         },
         {
           id: '2',
@@ -106,8 +107,8 @@ describe('SystemSettingsService', () => {
           description: null,
           category: 'General',
           metadata: null,
-          createdAt: new Date('2026-01-01'),
-          updatedAt: new Date('2026-01-01'),
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
         },
         {
           id: '3',
@@ -118,8 +119,8 @@ describe('SystemSettingsService', () => {
           description: null,
           category: 'Email',
           metadata: null,
-          createdAt: new Date('2026-01-01'),
-          updatedAt: new Date('2026-01-01'),
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
         },
       ]
       mockRepo.findAll.mockResolvedValue(mockSettings)
@@ -150,7 +151,7 @@ describe('SystemSettingsService', () => {
     it('should return only settings belonging to the given category', async () => {
       // Arrange
       const mockRepo = createMockRepo()
-      const generalSettings: SystemSettingRow[] = [
+      const generalSettings: SystemSetting[] = [
         {
           id: '1',
           key: 'app.name',
@@ -160,8 +161,8 @@ describe('SystemSettingsService', () => {
           description: null,
           category: 'General',
           metadata: null,
-          createdAt: new Date('2026-01-01'),
-          updatedAt: new Date('2026-01-01'),
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
         },
         {
           id: '2',
@@ -172,8 +173,8 @@ describe('SystemSettingsService', () => {
           description: null,
           category: 'General',
           metadata: null,
-          createdAt: new Date('2026-01-01'),
-          updatedAt: new Date('2026-01-01'),
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
         },
       ]
       mockRepo.findByCategory.mockResolvedValue(generalSettings)
@@ -216,7 +217,7 @@ describe('SystemSettingsService', () => {
   describe('batchUpdate()', () => {
     it('should read before-state, update each setting, and return updated rows with beforeState', async () => {
       // Arrange
-      const existingSetting: SystemSettingRow = {
+      const existingSetting: SystemSetting = {
         id: '1',
         key: 'app.name',
         value: 'Roxabi',
@@ -225,13 +226,13 @@ describe('SystemSettingsService', () => {
         description: null,
         category: 'General',
         metadata: null,
-        createdAt: new Date('2026-01-01'),
-        updatedAt: new Date('2026-01-01'),
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
       }
-      const updatedSetting: SystemSettingRow = {
+      const updatedSetting: SystemSetting = {
         ...existingSetting,
         value: 'NewName',
-        updatedAt: new Date('2026-02-01'),
+        updatedAt: '2026-02-01T00:00:00.000Z',
       }
       const mockRepo = createMockRepo()
       mockRepo.findByKey.mockResolvedValue(existingSetting)
@@ -248,7 +249,7 @@ describe('SystemSettingsService', () => {
 
     it('should update multiple settings and return all before-states', async () => {
       // Arrange
-      const settingA: SystemSettingRow = {
+      const settingA: SystemSetting = {
         id: '1',
         key: 'app.name',
         value: 'Roxabi',
@@ -257,10 +258,10 @@ describe('SystemSettingsService', () => {
         description: null,
         category: 'General',
         metadata: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
       }
-      const settingB: SystemSettingRow = {
+      const settingB: SystemSetting = {
         id: '2',
         key: 'app.support_email',
         value: 'old@example.com',
@@ -269,11 +270,11 @@ describe('SystemSettingsService', () => {
         description: null,
         category: 'General',
         metadata: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
       }
-      const updatedA: SystemSettingRow = { ...settingA, value: 'NewApp' }
-      const updatedB: SystemSettingRow = { ...settingB, value: 'new@example.com' }
+      const updatedA: SystemSetting = { ...settingA, value: 'NewApp' }
+      const updatedB: SystemSetting = { ...settingB, value: 'new@example.com' }
 
       const mockRepo = createMockRepo()
       // Each findByKey call resolves to the respective setting
@@ -310,7 +311,7 @@ describe('SystemSettingsService', () => {
 
     it('should throw SettingValidationException when value type does not match setting type', async () => {
       // Arrange
-      const numberSetting: SystemSettingRow = {
+      const numberSetting: SystemSetting = {
         id: '1',
         key: 'app.max_users',
         value: 100,
@@ -319,8 +320,8 @@ describe('SystemSettingsService', () => {
         description: null,
         category: 'General',
         metadata: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
       }
       const mockRepo = createMockRepo()
       mockRepo.findByKey.mockResolvedValue(numberSetting)
@@ -334,7 +335,7 @@ describe('SystemSettingsService', () => {
 
     it('should throw SettingValidationException when boolean setting receives non-boolean value', async () => {
       // Arrange
-      const boolSetting: SystemSettingRow = {
+      const boolSetting: SystemSetting = {
         id: '1',
         key: 'app.feature_enabled',
         value: true,
@@ -343,8 +344,8 @@ describe('SystemSettingsService', () => {
         description: null,
         category: 'General',
         metadata: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
       }
       const mockRepo = createMockRepo()
       mockRepo.findByKey.mockResolvedValue(boolSetting)
@@ -358,7 +359,7 @@ describe('SystemSettingsService', () => {
 
     it('should throw SettingValidationException when select setting receives value not in options', async () => {
       // Arrange
-      const selectSetting: SystemSettingRow = {
+      const selectSetting: SystemSetting = {
         id: '1',
         key: 'app.theme',
         value: 'light',
@@ -367,8 +368,8 @@ describe('SystemSettingsService', () => {
         description: null,
         category: 'General',
         metadata: { options: ['light', 'dark', 'system'] },
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
       }
       const mockRepo = createMockRepo()
       mockRepo.findByKey.mockResolvedValue(selectSetting)
@@ -382,7 +383,7 @@ describe('SystemSettingsService', () => {
 
     it('should accept a valid string value for a string setting', async () => {
       // Arrange
-      const stringSetting: SystemSettingRow = {
+      const stringSetting: SystemSetting = {
         id: '1',
         key: 'app.name',
         value: 'Roxabi',
@@ -391,10 +392,10 @@ describe('SystemSettingsService', () => {
         description: null,
         category: 'General',
         metadata: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
       }
-      const updatedSetting: SystemSettingRow = { ...stringSetting, value: 'NewName' }
+      const updatedSetting: SystemSetting = { ...stringSetting, value: 'NewName' }
       const mockRepo = createMockRepo()
       mockRepo.findByKey.mockResolvedValue(stringSetting)
       mockRepo.updateByKey.mockResolvedValue(updatedSetting)
@@ -409,7 +410,7 @@ describe('SystemSettingsService', () => {
 
     it('should accept a valid number value for a number setting', async () => {
       // Arrange
-      const numberSetting: SystemSettingRow = {
+      const numberSetting: SystemSetting = {
         id: '1',
         key: 'app.max_users',
         value: 100,
@@ -418,10 +419,10 @@ describe('SystemSettingsService', () => {
         description: null,
         category: 'General',
         metadata: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
       }
-      const updatedSetting: SystemSettingRow = { ...numberSetting, value: 200 }
+      const updatedSetting: SystemSetting = { ...numberSetting, value: 200 }
       const mockRepo = createMockRepo()
       mockRepo.findByKey.mockResolvedValue(numberSetting)
       mockRepo.updateByKey.mockResolvedValue(updatedSetting)
@@ -436,7 +437,7 @@ describe('SystemSettingsService', () => {
 
     it('should throw SettingValidationException when number setting receives NaN', async () => {
       // Arrange
-      const numberSetting: SystemSettingRow = {
+      const numberSetting: SystemSetting = {
         id: '1',
         key: 'app.max_users',
         value: 100,
@@ -445,8 +446,8 @@ describe('SystemSettingsService', () => {
         description: null,
         category: 'General',
         metadata: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
       }
       const mockRepo = createMockRepo()
       mockRepo.findByKey.mockResolvedValue(numberSetting)
@@ -460,7 +461,7 @@ describe('SystemSettingsService', () => {
 
     it('should accept a valid boolean value for a boolean setting', async () => {
       // Arrange
-      const boolSetting: SystemSettingRow = {
+      const boolSetting: SystemSetting = {
         id: '1',
         key: 'app.feature_enabled',
         value: true,
@@ -469,10 +470,10 @@ describe('SystemSettingsService', () => {
         description: null,
         category: 'General',
         metadata: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
       }
-      const updatedSetting: SystemSettingRow = { ...boolSetting, value: false }
+      const updatedSetting: SystemSetting = { ...boolSetting, value: false }
       const mockRepo = createMockRepo()
       mockRepo.findByKey.mockResolvedValue(boolSetting)
       mockRepo.updateByKey.mockResolvedValue(updatedSetting)
@@ -487,7 +488,7 @@ describe('SystemSettingsService', () => {
 
     it('should accept a valid option value for a select setting', async () => {
       // Arrange
-      const selectSetting: SystemSettingRow = {
+      const selectSetting: SystemSetting = {
         id: '1',
         key: 'app.theme',
         value: 'light',
@@ -496,10 +497,10 @@ describe('SystemSettingsService', () => {
         description: null,
         category: 'General',
         metadata: { options: ['light', 'dark', 'system'] },
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
       }
-      const updatedSetting: SystemSettingRow = { ...selectSetting, value: 'dark' }
+      const updatedSetting: SystemSetting = { ...selectSetting, value: 'dark' }
       const mockRepo = createMockRepo()
       mockRepo.findByKey.mockResolvedValue(selectSetting)
       mockRepo.updateByKey.mockResolvedValue(updatedSetting)
@@ -529,7 +530,7 @@ describe('SystemSettingsService', () => {
 
     it('should reject entire batch before any updates when first update has invalid type', async () => {
       // Arrange — first setting is number type, receives string value
-      const numberSetting: SystemSettingRow = {
+      const numberSetting: SystemSetting = {
         id: '1',
         key: 'app.max_users',
         value: 100,
@@ -538,8 +539,8 @@ describe('SystemSettingsService', () => {
         description: null,
         category: 'General',
         metadata: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
       }
       const mockRepo = createMockRepo()
       mockRepo.findByKey.mockResolvedValue(numberSetting)

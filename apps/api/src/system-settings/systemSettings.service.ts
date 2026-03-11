@@ -1,11 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common'
+import type { SystemSetting } from '@repo/types'
 import { SettingNotFoundException } from './exceptions/settingNotFound.exception.js'
 import { SettingValidationException } from './exceptions/settingValidation.exception.js'
-import {
-  SYSTEM_SETTINGS_REPO,
-  type SystemSettingRow,
-  type SystemSettingsRepository,
-} from './systemSettings.repository.js'
+import { SYSTEM_SETTINGS_REPO, type SystemSettingsRepository } from './systemSettings.repository.js'
 
 @Injectable()
 export class SystemSettingsService {
@@ -26,7 +23,7 @@ export class SystemSettingsService {
   }
 
   async batchUpdate(updates: Array<{ key: string; value: unknown }>): Promise<{
-    updated: SystemSettingRow[]
+    updated: SystemSetting[]
     beforeState: Record<string, unknown>
   }> {
     if (updates.length === 0) {
@@ -34,7 +31,7 @@ export class SystemSettingsService {
     }
 
     // Phase 1: Read all settings and validate before any writes
-    const existingSettings: SystemSettingRow[] = []
+    const existingSettings: SystemSetting[] = []
 
     for (const update of updates) {
       const existing = await this.repo.findByKey(update.key)
@@ -52,7 +49,7 @@ export class SystemSettingsService {
       beforeState[existing.key] = existing.value
     }
 
-    const updated: SystemSettingRow[] = []
+    const updated: SystemSetting[] = []
     for (const update of updates) {
       const result = await this.repo.updateByKey(update.key, update.value)
       if (result) {
@@ -92,6 +89,8 @@ export class SystemSettingsService {
           throw new SettingValidationException(key, 'select', actualType)
         }
         break
+      default:
+        throw new SettingValidationException(key, 'valid type', type)
     }
   }
 }
