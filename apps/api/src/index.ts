@@ -9,15 +9,22 @@ import { AppModule } from './app.module.js'
 import { DEFAULT_LOG_LEVEL } from './config/env.validation.js'
 import { parseCorsOrigins } from './cors.js'
 import { registerRateLimitHeadersHook } from './throttler/index.js'
+import { V1Module } from './v1/v1.module.js'
 
 async function configureSecurityHeaders(
   app: NestFastifyApplication,
-  swaggerEnabled: boolean
+  swaggerEnabled: boolean,
+  v1SwaggerEnabled: boolean
 ): Promise<void> {
   // Swagger requires unsafe-inline and unpkg.com for its bundled UI assets.
-  // Tighten CSP to self-only when Swagger is disabled (production default).
-  const scriptSrc = swaggerEnabled ? ["'self'", "'unsafe-inline'", 'https://unpkg.com'] : ["'self'"]
-  const styleSrc = swaggerEnabled ? ["'self'", "'unsafe-inline'", 'https://unpkg.com'] : ["'self'"]
+  // Tighten CSP to self-only when both Swagger instances are disabled (production default).
+  const anySwaggerEnabled = swaggerEnabled || v1SwaggerEnabled
+  const scriptSrc = anySwaggerEnabled
+    ? ["'self'", "'unsafe-inline'", 'https://unpkg.com']
+    : ["'self'"]
+  const styleSrc = anySwaggerEnabled
+    ? ["'self'", "'unsafe-inline'", 'https://unpkg.com']
+    : ["'self'"]
 
   // Security headers (must be registered before routes)
   await app.register(helmet, {
@@ -102,6 +109,42 @@ function configureSwagger(
   }
 }
 
+function configureV1Swagger(
+  app: NestFastifyApplication,
+  logger: Logger,
+  v1SwaggerEnabled: boolean,
+  appName: string
+): void {
+  if (v1SwaggerEnabled) {
+    const config = new DocumentBuilder()
+      .setTitle(appName + ' Public API')
+      .setDescription('Public API for external integrations. Authenticate with an API key.')
+      .setVersion('1.0')
+      .addApiKey(
+        {
+          type: 'apiKey',
+          name: 'Authorization',
+          in: 'header',
+          description: 'API key (Bearer sk_live_xxx)',
+        },
+        'api-key'
+      )
+      .build()
+
+    const document = SwaggerModule.createDocument(app, config, { include: [V1Module] })
+    SwaggerModule.setup('api/v1/docs', app, document, {
+      customCssUrl: 'https://unpkg.com/swagger-ui-dist@5.31.0/swagger-ui.css',
+      customJs: [
+        'https://unpkg.com/swagger-ui-dist@5.31.0/swagger-ui-bundle.js',
+        'https://unpkg.com/swagger-ui-dist@5.31.0/swagger-ui-standalone-preset.js',
+      ],
+    })
+    logger.log('V1 Public API Swagger UI enabled at /api/v1/docs')
+  } else {
+    logger.log('V1 Public API Swagger UI disabled (set V1_SWAGGER_ENABLED=true to enable)')
+  }
+}
+
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
@@ -123,8 +166,9 @@ async function bootstrap() {
   // is type-level only. SWAGGER_ENABLED is pre-validated as a native boolean by the Zod
   // schema in env.validation.ts before ConfigService is populated.
   const swaggerEnabled = configService.get<boolean>('SWAGGER_ENABLED', nodeEnv === 'development')
+  const v1SwaggerEnabled = configService.get<boolean>('V1_SWAGGER_ENABLED', true)
 
-  await configureSecurityHeaders(app, swaggerEnabled)
+  await configureSecurityHeaders(app, swaggerEnabled, v1SwaggerEnabled)
   registerRateLimitHeadersHook(app)
 
   // Global pipes
@@ -139,6 +183,7 @@ async function bootstrap() {
   configureCors(app, configService, logger, nodeEnv)
   const appName = configService.get<string>('APP_NAME', 'App')
   configureSwagger(app, logger, swaggerEnabled, appName)
+  configureV1Swagger(app, logger, v1SwaggerEnabled, appName)
 
   // API_PORT for local dev; fall back to Vercel-injected PORT at runtime
   const port = parseInt(process.env.PORT || '', 10) || configService.get<number>('API_PORT', 4000)

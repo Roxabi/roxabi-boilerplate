@@ -43,6 +43,7 @@ export const envSchema = z.object({
     .regex(/^[\w\s\-.]+$/)
     .default('App'),
   SWAGGER_ENABLED: booleanFromEnv.optional(),
+  V1_SWAGGER_ENABLED: booleanFromEnv.optional(),
   RATE_LIMIT_GLOBAL_TTL: z.coerce.number().positive().optional(),
   RATE_LIMIT_GLOBAL_LIMIT: z.coerce.number().positive().optional(),
   RATE_LIMIT_AUTH_TTL: z.coerce.number().positive().optional(),

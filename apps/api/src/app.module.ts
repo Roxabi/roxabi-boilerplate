@@ -26,6 +26,7 @@ import { SystemSettingsModule } from './system-settings/systemSettings.module.js
 import { TenantModule } from './tenant/tenant.module.js'
 import { ThrottlerConfigModule } from './throttler/throttler.module.js'
 import { UserModule } from './user/user.module.js'
+import { V1Module } from './v1/v1.module.js'
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { UserModule } from './user/user.module.js'
     SystemSettingsModule,
     AdminModule,
     ApiKeyModule,
+    V1Module,
     ThrottlerConfigModule,
   ],
   controllers: [AppController],
