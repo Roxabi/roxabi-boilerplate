@@ -233,7 +233,7 @@ describe('ThrottlerExceptionFilter', () => {
       tierName: 'api',
       tracker: 'apikey:key-uuid-1234',
     }
-    const { host, getSentBody } = createMockHost({ url: '/api/users', throttlerMeta })
+    const { host, headerFn, getSentBody } = createMockHost({ url: '/api/users', throttlerMeta })
     const exception = new ThrottlerException()
 
     // Act
@@ -242,6 +242,9 @@ describe('ThrottlerExceptionFilter', () => {
     // Assert
     const body = getSentBody()
     expect(body.errorCode).toBe('API_KEY_RATE_LIMITED')
+    expect(headerFn).toHaveBeenCalledWith('X-RateLimit-Limit', '100')
+    expect(headerFn).toHaveBeenCalledWith('X-RateLimit-Remaining', '0')
+    expect(headerFn).toHaveBeenCalledWith('X-RateLimit-Reset', String(throttlerMeta.reset))
   })
 
   it('should use RATE_LIMIT_EXCEEDED error code for non-api tiers', () => {

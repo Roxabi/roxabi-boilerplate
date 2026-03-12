@@ -113,7 +113,8 @@ async function createTestApp(globalLimit = 3, apiLimit = 3, apiKeyId?: string) {
       // biome-ignore lint/suspicious/noExplicitAny: Fastify raw request type
       .addHook('preHandler', (request: any, _reply: any, done: () => void) => {
         if ((request.url as string)?.startsWith('/api/key-test')) {
-          request.session = { apiKeyId }
+          const customKeyId = request.headers['x-test-api-key-id'] as string | undefined
+          request.session = { apiKeyId: customKeyId ?? apiKeyId, actorType: 'api_key' }
         }
         done()
       })
@@ -236,7 +237,29 @@ describe('Rate Limiting Integration', () => {
       expect(response.statusCode).toBe(200)
       expect(response.headers['x-ratelimit-limit']).toBeDefined()
       expect(response.headers['x-ratelimit-remaining']).toBeDefined()
-      expect(response.headers['x-ratelimit-reset']).toBeDefined()
+      const resetValue = Number(response.headers['x-ratelimit-reset'])
+      expect(resetValue).toBeGreaterThan(Math.floor(Date.now() / 1000))
+      expect(resetValue).toBeLessThan(Math.floor(Date.now() / 1000) + 120)
+    } finally {
+      await apiApp.close()
+    }
+  })
+
+  it('should track api keys independently', async () => {
+    const apiApp = await createTestApp(100, 2, 'key-a')
+
+    try {
+      // Exhaust key A
+      await inject(apiApp, 'GET', '/api/key-test')
+      await inject(apiApp, 'GET', '/api/key-test')
+      const keyAThird = await inject(apiApp, 'GET', '/api/key-test')
+      expect(keyAThird.statusCode).toBe(429)
+
+      // Key B should still be allowed
+      const keyBFirst = await inject(apiApp, 'GET', '/api/key-test', {
+        'x-test-api-key-id': 'key-b',
+      })
+      expect(keyBFirst.statusCode).toBe(200)
     } finally {
       await apiApp.close()
     }

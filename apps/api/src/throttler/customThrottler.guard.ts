@@ -50,8 +50,8 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
     // Skip api tier for non-API-key requests
     if (throttler.name === 'api') {
       const { req: apiReq } = this.getRequestResponse(context)
-      const session = apiReq.session as { apiKeyId?: string } | undefined
-      if (!session?.apiKeyId) return true
+      const session = apiReq.session as { actorType?: string; apiKeyId?: string } | undefined
+      if (session?.actorType !== 'api_key' || !session.apiKeyId) return true
 
       const tracker = `apikey:${session.apiKeyId}`
       const key = generateKey(context, tracker, 'api')

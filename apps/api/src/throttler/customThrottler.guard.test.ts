@@ -81,7 +81,7 @@ function createMockContext(
     url?: string
     ip?: string
     user?: { id: string } | null
-    session?: { apiKeyId?: string }
+    session?: { apiKeyId?: string; actorType?: string }
   } = {}
 ) {
   const req: Record<string, unknown> = {
@@ -397,11 +397,43 @@ describe('CustomThrottlerGuard', () => {
       expect(storageService.increment).not.toHaveBeenCalled()
     })
 
+    it('should skip api tier when apiKeyId is an empty string', async () => {
+      // Arrange
+      const { guard, storageService } = createGuard()
+      const { context } = createMockContext({
+        url: '/api/users',
+        session: { apiKeyId: '', actorType: 'api_key' },
+      })
+      guard.mockGetRequestResponse((ctx) => ({
+        req: ctx.switchToHttp().getRequest(),
+        res: ctx.switchToHttp().getResponse(),
+      }))
+
+      const requestProps = {
+        context,
+        limit: 100,
+        ttl: 60_000,
+        throttler: { name: 'api' },
+        blockDuration: 0,
+        generateKey: vi.fn().mockReturnValue('test-key'),
+      }
+
+      // Act
+      const result = await guard.handleRequest(requestProps as unknown as ThrottlerRequest)
+
+      // Assert
+      expect(result).toBe(true)
+      expect(storageService.increment).not.toHaveBeenCalled()
+    })
+
     it('should use apikey:${keyId} tracker for api tier', async () => {
       // Arrange
       const { guard, storageService } = createGuard()
       const keyId = 'key-uuid-1234'
-      const { context } = createMockContext({ url: '/api/users', session: { apiKeyId: keyId } })
+      const { context } = createMockContext({
+        url: '/api/users',
+        session: { apiKeyId: keyId, actorType: 'api_key' },
+      })
       guard.mockGetRequestResponse((ctx) => ({
         req: ctx.switchToHttp().getRequest(),
         res: ctx.switchToHttp().getResponse(),
@@ -437,7 +469,7 @@ describe('CustomThrottlerGuard', () => {
       const keyId = 'key-uuid-5678'
       const { context, req } = createMockContext({
         url: '/api/users',
-        session: { apiKeyId: keyId },
+        session: { apiKeyId: keyId, actorType: 'api_key' },
       })
       guard.mockGetRequestResponse((ctx) => ({
         req: ctx.switchToHttp().getRequest(),
@@ -478,7 +510,7 @@ describe('CustomThrottlerGuard', () => {
       })
       const { context } = createMockContext({
         url: '/api/users',
-        session: { apiKeyId: 'key-uuid-exceeded' },
+        session: { apiKeyId: 'key-uuid-exceeded', actorType: 'api_key' },
       })
       guard.mockGetRequestResponse((ctx) => ({
         req: ctx.switchToHttp().getRequest(),
@@ -491,6 +523,39 @@ describe('CustomThrottlerGuard', () => {
         ttl: 60_000,
         throttler: { name: 'api' },
         blockDuration: 0,
+        generateKey: vi.fn().mockReturnValue('test-key'),
+      }
+
+      // Act + Assert
+      await expect(
+        guard.handleRequest(requestProps as unknown as ThrottlerRequest)
+      ).rejects.toThrow(ThrottlerException)
+    })
+
+    it('should throw ThrottlerException when api tier isBlocked is true even if under limit', async () => {
+      // Arrange
+      const { guard, storageService } = createGuard()
+      storageService.increment.mockResolvedValue({
+        totalHits: 2,
+        timeToExpire: 120_000,
+        isBlocked: true,
+        timeToBlockExpire: 120_000,
+      })
+      const { context } = createMockContext({
+        url: '/api/users',
+        session: { apiKeyId: 'key-uuid-blocked', actorType: 'api_key' },
+      })
+      guard.mockGetRequestResponse((ctx) => ({
+        req: ctx.switchToHttp().getRequest(),
+        res: ctx.switchToHttp().getResponse(),
+      }))
+
+      const requestProps = {
+        context,
+        limit: 100,
+        ttl: 60_000,
+        throttler: { name: 'api' },
+        blockDuration: 300_000,
         generateKey: vi.fn().mockReturnValue('test-key'),
       }
 
