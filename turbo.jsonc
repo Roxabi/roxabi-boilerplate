@@ -24,6 +24,7 @@
     "SMTP_PORT",
     "SMTP_SECURE",
     "SWAGGER_ENABLED",
+    "V1_SWAGGER_ENABLED",
     // OAuth providers
     "GITHUB_CLIENT_ID",
     "GITHUB_CLIENT_SECRET",
