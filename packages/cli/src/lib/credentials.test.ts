@@ -1,50 +1,85 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 
-// Mock the credentials path to use a temp directory
-const testDir = join(tmpdir(), `roxabi-cli-test-${Date.now()}`)
-const testCredPath = join(testDir, 'credentials.json')
+const testHome = join(tmpdir(), `roxabi-cli-creds-${Date.now()}`)
+const credDir = join(testHome, '.config', 'roxabi')
+const credPath = join(credDir, 'credentials.json')
 
 vi.mock('node:os', async () => {
   const actual = await vi.importActual<typeof import('node:os')>('node:os')
-  return {
-    ...actual,
-    homedir: () => join(tmpdir(), `roxabi-cli-test-${Date.now()}`),
-  }
+  return { ...actual, homedir: () => testHome }
 })
 
+const { clearCredentials, loadCredentials, saveCredentials } = await import('./credentials.js')
+
 describe('credentials', () => {
-  beforeEach(() => {
-    mkdirSync(testDir, { recursive: true })
+  beforeAll(() => {
+    mkdirSync(testHome, { recursive: true })
   })
 
   afterEach(() => {
-    rmSync(testDir, { recursive: true, force: true })
+    if (existsSync(credPath)) rmSync(credPath)
+    if (existsSync(credDir)) rmSync(credDir, { recursive: true })
   })
 
-  it('should return null when no credentials file exists', async () => {
-    // Use dynamic import to get fresh module with mocked homedir
-    const { loadCredentials } = await import('./credentials.js')
+  afterAll(() => {
+    rmSync(testHome, { recursive: true, force: true })
+  })
+
+  it('returns null when no credentials file exists', () => {
     expect(loadCredentials()).toBeNull()
   })
 
-  it('should save and load credentials', () => {
-    // Write directly to test path since homedir is mocked
+  it('saves and loads credentials', () => {
     const creds = { token: 'sk_live_test123', apiUrl: 'http://localhost:4000' }
-    mkdirSync(testDir, { recursive: true })
-    writeFileSync(testCredPath, JSON.stringify(creds))
+    saveCredentials(creds)
 
-    // Read back
-    const raw = readFileSync(testCredPath, 'utf-8')
-    const parsed = JSON.parse(raw)
-    expect(parsed.token).toBe('sk_live_test123')
-    expect(parsed.apiUrl).toBe('http://localhost:4000')
+    expect(existsSync(credPath)).toBe(true)
+    const loaded = loadCredentials()
+    expect(loaded).toEqual(creds)
   })
 
-  it('should handle malformed credentials file', () => {
-    writeFileSync(testCredPath, 'not json')
-    expect(existsSync(testCredPath)).toBe(true)
+  it('creates parent directories when saving', () => {
+    const creds = { token: 'sk_live_abc', apiUrl: 'http://api.example.com' }
+    saveCredentials(creds)
+
+    const raw = readFileSync(credPath, 'utf-8')
+    expect(JSON.parse(raw)).toEqual(creds)
+  })
+
+  it('returns null for malformed JSON', () => {
+    mkdirSync(credDir, { recursive: true })
+    writeFileSync(credPath, 'not valid json')
+
+    expect(loadCredentials()).toBeNull()
+  })
+
+  it('returns null when token is missing', () => {
+    mkdirSync(credDir, { recursive: true })
+    writeFileSync(credPath, JSON.stringify({ apiUrl: 'http://localhost:4000' }))
+
+    expect(loadCredentials()).toBeNull()
+  })
+
+  it('returns null when apiUrl is missing', () => {
+    mkdirSync(credDir, { recursive: true })
+    writeFileSync(credPath, JSON.stringify({ token: 'sk_live_xxx' }))
+
+    expect(loadCredentials()).toBeNull()
+  })
+
+  it('clearCredentials empties the file', () => {
+    saveCredentials({ token: 'sk_live_clear', apiUrl: 'http://localhost:4000' })
+    clearCredentials()
+
+    const raw = readFileSync(credPath, 'utf-8')
+    expect(raw).toBe('')
+    expect(loadCredentials()).toBeNull()
+  })
+
+  it('clearCredentials is a no-op when no file exists', () => {
+    clearCredentials()
   })
 })

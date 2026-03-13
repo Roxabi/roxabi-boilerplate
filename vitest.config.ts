@@ -62,6 +62,8 @@ export default defineConfig({
         '**/paraglide/**',
         // Docs app (Next.js — no unit tests)
         'apps/docs/**',
+        // CLI command wrappers (thin Commander.js wiring, tested via integration)
+        'packages/cli/src/commands/**',
       ],
       // See artifacts/specs/17-testing-gold-standard.mdx for rationale.
       thresholds: {
