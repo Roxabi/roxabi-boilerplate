@@ -1,11 +1,12 @@
-import { Module } from '@nestjs/common'
+import { Global, Module } from '@nestjs/common'
 import { EmailModule } from '../email/email.module.js'
 import { EmailQueueHandler } from './handlers/email.handler.js'
 import { EmailDlqHandler } from './handlers/emailDlq.handler.js'
-import { QUEUE_DEFAULTS, QUEUE_NAMES } from './queue.constants.js'
+import { QUEUE_DEFAULTS, QUEUE_NAMES, QUEUE_REGISTRAR } from './queue.constants.js'
 import { QUEUE_SERVICE } from './queue.provider.js'
 import { QueueService } from './queue.service.js'
 
+@Global()
 @Module({
   imports: [EmailModule],
   providers: [
@@ -17,7 +18,7 @@ import { QueueService } from './queue.service.js'
     EmailQueueHandler,
     EmailDlqHandler,
     {
-      provide: 'QUEUE_REGISTRAR',
+      provide: QUEUE_REGISTRAR,
       inject: [QueueService, EmailQueueHandler, EmailDlqHandler],
       useFactory: (
         queueService: QueueService,

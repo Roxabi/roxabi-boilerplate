@@ -12,9 +12,9 @@ describe('AuthModule', () => {
   const providers: unknown[] = Reflect.getMetadata('providers', AuthModule) ?? []
   const exports_: unknown[] = Reflect.getMetadata('exports', AuthModule) ?? []
 
-  it('should import EmailModule, QueueModule, RbacModule, UserModule and ApiKeyModule', () => {
-    // Assert — EmailModule, QueueModule, RbacModule, ApiKeyModule are direct; only UserModule uses forwardRef
-    expect(imports).toHaveLength(5)
+  it('should import EmailModule, RbacModule, UserModule and ApiKeyModule', () => {
+    // Assert — QueueModule is @Global() (registered in AppModule), not imported here
+    expect(imports).toHaveLength(4)
   })
 
   it('should declare AuthController', () => {
