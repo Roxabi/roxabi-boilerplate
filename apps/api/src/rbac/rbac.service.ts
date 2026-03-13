@@ -174,6 +174,13 @@ export class RbacService {
   }
 
   /**
+   * List all roles for the current tenant, each with their permissions — single batched query.
+   */
+  async listRolesWithPermissions() {
+    return this.tenantService.query((tx) => this.repo.listRolesWithPermissions(tx))
+  }
+
+  /**
    * Seed default roles for a newly created organization.
    * Called on org creation event.
    */

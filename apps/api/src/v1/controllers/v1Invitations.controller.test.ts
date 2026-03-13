@@ -1,5 +1,7 @@
+import { Reflector } from '@nestjs/core'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AdminInvitationsService } from '../../admin/adminInvitations.service.js'
+import { V1ExceptionFilter } from '../filters/v1Exception.filter.js'
 import { V1InvitationsController } from './v1Invitations.controller.js'
 
 const mockAdminInvitationsService: AdminInvitationsService = {
@@ -12,7 +14,7 @@ describe('V1InvitationsController', () => {
   const controller = new V1InvitationsController(mockAdminInvitationsService)
 
   beforeEach(() => {
-    vi.restoreAllMocks()
+    vi.clearAllMocks()
   })
 
   const mockSession = {
@@ -154,6 +156,56 @@ describe('V1InvitationsController', () => {
           mockSession as never
         )
       ).rejects.toThrow('Already pending')
+    })
+  })
+
+  describe('decorator metadata', () => {
+    const reflector = new Reflector()
+
+    it('requires API key at controller level', () => {
+      // Arrange & Act
+      const metadata = reflector.get('REQUIRE_API_KEY', V1InvitationsController)
+
+      // Assert
+      expect(metadata).toBe(true)
+    })
+
+    it('applies V1ExceptionFilter at controller level', () => {
+      // Arrange & Act
+      const filters = reflector.get('__exceptionFilters__', V1InvitationsController)
+
+      // Assert
+      expect(filters).toContain(V1ExceptionFilter)
+    })
+
+    it('requires members:read permission on listPendingInvitations', () => {
+      // Arrange & Act
+      const metadata = reflector.get(
+        'PERMISSIONS',
+        V1InvitationsController.prototype.listPendingInvitations
+      )
+
+      // Assert
+      expect(metadata).toEqual(['members:read'])
+    })
+
+    it('requires members:write permission on inviteMember', () => {
+      // Arrange & Act
+      const metadata = reflector.get('PERMISSIONS', V1InvitationsController.prototype.inviteMember)
+
+      // Assert
+      expect(metadata).toEqual(['members:write'])
+    })
+
+    it('requires members:delete permission on revokeInvitation', () => {
+      // Arrange & Act
+      const metadata = reflector.get(
+        'PERMISSIONS',
+        V1InvitationsController.prototype.revokeInvitation
+      )
+
+      // Assert
+      expect(metadata).toEqual(['members:delete'])
     })
   })
 

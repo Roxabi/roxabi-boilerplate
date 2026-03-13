@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common'
 import { ApiOperation, ApiResponse, ApiSecurity, ApiTags } from '@nestjs/swagger'
 import { z } from 'zod'
-import { AdminInvitationsService } from '../../admin/adminInvitations.service.js'
+import { AdminInvitationsService, INVITATION_TTL_MS } from '../../admin/adminInvitations.service.js'
 import { Permissions } from '../../auth/decorators/permissions.decorator.js'
 import { RequireApiKey } from '../../auth/decorators/requireApiKey.decorator.js'
 import { Session } from '../../auth/decorators/session.decorator.js'
@@ -21,11 +21,6 @@ import type { AdminSession } from '../../auth/types.js'
 import { ZodValidationPipe } from '../../common/pipes/zodValidation.pipe.js'
 import type { V1InvitationResponse } from '../dto/v1Responses.js'
 import { V1ExceptionFilter } from '../filters/v1Exception.filter.js'
-
-// Coupled to AdminInvitationsService invitation TTL (7 days).
-// invitations table has no createdAt — invitedAt is derived as expiresAt - TTL.
-// If the service-side TTL changes, this constant must be updated.
-const INVITATION_TTL_MS = 7 * 24 * 60 * 60 * 1000
 
 const createInvitationSchema = z.object({
   email: z.string().email(),

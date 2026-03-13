@@ -57,6 +57,8 @@ export interface RbacRepository {
 
   getRolePermissions(roleId: string, tx?: DrizzleTx): Promise<PermissionRow[]>
 
+  listRolesWithPermissions(tx?: DrizzleTx): Promise<(RoleRow & { permissions: PermissionRow[] })[]>
+
   seedDefaultRoles(
     organizationId: string,
     roles: {

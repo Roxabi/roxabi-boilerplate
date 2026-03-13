@@ -1,5 +1,7 @@
+import { Reflector } from '@nestjs/core'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AdminMembersService } from '../../admin/adminMembers.service.js'
+import { V1ExceptionFilter } from '../filters/v1Exception.filter.js'
 import { V1MembersController } from './v1Members.controller.js'
 
 const mockAdminMembersService: AdminMembersService = {
@@ -12,7 +14,7 @@ describe('V1MembersController', () => {
   const controller = new V1MembersController(mockAdminMembersService)
 
   beforeEach(() => {
-    vi.restoreAllMocks()
+    vi.clearAllMocks()
   })
 
   const mockSession = {
@@ -146,6 +148,36 @@ describe('V1MembersController', () => {
       })
     })
 
+    it('trims whitespace-only search to undefined', async () => {
+      // Arrange
+      vi.mocked(mockAdminMembersService.listMembers).mockResolvedValue({
+        data: [],
+        pagination: { page: 1, limit: 20, total: 0 },
+      } as never)
+
+      // Act
+      await controller.listMembers(mockSession as never, 1, 20, '   ')
+
+      // Assert
+      expect(mockAdminMembersService.listMembers).toHaveBeenCalledWith('org-1', {
+        page: 1,
+        limit: 20,
+        search: undefined,
+      })
+    })
+
+    it('propagates errors from adminMembersService.listMembers', async () => {
+      // Arrange
+      vi.mocked(mockAdminMembersService.listMembers).mockRejectedValue(
+        new Error('DB connection lost')
+      )
+
+      // Act & Assert
+      await expect(controller.listMembers(mockSession as never, 1, 20)).rejects.toThrow(
+        'DB connection lost'
+      )
+    })
+
     it('maps null user.name to empty string', async () => {
       // Arrange
       const member = makeMember({ user: { name: null, email: 'x@example.com' } })
@@ -159,6 +191,50 @@ describe('V1MembersController', () => {
 
       // Assert
       expect(result.data[0]!.name).toBe('')
+    })
+  })
+
+  describe('decorator metadata', () => {
+    const reflector = new Reflector()
+
+    it('requires API key at controller level', () => {
+      // Arrange & Act
+      const metadata = reflector.get('REQUIRE_API_KEY', V1MembersController)
+
+      // Assert
+      expect(metadata).toBe(true)
+    })
+
+    it('applies V1ExceptionFilter at controller level', () => {
+      // Arrange & Act
+      const filters = reflector.get('__exceptionFilters__', V1MembersController)
+
+      // Assert
+      expect(filters).toContain(V1ExceptionFilter)
+    })
+
+    it('requires members:read permission on listMembers', () => {
+      // Arrange & Act
+      const metadata = reflector.get('PERMISSIONS', V1MembersController.prototype.listMembers)
+
+      // Assert
+      expect(metadata).toEqual(['members:read'])
+    })
+
+    it('requires members:delete permission on removeMember', () => {
+      // Arrange & Act
+      const metadata = reflector.get('PERMISSIONS', V1MembersController.prototype.removeMember)
+
+      // Assert
+      expect(metadata).toEqual(['members:delete'])
+    })
+
+    it('requires members:write permission on changeMemberRole', () => {
+      // Arrange & Act
+      const metadata = reflector.get('PERMISSIONS', V1MembersController.prototype.changeMemberRole)
+
+      // Assert
+      expect(metadata).toEqual(['members:write'])
     })
   })
 
@@ -193,10 +269,9 @@ describe('V1MembersController', () => {
   })
 
   describe('changeMemberRole', () => {
-    it('calls adminMembersService.changeMemberRole with correct args', async () => {
+    it('calls adminMembersService.changeMemberRole with correct args and returns void', async () => {
       // Arrange
-      const updated = { id: 'm-1', role: 'admin' }
-      vi.mocked(mockAdminMembersService.changeMemberRole).mockResolvedValue(updated as never)
+      vi.mocked(mockAdminMembersService.changeMemberRole).mockResolvedValue(undefined as never)
 
       // Act
       const result = await controller.changeMemberRole(
@@ -206,7 +281,7 @@ describe('V1MembersController', () => {
       )
 
       // Assert
-      expect(result).toEqual(updated)
+      expect(result).toBeUndefined()
       expect(mockAdminMembersService.changeMemberRole).toHaveBeenCalledWith(
         'member-1',
         'org-1',
