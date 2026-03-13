@@ -1,5 +1,7 @@
+import { Reflector } from '@nestjs/core'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { UserService } from '../../user/user.service.js'
+import { V1ExceptionFilter } from '../filters/v1Exception.filter.js'
 import { V1UsersController } from './v1Users.controller.js'
 
 const mockUserService: UserService = {
@@ -10,13 +12,41 @@ describe('V1UsersController', () => {
   const controller = new V1UsersController(mockUserService)
 
   beforeEach(() => {
-    vi.restoreAllMocks()
+    vi.clearAllMocks()
   })
 
   const mockSession = {
     user: { id: 'user-1' },
     session: { activeOrganizationId: 'org-1' },
   }
+
+  describe('decorator metadata', () => {
+    const reflector = new Reflector()
+
+    it('requires API key at controller level', () => {
+      // Arrange & Act
+      const metadata = reflector.get('REQUIRE_API_KEY', V1UsersController)
+
+      // Assert
+      expect(metadata).toBe(true)
+    })
+
+    it('applies V1ExceptionFilter at controller level', () => {
+      // Arrange & Act
+      const filters = reflector.get('__exceptionFilters__', V1UsersController)
+
+      // Assert
+      expect(filters).toContain(V1ExceptionFilter)
+    })
+
+    it('requires users:read permission on getMe', () => {
+      // Arrange & Act
+      const metadata = reflector.get('PERMISSIONS', V1UsersController.prototype.getMe)
+
+      // Assert
+      expect(metadata).toEqual(['users:read'])
+    })
+  })
 
   describe('getMe', () => {
     it('returns V1UserMeResponse with fullName when available', async () => {

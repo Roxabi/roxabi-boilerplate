@@ -19,18 +19,12 @@ export class V1RolesController {
   @ApiOperation({ summary: 'List roles for the current organization' })
   @ApiResponse({ status: 200, description: 'List of roles' })
   async listRoles(): Promise<V1RoleResponse[]> {
-    const roles = await this.rbacService.listRoles()
-    const rolesWithPermissions = await Promise.all(
-      roles.map(async (role) => {
-        const permissions = await this.rbacService.getRolePermissions(role.id)
-        return {
-          id: role.id,
-          name: role.name,
-          description: role.description,
-          permissions: permissions.map((p) => `${p.resource}:${p.action}`),
-        }
-      })
-    )
-    return rolesWithPermissions
+    const roles = await this.rbacService.listRolesWithPermissions()
+    return roles.map((role) => ({
+      id: role.id,
+      name: role.name,
+      description: role.description,
+      permissions: role.permissions.map((p) => `${p.resource}:${p.action}`),
+    }))
   }
 }

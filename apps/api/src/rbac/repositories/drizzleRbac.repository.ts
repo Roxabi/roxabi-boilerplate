@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 import { DRIZZLE, type DrizzleDB, type DrizzleTx } from '../../database/drizzle.provider.js'
 import { members } from '../../database/schema/auth.schema.js'
 import { permissions, rolePermissions, roles } from '../../database/schema/rbac.schema.js'
@@ -102,6 +102,41 @@ export class DrizzleRbacRepository implements RbacRepository {
     if (inserts.length > 0) {
       await qb.insert(rolePermissions).values(inserts)
     }
+  }
+
+  async listRolesWithPermissions(
+    tx?: DrizzleTx
+  ): Promise<(RoleRow & { permissions: PermissionRow[] })[]> {
+    const qb = tx ?? this.db
+    const allRoles = await qb.select().from(roles)
+    if (allRoles.length === 0) return []
+
+    const roleIds = allRoles.map((r) => r.id)
+    const rows = await qb
+      .select({
+        roleId: rolePermissions.roleId,
+        id: permissions.id,
+        resource: permissions.resource,
+        action: permissions.action,
+        description: permissions.description,
+      })
+      .from(rolePermissions)
+      .innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
+      .where(inArray(rolePermissions.roleId, roleIds))
+
+    const permsByRole = new Map<string, PermissionRow[]>()
+    for (const row of rows) {
+      const list = permsByRole.get(row.roleId) ?? []
+      list.push({
+        id: row.id,
+        resource: row.resource,
+        action: row.action,
+        description: row.description,
+      })
+      permsByRole.set(row.roleId, list)
+    }
+
+    return allRoles.map((role) => ({ ...role, permissions: permsByRole.get(role.id) ?? [] }))
   }
 
   async getRolePermissions(roleId: string, tx?: DrizzleTx): Promise<PermissionRow[]> {
