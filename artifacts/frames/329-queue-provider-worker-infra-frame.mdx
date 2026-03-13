@@ -1,0 +1,46 @@
+---
+title: 'Queue Provider Setup + Worker Infrastructure'
+issue: 329
+status: approved
+tier: F-full
+date: 2026-03-13
+---
+
+## Problem
+
+The application has no background job processing capability. All work currently runs synchronously within request handlers — email sending blocks API responses, and there's no mechanism for retry, scheduling, or concurrency control.
+
+As the platform grows, async workloads (transactional emails, future webhooks, scheduled tasks) need a reliable queue with retry policies, dead-letter handling, and graceful shutdown. Without this, adding any async feature requires ad-hoc solutions that don't compose.
+
+## Who
+
+- **Primary:** Backend developers — need a clean API to enqueue and process jobs within NestJS
+- **Secondary:** End users — experience faster API responses when email/heavy work moves to background
+
+## First Use Cases
+
+- **Email sending** — async delivery of welcome emails, magic links, notifications (currently synchronous)
+- **General background work** — foundation for future workloads (webhooks, scheduled tasks, AI processing)
+
+## Constraints
+
+- Provider decision (BullMQ + Redis vs pg-boss + Postgres) is **open** — requires analysis of trade-offs given project context (infra complexity, scale needs, existing stack)
+- Must integrate cleanly with NestJS module system
+- Must support: retry with exponential backoff, dead-letter queue, concurrency control, graceful shutdown (SIGTERM drain)
+- Vercel deployment model may constrain worker process architecture (in-process vs separate)
+
+## Out of Scope
+
+- Specific job implementations (email jobs will be a follow-up issue)
+- Job scheduling/cron (future enhancement on top of this infrastructure)
+- Dashboard/monitoring UI (can be added later, e.g., Bull Board or pg-boss admin)
+- Multi-region or distributed queue topology
+
+## Complexity
+
+**Tier: F-full** — New architectural component (queue infra), open provider decision requiring ADR, touches API config + module system + deployment model.
+
+- New infrastructure dependency (Redis or extended Postgres usage)
+- Architectural decision with long-term lock-in implications
+- Worker process model depends on deployment constraints (Vercel)
+- Multiple integration points: NestJS modules, graceful shutdown, retry policies
