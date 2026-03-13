@@ -49,6 +49,8 @@ export const envSchema = z.object({
   RATE_LIMIT_AUTH_TTL: z.coerce.number().positive().optional(),
   RATE_LIMIT_AUTH_LIMIT: z.coerce.number().positive().optional(),
   RATE_LIMIT_AUTH_BLOCK_DURATION: z.coerce.number().positive().optional(),
+  // Queue worker
+  QUEUE_WORKER_ENABLED: booleanFromEnv.default(true),
   // CRON secret for scheduled jobs (purge, etc.)
   CRON_SECRET: z.string().min(32).optional(),
   // Reserved for the future API key rate-limit tier

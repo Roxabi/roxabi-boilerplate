@@ -395,6 +395,7 @@ jobs:
       BETTER_AUTH_SECRET: test-secret-minimum-32-characters-long
       SMTP_HOST: localhost
       RATE_LIMIT_ENABLED: "false"
+      QUEUE_WORKER_ENABLED: "true"
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -507,6 +508,7 @@ jobs:
       BETTER_AUTH_SECRET: test-secret-minimum-32-characters-long
       SMTP_HOST: localhost
       RATE_LIMIT_ENABLED: "false"
+      QUEUE_WORKER_ENABLED: "true"
     strategy:
       fail-fast: false
       matrix:

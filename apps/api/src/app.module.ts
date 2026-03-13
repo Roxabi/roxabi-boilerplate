@@ -21,6 +21,7 @@ import { FeatureFlagsModule } from './feature-flags/featureFlags.module.js'
 import { GdprModule } from './gdpr/gdpr.module.js'
 import { OrganizationModule } from './organization/organization.module.js'
 import { PurgeModule } from './purge/purge.module.js'
+import { QueueModule } from './queue/queue.module.js'
 import { RbacModule } from './rbac/rbac.module.js'
 import { SystemSettingsModule } from './system-settings/systemSettings.module.js'
 import { TenantModule } from './tenant/tenant.module.js'
@@ -52,6 +53,7 @@ import { V1Module } from './v1/v1.module.js'
     EventEmitterModule.forRoot(),
     DatabaseModule,
     EmailModule,
+    QueueModule.forRoot(),
     AuditModule,
     AuthModule,
     TenantModule,
