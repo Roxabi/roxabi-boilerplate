@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
@@ -70,12 +70,17 @@ describe('credentials', () => {
     expect(loadCredentials()).toBeNull()
   })
 
-  it('clearCredentials empties the file', () => {
+  it('saveCredentials sets file mode to 0o600', () => {
+    saveCredentials({ token: 'sk_live_mode', apiUrl: 'http://localhost:4000' })
+    const mode = statSync(credPath).mode & 0o777
+    expect(mode).toBe(0o600)
+  })
+
+  it('clearCredentials deletes the file', () => {
     saveCredentials({ token: 'sk_live_clear', apiUrl: 'http://localhost:4000' })
     clearCredentials()
 
-    const raw = readFileSync(credPath, 'utf-8')
-    expect(raw).toBe('')
+    expect(existsSync(credPath)).toBe(false)
     expect(loadCredentials()).toBeNull()
   })
 

@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 
@@ -26,13 +26,13 @@ export function loadCredentials(): Credentials | null {
 
 export function saveCredentials(credentials: Credentials): void {
   const path = getCredentialsPath()
-  mkdirSync(dirname(path), { recursive: true })
+  mkdirSync(dirname(path), { recursive: true, mode: 0o700 })
   writeFileSync(path, `${JSON.stringify(credentials, null, 2)}\n`, { mode: 0o600 })
 }
 
 export function clearCredentials(): void {
   const path = getCredentialsPath()
   if (existsSync(path)) {
-    writeFileSync(path, '', { mode: 0o600 })
+    unlinkSync(path)
   }
 }

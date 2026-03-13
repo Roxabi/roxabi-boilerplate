@@ -47,6 +47,9 @@ export function createClient(apiUrl?: string, token?: string): ApiClient {
     body?: unknown,
     params?: Record<string, string>
   ): Promise<T> {
+    if (!path.startsWith('/')) {
+      throw new Error(`API path must be relative (start with /), got: ${path}`)
+    }
     const url = new URL(path, baseUrl)
     if (params) {
       for (const [key, value] of Object.entries(params)) {
