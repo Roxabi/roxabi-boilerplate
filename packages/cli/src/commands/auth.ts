@@ -10,10 +10,20 @@ export function authCommand(): Command {
   auth
     .command('login')
     .description('Authenticate with an API token')
-    .requiredOption('--token <token>', 'API key (sk_live_xxx)')
+    .option(
+      '--token <token>',
+      'API key (sk_live_xxx). Prefer ROXABI_TOKEN env var to avoid shell history exposure.'
+    )
     .option('--api-url <url>', 'API base URL', DEFAULT_API_URL)
-    .action(async (opts: { token: string; apiUrl: string }) => {
-      const { token, apiUrl } = opts
+    .action(async (opts: { token?: string; apiUrl: string }) => {
+      const token = opts.token ?? process.env.ROXABI_TOKEN
+      if (!token) {
+        console.error(
+          'No token provided. Use --token <token> or set ROXABI_TOKEN environment variable.'
+        )
+        process.exit(1)
+      }
+      const { apiUrl } = opts
 
       // Validate the token by calling /api/v1/users/me
       const client = createClient(apiUrl, token)

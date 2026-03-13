@@ -46,4 +46,15 @@ describe('output', () => {
     expect(calls[1]).toContain('Alice')
     spy.mockRestore()
   })
+
+  it('printSingle shows em-dash for missing fields', () => {
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    printSingle({ id: '123' }, [
+      { key: 'id', label: 'ID' },
+      { key: 'missing', label: 'Missing' },
+    ])
+    const calls = spy.mock.calls.map((c) => c[0])
+    expect(calls[1]).toContain('—')
+    spy.mockRestore()
+  })
 })
