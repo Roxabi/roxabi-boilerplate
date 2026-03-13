@@ -84,8 +84,8 @@ function createMockDb() {
   }
 }
 
-function createMockEmailProvider() {
-  return { send: vi.fn().mockResolvedValue(undefined) }
+function createMockQueueService() {
+  return { enqueue: vi.fn().mockResolvedValue('mock-job-id') }
 }
 
 const defaultConfig = {
@@ -103,7 +103,7 @@ describe('createBetterAuth databaseHooks', () => {
   it('should set default avatar fields and image URL when user has no image (non-OAuth)', async () => {
     // Arrange
     const mockDb = createMockDb()
-    createBetterAuth(mockDb as never, createMockEmailProvider() as never, defaultConfig)
+    createBetterAuth(mockDb as never, createMockQueueService() as never, defaultConfig)
 
     const hooks = capturedConfig.config?.databaseHooks as {
       user: { create: { after: (user: Record<string, unknown>) => Promise<void> } }
@@ -127,7 +127,7 @@ describe('createBetterAuth databaseHooks', () => {
   it('should keep existing image but set avatar metadata when user has an image (OAuth)', async () => {
     // Arrange
     const mockDb = createMockDb()
-    createBetterAuth(mockDb as never, createMockEmailProvider() as never, defaultConfig)
+    createBetterAuth(mockDb as never, createMockQueueService() as never, defaultConfig)
 
     const hooks = capturedConfig.config?.databaseHooks as {
       user: { create: { after: (user: Record<string, unknown>) => Promise<void> } }
@@ -154,7 +154,7 @@ describe('createBetterAuth databaseHooks', () => {
   it('should use the correct user ID as the DiceBear seed', async () => {
     // Arrange
     const mockDb = createMockDb()
-    createBetterAuth(mockDb as never, createMockEmailProvider() as never, defaultConfig)
+    createBetterAuth(mockDb as never, createMockQueueService() as never, defaultConfig)
 
     const hooks = capturedConfig.config?.databaseHooks as {
       user: { create: { after: (user: Record<string, unknown>) => Promise<void> } }
@@ -175,7 +175,7 @@ describe('createBetterAuth databaseHooks', () => {
   it('should update the correct user row by user.id', async () => {
     // Arrange
     const mockDb = createMockDb()
-    createBetterAuth(mockDb as never, createMockEmailProvider() as never, defaultConfig)
+    createBetterAuth(mockDb as never, createMockQueueService() as never, defaultConfig)
 
     const hooks = capturedConfig.config?.databaseHooks as {
       user: { create: { after: (user: Record<string, unknown>) => Promise<void> } }
@@ -195,7 +195,7 @@ describe('createBetterAuth databaseHooks', () => {
   it('should treat empty string image as falsy and set default avatar URL', async () => {
     // Arrange
     const mockDb = createMockDb()
-    createBetterAuth(mockDb as never, createMockEmailProvider() as never, defaultConfig)
+    createBetterAuth(mockDb as never, createMockQueueService() as never, defaultConfig)
 
     const hooks = capturedConfig.config?.databaseHooks as {
       user: { create: { after: (user: Record<string, unknown>) => Promise<void> } }
@@ -295,8 +295,8 @@ describe('createBetterAuth sendVerificationEmail', () => {
   it('should render and send verification email with user locale', async () => {
     // Arrange
     const mockDb = createMockDb()
-    const mockEmail = createMockEmailProvider()
-    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    const mockQueue = createMockQueueService()
+    createBetterAuth(mockDb as never, mockQueue as never, defaultConfig)
     const handler = getVerificationHandler()
 
     mockRenderVerificationEmail.mockResolvedValueOnce({
@@ -317,7 +317,7 @@ describe('createBetterAuth sendVerificationEmail', () => {
       'fr',
       { appUrl: 'http://localhost:3000', appName: 'App' }
     )
-    expect(mockEmail.send).toHaveBeenCalledWith({
+    expect(mockQueue.enqueue).toHaveBeenCalledWith('email-send', {
       to: 'user@example.com',
       subject: 'Verify your email',
       html: '<p>Verify</p>',
@@ -328,8 +328,8 @@ describe('createBetterAuth sendVerificationEmail', () => {
   it('should default to "en" locale when user has no locale', async () => {
     // Arrange
     const mockDb = createMockDb()
-    const mockEmail = createMockEmailProvider()
-    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    const mockQueue = createMockQueueService()
+    createBetterAuth(mockDb as never, mockQueue as never, defaultConfig)
     const handler = getVerificationHandler()
 
     mockRenderVerificationEmail.mockResolvedValueOnce({
@@ -355,8 +355,8 @@ describe('createBetterAuth sendVerificationEmail', () => {
   it('should send fallback email when renderVerificationEmail throws', async () => {
     // Arrange
     const mockDb = createMockDb()
-    const mockEmail = createMockEmailProvider()
-    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    const mockQueue = createMockQueueService()
+    createBetterAuth(mockDb as never, mockQueue as never, defaultConfig)
     const handler = getVerificationHandler()
 
     mockRenderVerificationEmail.mockRejectedValueOnce(new Error('Template render failed'))
@@ -368,7 +368,7 @@ describe('createBetterAuth sendVerificationEmail', () => {
     })
 
     // Assert - should send fallback email with frontend URL
-    expect(mockEmail.send).toHaveBeenCalledWith({
+    expect(mockQueue.enqueue).toHaveBeenCalledWith('email-send', {
       to: 'user@example.com',
       subject: 'Verify your email',
       html: '<p>Click <a href="http://localhost:3000/verify-email?token=abc">here</a> to verify your email.</p>',
@@ -376,11 +376,11 @@ describe('createBetterAuth sendVerificationEmail', () => {
     })
   })
 
-  it('should throw APIError when emailProvider.send fails', async () => {
+  it('should throw APIError when queueService.enqueue fails', async () => {
     // Arrange
     const mockDb = createMockDb()
-    const mockEmail = { send: vi.fn().mockRejectedValue(new Error('Resend down')) }
-    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    const mockQueue = { enqueue: vi.fn().mockRejectedValue(new Error('Enqueue failed')) }
+    createBetterAuth(mockDb as never, mockQueue as never, defaultConfig)
     const handler = getVerificationHandler()
 
     mockRenderVerificationEmail.mockResolvedValueOnce({
@@ -401,8 +401,8 @@ describe('createBetterAuth sendVerificationEmail', () => {
   it('should throw APIError when send fails after render also fails', async () => {
     // Arrange
     const mockDb = createMockDb()
-    const mockEmail = { send: vi.fn().mockRejectedValue(new Error('Resend down')) }
-    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    const mockQueue = { enqueue: vi.fn().mockRejectedValue(new Error('Enqueue failed')) }
+    createBetterAuth(mockDb as never, mockQueue as never, defaultConfig)
     const handler = getVerificationHandler()
 
     mockRenderVerificationEmail.mockRejectedValueOnce(new Error('Render failed'))
@@ -441,8 +441,8 @@ describe('createBetterAuth sendResetPassword', () => {
   it('should render and send reset password email with user locale', async () => {
     // Arrange
     const mockDb = createMockDb()
-    const mockEmail = createMockEmailProvider()
-    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    const mockQueue = createMockQueueService()
+    createBetterAuth(mockDb as never, mockQueue as never, defaultConfig)
     const handler = getResetPasswordHandler()
 
     mockRenderResetEmail.mockResolvedValueOnce({
@@ -463,7 +463,7 @@ describe('createBetterAuth sendResetPassword', () => {
       'fr',
       { appUrl: 'http://localhost:3000', appName: 'App' }
     )
-    expect(mockEmail.send).toHaveBeenCalledWith({
+    expect(mockQueue.enqueue).toHaveBeenCalledWith('email-send', {
       to: 'user@example.com',
       subject: 'Reset your password',
       html: '<p>Reset</p>',
@@ -474,8 +474,8 @@ describe('createBetterAuth sendResetPassword', () => {
   it('should default to "en" locale when user has no locale', async () => {
     // Arrange
     const mockDb = createMockDb()
-    const mockEmail = createMockEmailProvider()
-    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    const mockQueue = createMockQueueService()
+    createBetterAuth(mockDb as never, mockQueue as never, defaultConfig)
     const handler = getResetPasswordHandler()
 
     mockRenderResetEmail.mockResolvedValueOnce({
@@ -501,8 +501,8 @@ describe('createBetterAuth sendResetPassword', () => {
   it('should send fallback email when renderResetEmail throws', async () => {
     // Arrange
     const mockDb = createMockDb()
-    const mockEmail = createMockEmailProvider()
-    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    const mockQueue = createMockQueueService()
+    createBetterAuth(mockDb as never, mockQueue as never, defaultConfig)
     const handler = getResetPasswordHandler()
 
     mockRenderResetEmail.mockRejectedValueOnce(new Error('Render failed'))
@@ -514,7 +514,7 @@ describe('createBetterAuth sendResetPassword', () => {
     })
 
     // Assert - should send fallback email with frontend URL
-    expect(mockEmail.send).toHaveBeenCalledWith({
+    expect(mockQueue.enqueue).toHaveBeenCalledWith('email-send', {
       to: 'user@example.com',
       subject: 'Reset your password',
       html: '<p>Click <a href="http://localhost:3000/reset-password/confirm?token=xyz">here</a> to reset your password.</p>',
@@ -522,11 +522,11 @@ describe('createBetterAuth sendResetPassword', () => {
     })
   })
 
-  it('should throw APIError when emailProvider.send fails', async () => {
+  it('should throw APIError when queueService.enqueue fails', async () => {
     // Arrange
     const mockDb = createMockDb()
-    const mockEmail = { send: vi.fn().mockRejectedValue(new Error('Resend down')) }
-    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    const mockQueue = { enqueue: vi.fn().mockRejectedValue(new Error('Enqueue failed')) }
+    createBetterAuth(mockDb as never, mockQueue as never, defaultConfig)
     const handler = getResetPasswordHandler()
 
     mockRenderResetEmail.mockResolvedValueOnce({
@@ -547,8 +547,8 @@ describe('createBetterAuth sendResetPassword', () => {
   it('should throw APIError when send fails after render also fails', async () => {
     // Arrange
     const mockDb = createMockDb()
-    const mockEmail = { send: vi.fn().mockRejectedValue(new Error('Resend down')) }
-    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    const mockQueue = { enqueue: vi.fn().mockRejectedValue(new Error('Enqueue failed')) }
+    createBetterAuth(mockDb as never, mockQueue as never, defaultConfig)
     const handler = getResetPasswordHandler()
 
     mockRenderResetEmail.mockRejectedValueOnce(new Error('Render failed'))
@@ -585,9 +585,9 @@ describe('createBetterAuth sendMagicLink', () => {
   it('should look up user locale from DB and render magic link email', async () => {
     // Arrange
     const mockDb = createMockDb()
-    const mockEmail = createMockEmailProvider()
+    const mockQueue = createMockQueueService()
     mockDb._mocks.selectWhereFn.mockResolvedValueOnce([{ locale: 'fr' }])
-    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    createBetterAuth(mockDb as never, mockQueue as never, defaultConfig)
     const handler = getMagicLinkHandler()
 
     mockRenderMagicLinkEmail.mockResolvedValueOnce({
@@ -609,7 +609,7 @@ describe('createBetterAuth sendMagicLink', () => {
       'fr',
       { appUrl: 'http://localhost:3000', appName: 'App' }
     )
-    expect(mockEmail.send).toHaveBeenCalledWith({
+    expect(mockQueue.enqueue).toHaveBeenCalledWith('email-send', {
       to: 'user@example.com',
       subject: 'Sign in to Roxabi',
       html: '<p>Magic</p>',
@@ -620,9 +620,9 @@ describe('createBetterAuth sendMagicLink', () => {
   it('should default to "en" locale when user locale is null', async () => {
     // Arrange
     const mockDb = createMockDb()
-    const mockEmail = createMockEmailProvider()
+    const mockQueue = createMockQueueService()
     mockDb._mocks.selectWhereFn.mockResolvedValueOnce([{ locale: null }])
-    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    createBetterAuth(mockDb as never, mockQueue as never, defaultConfig)
     const handler = getMagicLinkHandler()
 
     mockRenderMagicLinkEmail.mockResolvedValueOnce({
@@ -648,9 +648,9 @@ describe('createBetterAuth sendMagicLink', () => {
   it('should throw APIError when user not found in DB', async () => {
     // Arrange
     const mockDb = createMockDb()
-    const mockEmail = createMockEmailProvider()
+    const mockQueue = createMockQueueService()
     mockDb._mocks.selectWhereFn.mockResolvedValueOnce([])
-    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    createBetterAuth(mockDb as never, mockQueue as never, defaultConfig)
     const handler = getMagicLinkHandler()
 
     // Act & Assert — should reject unregistered emails
@@ -662,16 +662,16 @@ describe('createBetterAuth sendMagicLink', () => {
     ).rejects.toThrow('USER_NOT_FOUND')
 
     // Email should NOT be sent
-    expect(mockEmail.send).not.toHaveBeenCalled()
+    expect(mockQueue.enqueue).not.toHaveBeenCalled()
     expect(mockRenderMagicLinkEmail).not.toHaveBeenCalled()
   })
 
   it('should send fallback email when renderMagicLinkEmail throws', async () => {
     // Arrange
     const mockDb = createMockDb()
-    const mockEmail = createMockEmailProvider()
+    const mockQueue = createMockQueueService()
     mockDb._mocks.selectWhereFn.mockResolvedValueOnce([{ locale: 'en' }])
-    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    createBetterAuth(mockDb as never, mockQueue as never, defaultConfig)
     const handler = getMagicLinkHandler()
 
     mockRenderMagicLinkEmail.mockRejectedValueOnce(new Error('Render failed'))
@@ -683,7 +683,7 @@ describe('createBetterAuth sendMagicLink', () => {
     })
 
     // Assert - should send fallback email with frontend URL
-    expect(mockEmail.send).toHaveBeenCalledWith({
+    expect(mockQueue.enqueue).toHaveBeenCalledWith('email-send', {
       to: 'user@example.com',
       subject: 'Sign in to App',
       html: '<p>Click <a href="http://localhost:3000/magic-link/verify?token=m3">here</a> to sign in.</p>',
@@ -691,12 +691,12 @@ describe('createBetterAuth sendMagicLink', () => {
     })
   })
 
-  it('should throw APIError when emailProvider.send fails', async () => {
+  it('should throw APIError when queueService.enqueue fails', async () => {
     // Arrange
     const mockDb = createMockDb()
-    const mockEmail = { send: vi.fn().mockRejectedValue(new Error('Resend down')) }
+    const mockQueue = { enqueue: vi.fn().mockRejectedValue(new Error('Enqueue failed')) }
     mockDb._mocks.selectWhereFn.mockResolvedValueOnce([{ locale: 'en' }])
-    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    createBetterAuth(mockDb as never, mockQueue as never, defaultConfig)
     const handler = getMagicLinkHandler()
 
     mockRenderMagicLinkEmail.mockResolvedValueOnce({
@@ -717,9 +717,9 @@ describe('createBetterAuth sendMagicLink', () => {
   it('should throw APIError when send fails after render also fails', async () => {
     // Arrange
     const mockDb = createMockDb()
-    const mockEmail = { send: vi.fn().mockRejectedValue(new Error('Resend down')) }
+    const mockQueue = { enqueue: vi.fn().mockRejectedValue(new Error('Enqueue failed')) }
     mockDb._mocks.selectWhereFn.mockResolvedValueOnce([{ locale: 'en' }])
-    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    createBetterAuth(mockDb as never, mockQueue as never, defaultConfig)
     const handler = getMagicLinkHandler()
 
     mockRenderMagicLinkEmail.mockRejectedValueOnce(new Error('Render failed'))
@@ -736,9 +736,9 @@ describe('createBetterAuth sendMagicLink', () => {
   it('should propagate error when DB query throws', async () => {
     // Arrange
     const mockDb = createMockDb()
-    const mockEmail = createMockEmailProvider()
+    const mockQueue = createMockQueueService()
     mockDb._mocks.selectWhereFn.mockRejectedValueOnce(new Error('DB error'))
-    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    createBetterAuth(mockDb as never, mockQueue as never, defaultConfig)
     const handler = getMagicLinkHandler()
 
     // Act & Assert — DB errors propagate (not caught by email fallback)
@@ -750,7 +750,7 @@ describe('createBetterAuth sendMagicLink', () => {
     ).rejects.toThrow('DB error')
 
     // Email should NOT be sent
-    expect(mockEmail.send).not.toHaveBeenCalled()
+    expect(mockQueue.enqueue).not.toHaveBeenCalled()
   })
 })
 
@@ -768,8 +768,8 @@ describe('createBetterAuth buildFrontendUrl', () => {
   it('should build frontend verify-email URL from API verification URL', async () => {
     // Arrange
     const mockDb = createMockDb()
-    const mockEmail = createMockEmailProvider()
-    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    const mockQueue = createMockQueueService()
+    createBetterAuth(mockDb as never, mockQueue as never, defaultConfig)
 
     const emailVerification = capturedConfig.config?.emailVerification as {
       sendVerificationEmail: (params: {
@@ -801,8 +801,8 @@ describe('createBetterAuth buildFrontendUrl', () => {
   it('should build frontend reset-password URL from API reset URL', async () => {
     // Arrange
     const mockDb = createMockDb()
-    const mockEmail = createMockEmailProvider()
-    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    const mockQueue = createMockQueueService()
+    createBetterAuth(mockDb as never, mockQueue as never, defaultConfig)
 
     const emailAndPassword = capturedConfig.config?.emailAndPassword as {
       sendResetPassword: (params: {
@@ -834,9 +834,9 @@ describe('createBetterAuth buildFrontendUrl', () => {
   it('should build frontend magic-link URL from API magic link URL', async () => {
     // Arrange
     const mockDb = createMockDb()
-    const mockEmail = createMockEmailProvider()
+    const mockQueue = createMockQueueService()
     mockDb._mocks.selectWhereFn.mockResolvedValueOnce([{ locale: 'en' }])
-    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    createBetterAuth(mockDb as never, mockQueue as never, defaultConfig)
 
     const handler = capturedMagicLinkConfig.config?.sendMagicLink as (params: {
       email: string
@@ -866,9 +866,9 @@ describe('createBetterAuth buildFrontendUrl', () => {
   it('should not rewrite URL when appURL is not configured', async () => {
     // Arrange
     const mockDb = createMockDb()
-    const mockEmail = createMockEmailProvider()
+    const mockQueue = createMockQueueService()
     const configNoApp = { secret: 'test-secret', baseURL: 'http://localhost:4000' }
-    createBetterAuth(mockDb as never, mockEmail as never, configNoApp)
+    createBetterAuth(mockDb as never, mockQueue as never, configNoApp)
 
     const emailVerification = capturedConfig.config?.emailVerification as {
       sendVerificationEmail: (params: {
@@ -900,8 +900,8 @@ describe('createBetterAuth buildFrontendUrl', () => {
   it('should use frontend URL in fallback email when render throws (reset password)', async () => {
     // Arrange
     const mockDb = createMockDb()
-    const mockEmail = createMockEmailProvider()
-    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    const mockQueue = createMockQueueService()
+    createBetterAuth(mockDb as never, mockQueue as never, defaultConfig)
 
     const emailAndPassword = capturedConfig.config?.emailAndPassword as {
       sendResetPassword: (params: {
@@ -920,7 +920,7 @@ describe('createBetterAuth buildFrontendUrl', () => {
 
     // Assert — fallback should use the frontend URL
     const frontendUrl = 'http://localhost:3000/reset-password/confirm?token=xyz'
-    expect(mockEmail.send).toHaveBeenCalledWith({
+    expect(mockQueue.enqueue).toHaveBeenCalledWith('email-send', {
       to: 'user@example.com',
       subject: 'Reset your password',
       html: `<p>Click <a href="${escapeHtml(frontendUrl)}">here</a> to reset your password.</p>`,
@@ -931,8 +931,8 @@ describe('createBetterAuth buildFrontendUrl', () => {
   it('should use frontend URL in fallback email when render throws (verification)', async () => {
     // Arrange
     const mockDb = createMockDb()
-    const mockEmail = createMockEmailProvider()
-    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    const mockQueue = createMockQueueService()
+    createBetterAuth(mockDb as never, mockQueue as never, defaultConfig)
 
     const emailVerification = capturedConfig.config?.emailVerification as {
       sendVerificationEmail: (params: {
@@ -951,7 +951,7 @@ describe('createBetterAuth buildFrontendUrl', () => {
 
     // Assert — fallback should use the frontend URL
     const frontendUrl = 'http://localhost:3000/verify-email?token=abc'
-    expect(mockEmail.send).toHaveBeenCalledWith({
+    expect(mockQueue.enqueue).toHaveBeenCalledWith('email-send', {
       to: 'user@example.com',
       subject: 'Verify your email',
       html: `<p>Click <a href="${escapeHtml(frontendUrl)}">here</a> to verify your email.</p>`,
@@ -974,8 +974,8 @@ describe('buildFrontendUrl edge cases', () => {
   it('should still build frontend URL when there is no callbackURL parameter but token exists', async () => {
     // Arrange
     const mockDb = createMockDb()
-    const mockEmail = createMockEmailProvider()
-    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    const mockQueue = createMockQueueService()
+    createBetterAuth(mockDb as never, mockQueue as never, defaultConfig)
 
     const emailVerification = capturedConfig.config?.emailVerification as {
       sendVerificationEmail: (params: {
@@ -1007,8 +1007,8 @@ describe('buildFrontendUrl edge cases', () => {
   it('should build frontend URL when appURL is configured', async () => {
     // Arrange
     const mockDb = createMockDb()
-    const mockEmail = createMockEmailProvider()
-    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    const mockQueue = createMockQueueService()
+    createBetterAuth(mockDb as never, mockQueue as never, defaultConfig)
 
     const emailVerification = capturedConfig.config?.emailVerification as {
       sendVerificationEmail: (params: {
@@ -1040,9 +1040,9 @@ describe('buildFrontendUrl edge cases', () => {
   it('should not rewrite URL when appURL is undefined', async () => {
     // Arrange
     const mockDb = createMockDb()
-    const mockEmail = createMockEmailProvider()
+    const mockQueue = createMockQueueService()
     const configNoApp = { secret: 'test-secret', baseURL: 'http://localhost:4000' }
-    createBetterAuth(mockDb as never, mockEmail as never, configNoApp)
+    createBetterAuth(mockDb as never, mockQueue as never, configNoApp)
 
     const emailAndPassword = capturedConfig.config?.emailAndPassword as {
       sendResetPassword: (params: {
@@ -1092,7 +1092,7 @@ describe('createBetterAuth configuration', () => {
     }
 
     // Act
-    createBetterAuth(createMockDb() as never, createMockEmailProvider() as never, config)
+    createBetterAuth(createMockDb() as never, createMockQueueService() as never, config)
 
     // Assert
     const socialProviders = capturedConfig.config?.socialProviders as Record<string, unknown>
@@ -1111,7 +1111,7 @@ describe('createBetterAuth configuration', () => {
     }
 
     // Act
-    createBetterAuth(createMockDb() as never, createMockEmailProvider() as never, config)
+    createBetterAuth(createMockDb() as never, createMockQueueService() as never, config)
 
     // Assert
     const socialProviders = capturedConfig.config?.socialProviders as Record<string, unknown>
@@ -1123,7 +1123,7 @@ describe('createBetterAuth configuration', () => {
 
   it('should not include social providers when credentials are missing', () => {
     // Arrange & Act
-    createBetterAuth(createMockDb() as never, createMockEmailProvider() as never, defaultConfig)
+    createBetterAuth(createMockDb() as never, createMockQueueService() as never, defaultConfig)
 
     // Assert
     const socialProviders = capturedConfig.config?.socialProviders as Record<string, unknown>
@@ -1133,7 +1133,7 @@ describe('createBetterAuth configuration', () => {
 
   it('should set trustedOrigins from appURL', () => {
     // Arrange & Act
-    createBetterAuth(createMockDb() as never, createMockEmailProvider() as never, defaultConfig)
+    createBetterAuth(createMockDb() as never, createMockQueueService() as never, defaultConfig)
 
     // Assert
     expect(capturedConfig.config?.trustedOrigins).toEqual(['http://localhost:3000'])
@@ -1144,7 +1144,7 @@ describe('createBetterAuth configuration', () => {
     const config = { secret: 'test-secret', baseURL: 'http://localhost:4000' }
 
     // Act
-    createBetterAuth(createMockDb() as never, createMockEmailProvider() as never, config)
+    createBetterAuth(createMockDb() as never, createMockQueueService() as never, config)
 
     // Assert
     expect(capturedConfig.config?.trustedOrigins).toEqual([])
@@ -1172,8 +1172,8 @@ describe('createBetterAuth onExistingUserSignUp', () => {
   it('should render and send existing account notification with user locale', async () => {
     // Arrange
     const mockDb = createMockDb()
-    const mockEmail = createMockEmailProvider()
-    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    const mockQueue = createMockQueueService()
+    createBetterAuth(mockDb as never, mockQueue as never, defaultConfig)
     const handler = getExistingUserSignUpHandler()
 
     mockRenderExistingAccountEmail.mockResolvedValueOnce({
@@ -1191,7 +1191,7 @@ describe('createBetterAuth onExistingUserSignUp', () => {
       'fr',
       { appUrl: 'http://localhost:3000', appName: 'App' }
     )
-    expect(mockEmail.send).toHaveBeenCalledWith({
+    expect(mockQueue.enqueue).toHaveBeenCalledWith('email-send', {
       to: 'existing@example.com',
       subject: 'Someone tried to sign up with your email',
       html: '<p>Notification</p>',
@@ -1202,8 +1202,8 @@ describe('createBetterAuth onExistingUserSignUp', () => {
   it('should default to "en" locale when user has no locale', async () => {
     // Arrange
     const mockDb = createMockDb()
-    const mockEmail = createMockEmailProvider()
-    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    const mockQueue = createMockQueueService()
+    createBetterAuth(mockDb as never, mockQueue as never, defaultConfig)
     const handler = getExistingUserSignUpHandler()
 
     mockRenderExistingAccountEmail.mockResolvedValueOnce({
@@ -1226,8 +1226,8 @@ describe('createBetterAuth onExistingUserSignUp', () => {
   it('should send fallback email when renderExistingAccountEmail throws', async () => {
     // Arrange
     const mockDb = createMockDb()
-    const mockEmail = createMockEmailProvider()
-    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    const mockQueue = createMockQueueService()
+    createBetterAuth(mockDb as never, mockQueue as never, defaultConfig)
     const handler = getExistingUserSignUpHandler()
 
     mockRenderExistingAccountEmail.mockRejectedValueOnce(new Error('Render failed'))
@@ -1236,7 +1236,7 @@ describe('createBetterAuth onExistingUserSignUp', () => {
     await handler({ user: { email: 'existing@example.com' } })
 
     // Assert — fallback email sent, does not throw
-    expect(mockEmail.send).toHaveBeenCalledWith({
+    expect(mockQueue.enqueue).toHaveBeenCalledWith('email-send', {
       to: 'existing@example.com',
       subject: 'Someone tried to sign up with your email',
       html: '<p>Someone tried to create an account using your email. <a href="http://localhost:3000/login">Sign in</a> to your existing account instead.</p>',
@@ -1244,11 +1244,11 @@ describe('createBetterAuth onExistingUserSignUp', () => {
     })
   })
 
-  it('should not throw when emailProvider.send fails', async () => {
+  it('should not throw when queueService.enqueue fails', async () => {
     // Arrange — send failure must be non-critical (must not affect registration response)
     const mockDb = createMockDb()
-    const mockEmail = { send: vi.fn().mockRejectedValue(new Error('Resend down')) }
-    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    const mockQueue = { enqueue: vi.fn().mockRejectedValue(new Error('Enqueue failed')) }
+    createBetterAuth(mockDb as never, mockQueue as never, defaultConfig)
     const handler = getExistingUserSignUpHandler()
 
     mockRenderExistingAccountEmail.mockResolvedValueOnce({
@@ -1264,9 +1264,9 @@ describe('createBetterAuth onExistingUserSignUp', () => {
   it('should use /login fallback when appURL is not configured', async () => {
     // Arrange
     const mockDb = createMockDb()
-    const mockEmail = createMockEmailProvider()
+    const mockQueue = createMockQueueService()
     const configNoApp = { secret: 'test-secret', baseURL: 'http://localhost:4000' }
-    createBetterAuth(mockDb as never, mockEmail as never, configNoApp)
+    createBetterAuth(mockDb as never, mockQueue as never, configNoApp)
     const handler = getExistingUserSignUpHandler()
 
     mockRenderExistingAccountEmail.mockResolvedValueOnce({
@@ -1283,14 +1283,14 @@ describe('createBetterAuth onExistingUserSignUp', () => {
       appUrl: undefined,
       appName: 'App',
     })
-    expect(mockEmail.send).toHaveBeenCalled()
+    expect(mockQueue.enqueue).toHaveBeenCalled()
   })
 
   it('should not throw when both render and send fail', async () => {
     // Arrange
     const mockDb = createMockDb()
-    const mockEmail = { send: vi.fn().mockRejectedValue(new Error('Resend down')) }
-    createBetterAuth(mockDb as never, mockEmail as never, defaultConfig)
+    const mockQueue = { enqueue: vi.fn().mockRejectedValue(new Error('Enqueue failed')) }
+    createBetterAuth(mockDb as never, mockQueue as never, defaultConfig)
     const handler = getExistingUserSignUpHandler()
 
     mockRenderExistingAccountEmail.mockRejectedValueOnce(new Error('Render failed'))
@@ -1316,8 +1316,8 @@ describe('APP_NAME env override', () => {
     const { createBetterAuth: createBetterAuthFresh } = await import('./auth.instance.js')
 
     const mockDb = createMockDb()
-    const mockEmail = createMockEmailProvider()
-    createBetterAuthFresh(mockDb as never, mockEmail as never, defaultConfig)
+    const mockQueue = createMockQueueService()
+    createBetterAuthFresh(mockDb as never, mockQueue as never, defaultConfig)
 
     const emailVerification = capturedConfig.config?.emailVerification as {
       sendVerificationEmail: (params: {
@@ -1353,8 +1353,8 @@ describe('APP_NAME env override', () => {
     const { createBetterAuth: createBetterAuthFresh } = await import('./auth.instance.js')
 
     const mockDb = createMockDb()
-    const mockEmail = createMockEmailProvider()
-    createBetterAuthFresh(mockDb as never, mockEmail as never, defaultConfig)
+    const mockQueue = createMockQueueService()
+    createBetterAuthFresh(mockDb as never, mockQueue as never, defaultConfig)
 
     const emailAndPassword = capturedConfig.config?.emailAndPassword as {
       sendResetPassword: (params: {
@@ -1390,9 +1390,9 @@ describe('APP_NAME env override', () => {
     const { createBetterAuth: createBetterAuthFresh } = await import('./auth.instance.js')
 
     const mockDb = createMockDb()
-    const mockEmail = createMockEmailProvider()
+    const mockQueue = createMockQueueService()
     mockDb._mocks.selectWhereFn.mockResolvedValueOnce([{ locale: 'en' }])
-    createBetterAuthFresh(mockDb as never, mockEmail as never, defaultConfig)
+    createBetterAuthFresh(mockDb as never, mockQueue as never, defaultConfig)
 
     const handler = capturedMagicLinkConfig.config?.sendMagicLink as (params: {
       email: string
@@ -1426,8 +1426,8 @@ describe('APP_NAME env override', () => {
     const { createBetterAuth: createBetterAuthFresh } = await import('./auth.instance.js')
 
     const mockDb = createMockDb()
-    const mockEmail = createMockEmailProvider()
-    createBetterAuthFresh(mockDb as never, mockEmail as never, defaultConfig)
+    const mockQueue = createMockQueueService()
+    createBetterAuthFresh(mockDb as never, mockQueue as never, defaultConfig)
 
     const emailAndPassword = capturedConfig.config?.emailAndPassword as {
       onExistingUserSignUp: (params: { user: { email: string; locale?: string } }) => Promise<void>
