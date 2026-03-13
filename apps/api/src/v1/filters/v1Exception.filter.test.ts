@@ -175,8 +175,9 @@ describe('V1ExceptionFilter', () => {
       filter.catch(exception, host as never)
 
       // Assert
+      // domain exceptions use statusToMessage — raw message is sanitized
       expect(sendMock).toHaveBeenCalledWith({
-        error: { code: 'USER_NOT_FOUND', message: 'User not found', statusCode: 404 },
+        error: { code: 'USER_NOT_FOUND', message: 'Not found', statusCode: 404 },
       })
     })
 
@@ -190,8 +191,9 @@ describe('V1ExceptionFilter', () => {
       filter.catch(exception, host as never)
 
       // Assert
+      // domain exceptions use statusToMessage — raw message is sanitized
       expect(sendMock).toHaveBeenCalledWith({
-        error: { code: 'TOKEN_UNAUTHORIZED', message: 'Token invalid', statusCode: 401 },
+        error: { code: 'TOKEN_UNAUTHORIZED', message: 'Unauthorized', statusCode: 401 },
       })
     })
 
@@ -205,8 +207,9 @@ describe('V1ExceptionFilter', () => {
       filter.catch(exception, host as never)
 
       // Assert
+      // domain exceptions use statusToMessage — raw message is sanitized
       expect(sendMock).toHaveBeenCalledWith({
-        error: { code: 'RESOURCE_SCOPE_DENIED', message: 'Access denied', statusCode: 403 },
+        error: { code: 'RESOURCE_SCOPE_DENIED', message: 'Forbidden', statusCode: 403 },
       })
     })
 
@@ -220,8 +223,9 @@ describe('V1ExceptionFilter', () => {
       filter.catch(exception, host as never)
 
       // Assert
+      // domain exceptions use statusToMessage — raw message is sanitized
       expect(sendMock).toHaveBeenCalledWith({
-        error: { code: 'MEMBER_ALREADY_EXISTS', message: 'Member already exists', statusCode: 409 },
+        error: { code: 'MEMBER_ALREADY_EXISTS', message: 'Conflict', statusCode: 409 },
       })
     })
 
@@ -235,8 +239,9 @@ describe('V1ExceptionFilter', () => {
       filter.catch(exception, host as never)
 
       // Assert
+      // domain exceptions use statusToMessage — raw message is sanitized
       expect(sendMock).toHaveBeenCalledWith({
-        error: { code: 'EMAIL_INVALID', message: 'Invalid input', statusCode: 400 },
+        error: { code: 'EMAIL_INVALID', message: 'Bad request', statusCode: 400 },
       })
     })
 
@@ -250,8 +255,9 @@ describe('V1ExceptionFilter', () => {
       filter.catch(exception, host as never)
 
       // Assert
+      // domain exceptions use statusToMessage — raw message is sanitized
       expect(sendMock).toHaveBeenCalledWith({
-        error: { code: 'API_KEY_REVOKED', message: 'Key revoked', statusCode: 403 },
+        error: { code: 'API_KEY_REVOKED', message: 'Forbidden', statusCode: 403 },
       })
     })
 
@@ -265,8 +271,89 @@ describe('V1ExceptionFilter', () => {
       filter.catch(exception, host as never)
 
       // Assert
+      // domain exceptions use statusToMessage — raw message is sanitized
       expect(sendMock).toHaveBeenCalledWith({
-        error: { code: 'INPUT_VALIDATION', message: 'Input validation failed', statusCode: 400 },
+        error: { code: 'INPUT_VALIDATION', message: 'Bad request', statusCode: 400 },
+      })
+    })
+
+    it('maps _REQUIRED errorCode to 401', () => {
+      // Arrange
+      const exception = Object.assign(new Error('API key required'), {
+        errorCode: 'API_KEY_REQUIRED',
+      })
+
+      // Act
+      filter.catch(exception, host as never)
+
+      // Assert
+      // domain exceptions use statusToMessage — raw message is sanitized
+      expect(sendMock).toHaveBeenCalledWith({
+        error: { code: 'API_KEY_REQUIRED', message: 'Unauthorized', statusCode: 401 },
+      })
+    })
+
+    it('maps _EXPIRED errorCode to 401', () => {
+      // Arrange
+      const exception = Object.assign(new Error('Session expired'), {
+        errorCode: 'SESSION_EXPIRED',
+      })
+
+      // Act
+      filter.catch(exception, host as never)
+
+      // Assert
+      // domain exceptions use statusToMessage — raw message is sanitized
+      expect(sendMock).toHaveBeenCalledWith({
+        error: { code: 'SESSION_EXPIRED', message: 'Unauthorized', statusCode: 401 },
+      })
+    })
+
+    it('maps _CONFLICT errorCode to 409', () => {
+      // Arrange
+      const exception = Object.assign(new Error('Email conflict'), {
+        errorCode: 'EMAIL_CONFLICT',
+      })
+
+      // Act
+      filter.catch(exception, host as never)
+
+      // Assert
+      // domain exceptions use statusToMessage — raw message is sanitized
+      expect(sendMock).toHaveBeenCalledWith({
+        error: { code: 'EMAIL_CONFLICT', message: 'Conflict', statusCode: 409 },
+      })
+    })
+
+    it('maps _CONSTRAINT errorCode to 403', () => {
+      // Arrange
+      const exception = Object.assign(new Error('Role constraint violated'), {
+        errorCode: 'ROLE_CONSTRAINT',
+      })
+
+      // Act
+      filter.catch(exception, host as never)
+
+      // Assert
+      // domain exceptions use statusToMessage — raw message is sanitized
+      expect(sendMock).toHaveBeenCalledWith({
+        error: { code: 'ROLE_CONSTRAINT', message: 'Forbidden', statusCode: 403 },
+      })
+    })
+
+    it('maps _PROTECTION errorCode to 403', () => {
+      // Arrange
+      const exception = Object.assign(new Error('Deletion protection active'), {
+        errorCode: 'DELETION_PROTECTION',
+      })
+
+      // Act
+      filter.catch(exception, host as never)
+
+      // Assert
+      // domain exceptions use statusToMessage — raw message is sanitized
+      expect(sendMock).toHaveBeenCalledWith({
+        error: { code: 'DELETION_PROTECTION', message: 'Forbidden', statusCode: 403 },
       })
     })
 

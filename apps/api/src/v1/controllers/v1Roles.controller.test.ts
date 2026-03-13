@@ -1,5 +1,6 @@
 import { Reflector } from '@nestjs/core'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { AuthenticatedSession } from '../../auth/types.js'
 import type { RbacService } from '../../rbac/rbac.service.js'
 import { V1ExceptionFilter } from '../filters/v1Exception.filter.js'
 import { V1RolesController } from './v1Roles.controller.js'
@@ -7,6 +8,13 @@ import { V1RolesController } from './v1Roles.controller.js'
 const mockRbacService: RbacService = {
   listRolesWithPermissions: vi.fn(),
 } as unknown as RbacService
+
+const mockSession: AuthenticatedSession = {
+  user: { id: 'user-1' },
+  session: { id: 'session-1', activeOrganizationId: 'org-1' },
+  permissions: ['roles:read'],
+  actorType: 'api_key',
+}
 
 describe('V1RolesController', () => {
   const controller = new V1RolesController(mockRbacService)
@@ -49,7 +57,7 @@ describe('V1RolesController', () => {
       vi.mocked(mockRbacService.listRolesWithPermissions).mockResolvedValue([])
 
       // Act
-      await controller.listRoles()
+      await controller.listRoles(mockSession)
 
       // Assert
       expect(mockRbacService.listRolesWithPermissions).toHaveBeenCalledOnce()
@@ -71,7 +79,7 @@ describe('V1RolesController', () => {
       ] as never)
 
       // Act
-      const result = await controller.listRoles()
+      const result = await controller.listRoles(mockSession)
 
       // Assert
       expect(result[0]!.permissions).toEqual(['members:read', 'users:write', 'roles:delete'])
@@ -89,7 +97,7 @@ describe('V1RolesController', () => {
       ] as never)
 
       // Act
-      const result = await controller.listRoles()
+      const result = await controller.listRoles(mockSession)
 
       // Assert
       expect(result).toEqual([
@@ -107,7 +115,7 @@ describe('V1RolesController', () => {
       vi.mocked(mockRbacService.listRolesWithPermissions).mockResolvedValue([])
 
       // Act
-      const result = await controller.listRoles()
+      const result = await controller.listRoles(mockSession)
 
       // Assert
       expect(result).toEqual([])
@@ -120,7 +128,7 @@ describe('V1RolesController', () => {
       ] as never)
 
       // Act
-      const result = await controller.listRoles()
+      const result = await controller.listRoles(mockSession)
 
       // Assert
       expect(result[0]!.description).toBeNull()
@@ -133,7 +141,7 @@ describe('V1RolesController', () => {
       ] as never)
 
       // Act
-      const result = await controller.listRoles()
+      const result = await controller.listRoles(mockSession)
 
       // Assert
       expect(result[0]!.permissions).toEqual([])
@@ -157,7 +165,7 @@ describe('V1RolesController', () => {
       ] as never)
 
       // Act
-      const result = await controller.listRoles()
+      const result = await controller.listRoles(mockSession)
 
       // Assert
       expect(result).toHaveLength(2)
@@ -170,7 +178,7 @@ describe('V1RolesController', () => {
       vi.mocked(mockRbacService.listRolesWithPermissions).mockRejectedValue(new Error('DB error'))
 
       // Act & Assert
-      await expect(controller.listRoles()).rejects.toThrow('DB error')
+      await expect(controller.listRoles(mockSession)).rejects.toThrow('DB error')
     })
 
     it('propagates errors when permissions fetch fails', async () => {
@@ -180,7 +188,7 @@ describe('V1RolesController', () => {
       )
 
       // Act & Assert
-      await expect(controller.listRoles()).rejects.toThrow('Permissions error')
+      await expect(controller.listRoles(mockSession)).rejects.toThrow('Permissions error')
     })
   })
 })

@@ -43,8 +43,8 @@ export class V1ExceptionFilter implements ExceptionFilter {
       code = exErrorCode ?? resErrorCode ?? this.statusToCode(statusCode)
     } else if (exception instanceof Error && hasErrorCode(exception)) {
       code = exception.errorCode
-      message = exception.message
       statusCode = this.errorCodeToStatus(code)
+      message = this.statusToMessage(statusCode)
     }
 
     if (statusCode >= 500) {
@@ -55,6 +55,25 @@ export class V1ExceptionFilter implements ExceptionFilter {
     response.status(statusCode).send({
       error: { code, message, statusCode },
     })
+  }
+
+  private statusToMessage(status: number): string {
+    switch (status) {
+      case HttpStatus.BAD_REQUEST:
+        return 'Bad request'
+      case HttpStatus.UNAUTHORIZED:
+        return 'Unauthorized'
+      case HttpStatus.FORBIDDEN:
+        return 'Forbidden'
+      case HttpStatus.NOT_FOUND:
+        return 'Not found'
+      case HttpStatus.CONFLICT:
+        return 'Conflict'
+      case HttpStatus.TOO_MANY_REQUESTS:
+        return 'Too many requests'
+      default:
+        return 'Internal server error'
+    }
   }
 
   private errorCodeToStatus(code: string): number {

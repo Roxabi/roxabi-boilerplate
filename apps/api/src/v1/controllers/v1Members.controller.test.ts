@@ -148,6 +148,36 @@ describe('V1MembersController', () => {
       })
     })
 
+    it('trims whitespace-only search to undefined', async () => {
+      // Arrange
+      vi.mocked(mockAdminMembersService.listMembers).mockResolvedValue({
+        data: [],
+        pagination: { page: 1, limit: 20, total: 0 },
+      } as never)
+
+      // Act
+      await controller.listMembers(mockSession as never, 1, 20, '   ')
+
+      // Assert
+      expect(mockAdminMembersService.listMembers).toHaveBeenCalledWith('org-1', {
+        page: 1,
+        limit: 20,
+        search: undefined,
+      })
+    })
+
+    it('propagates errors from adminMembersService.listMembers', async () => {
+      // Arrange
+      vi.mocked(mockAdminMembersService.listMembers).mockRejectedValue(
+        new Error('DB connection lost')
+      )
+
+      // Act & Assert
+      await expect(controller.listMembers(mockSession as never, 1, 20)).rejects.toThrow(
+        'DB connection lost'
+      )
+    })
+
     it('maps null user.name to empty string', async () => {
       // Arrange
       const member = makeMember({ user: { name: null, email: 'x@example.com' } })

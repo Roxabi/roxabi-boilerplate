@@ -109,6 +109,24 @@ describe('V1UsersController', () => {
       expect(result.name).toBe('Carol')
     })
 
+    it('falls back to lastName only when firstName is null', async () => {
+      // Arrange
+      vi.mocked(mockUserService.getProfile).mockResolvedValue({
+        id: 'user-1',
+        fullName: null,
+        firstName: null,
+        lastName: 'Smith',
+        email: 'smith@example.com',
+        image: null,
+      } as never)
+
+      // Act
+      const result = await controller.getMe(mockSession as never)
+
+      // Assert
+      expect(result.name).toBe('Smith')
+    })
+
     it('returns empty string name when all name fields are null', async () => {
       // Arrange
       vi.mocked(mockUserService.getProfile).mockResolvedValue({
