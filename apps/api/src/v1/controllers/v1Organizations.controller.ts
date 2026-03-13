@@ -1,5 +1,6 @@
 import { Controller, Get, UseFilters } from '@nestjs/common'
 import { ApiOperation, ApiResponse, ApiSecurity, ApiTags } from '@nestjs/swagger'
+import { Permissions } from '../../auth/decorators/permissions.decorator.js'
 import { RequireApiKey } from '../../auth/decorators/requireApiKey.decorator.js'
 import { Session } from '../../auth/decorators/session.decorator.js'
 import type { AuthenticatedSession } from '../../auth/types.js'
@@ -16,6 +17,7 @@ export class V1OrganizationsController {
   constructor(private readonly organizationService: OrganizationService) {}
 
   @Get()
+  @Permissions('organizations:read')
   @ApiOperation({ summary: 'List organizations for the authenticated user' })
   @ApiResponse({ status: 200, description: 'List of organizations' })
   async listOrganizations(

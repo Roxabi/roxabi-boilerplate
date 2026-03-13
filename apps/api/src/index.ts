@@ -120,12 +120,11 @@ function configureV1Swagger(
       .setTitle(appName + ' Public API')
       .setDescription('Public API for external integrations. Authenticate with an API key.')
       .setVersion('1.0')
-      .addApiKey(
+      .addBearerAuth(
         {
-          type: 'apiKey',
-          name: 'Authorization',
-          in: 'header',
-          description: 'API key (Bearer sk_live_xxx)',
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'API Key',
         },
         'api-key'
       )

@@ -93,15 +93,16 @@ export class V1MembersController {
 
   @Patch(':memberId/role')
   @Permissions('members:write')
+  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Change a member's role in the active organization" })
-  @ApiResponse({ status: 200, description: 'Role updated' })
+  @ApiResponse({ status: 204, description: 'Role updated' })
   async changeMemberRole(
     @Param('memberId', new ParseUUIDPipe({ version: '4' })) memberId: string,
     @Body(new ZodValidationPipe(changeRoleSchema)) body: ChangeRoleDto,
     @Session() session: AdminSession
-  ) {
+  ): Promise<void> {
     const orgId = session.session.activeOrganizationId
-    return this.adminMembersService.changeMemberRole(
+    await this.adminMembersService.changeMemberRole(
       memberId,
       orgId,
       { roleId: body.roleId },

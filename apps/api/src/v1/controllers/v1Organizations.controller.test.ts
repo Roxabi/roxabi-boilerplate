@@ -1,5 +1,7 @@
+import { Reflector } from '@nestjs/core'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { OrganizationService } from '../../organization/organization.service.js'
+import { V1ExceptionFilter } from '../filters/v1Exception.filter.js'
 import { V1OrganizationsController } from './v1Organizations.controller.js'
 
 const mockOrganizationService: OrganizationService = {
@@ -10,13 +12,33 @@ describe('V1OrganizationsController', () => {
   const controller = new V1OrganizationsController(mockOrganizationService)
 
   beforeEach(() => {
-    vi.restoreAllMocks()
+    vi.clearAllMocks()
   })
 
   const mockSession = {
     user: { id: 'user-1' },
     session: { activeOrganizationId: 'org-1' },
   }
+
+  describe('decorator metadata', () => {
+    const reflector = new Reflector()
+
+    it('requires API key at controller level', () => {
+      // Arrange & Act
+      const metadata = reflector.get('REQUIRE_API_KEY', V1OrganizationsController)
+
+      // Assert
+      expect(metadata).toBe(true)
+    })
+
+    it('applies V1ExceptionFilter at controller level', () => {
+      // Arrange & Act
+      const filters = reflector.get('__exceptionFilters__', V1OrganizationsController)
+
+      // Assert
+      expect(filters).toContain(V1ExceptionFilter)
+    })
+  })
 
   describe('listOrganizations', () => {
     it('calls organizationService.listForUser with session userId', async () => {
