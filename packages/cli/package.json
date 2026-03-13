@@ -1,0 +1,24 @@
+{
+  "name": "@repo/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "roxabi": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "generate:api-types": "bunx openapi-typescript http://localhost:4000/api/v1/docs-json -o src/lib/api-types.generated.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "commander": "^14.0.0"
+  },
+  "devDependencies": {
+    "@repo/vitest-config": "workspace:*",
+    "openapi-typescript": "^7.8.0",
+    "typescript": "^5.9.3"
+  }
+}
