@@ -1,6 +1,6 @@
 import { Button } from '@repo/ui'
 import { Link } from '@tanstack/react-router'
-import { Menu, X } from 'lucide-react'
+import { BookOpen, Menu, X } from 'lucide-react'
 import { Collapsible } from 'radix-ui'
 import { useEffect, useRef, useState } from 'react'
 import { useSession } from '@/lib/authClient'
@@ -68,6 +68,7 @@ function DesktopNavLinks() {
       {clientEnv.VITE_DOCS_URL && (
         <Button variant="ghost" size="sm" asChild>
           <a href={clientEnv.VITE_DOCS_URL} target="_blank" rel="noopener noreferrer">
+            <BookOpen className="size-4" />
             {m.nav_docs()}
           </a>
         </Button>
@@ -130,6 +131,7 @@ function MobileNavPanel({
               rel="noopener noreferrer"
               onClick={onClose}
             >
+              <BookOpen className="size-4" />
               {m.nav_docs()}
             </a>
           </Button>

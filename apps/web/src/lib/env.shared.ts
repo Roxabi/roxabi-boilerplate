@@ -1,5 +1,15 @@
 import { z } from 'zod'
 
+const httpsUrl = (name: string) =>
+  z
+    .string()
+    .url()
+    .refine(
+      (v) => v.startsWith('https://') || v.startsWith('http://localhost'),
+      `${name} must use https (http://localhost allowed in dev)`
+    )
+    .optional()
+
 export const clientEnvSchema = z.object({
   VITE_APP_NAME: z
     .string()
@@ -7,16 +17,8 @@ export const clientEnvSchema = z.object({
     .regex(/^[\w\s\-.]+$/)
     .optional(),
   VITE_GITHUB_REPO_URL: z.string().url().optional(),
-  VITE_TALKS_URL: z
-    .string()
-    .url()
-    .refine((v) => v.startsWith('https://'), 'VITE_TALKS_URL must use https')
-    .optional(),
-  VITE_DOCS_URL: z
-    .string()
-    .url()
-    .refine((v) => v.startsWith('https://'), 'VITE_DOCS_URL must use https')
-    .optional(),
+  VITE_TALKS_URL: httpsUrl('VITE_TALKS_URL'),
+  VITE_DOCS_URL: httpsUrl('VITE_DOCS_URL'),
 })
 
 export type ClientEnv = z.infer<typeof clientEnvSchema>
