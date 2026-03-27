@@ -19,7 +19,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build": "tsup",
-    "dev": "tsup --watch & trap 'kill 0' TERM INT; email dev --dir emails --port ${EMAIL_PORT:-3001}; wait",
+    "dev": "trap 'kill -INT 0' TERM INT; tsup --watch & email dev --dir emails --port ${EMAIL_PORT:-3001}; wait",
     "preview": "email dev --dir emails --port ${EMAIL_PORT:-3001}",
     "test": "vitest run"
   },
