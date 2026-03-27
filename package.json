@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "prepare": "bash scripts/prepare.sh",
-    "dev": "set -a; [ -f .env ] && . .env; set +a; bash scripts/predev.sh && turbo dev",
+    "dev": "set -a; [ -f .env ] && . .env; set +a; bash scripts/predev.sh && exec turbo dev",
     "dev:web": "set -a; [ -f .env ] && . .env; set +a; turbo dev --filter=@repo/web",
     "dev:api": "set -a; [ -f .env ] && . .env; set +a; turbo dev --filter=@repo/api",
     "dev:docs": "turbo dev --filter=@repo/docs",

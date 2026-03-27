@@ -4,7 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "bunx nest start --watch",
+    "dev": "bash -c 'trap \"kill 0\" INT TERM; bunx nest start --watch & wait'",
     "build": "bunx nest build",
     "start": "node dist/index",
     "start:prod": "NODE_ENV=production node dist/index",

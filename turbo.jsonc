@@ -56,6 +56,7 @@
     // If orphaned processes hold dev ports after Ctrl+C, run `bun run dev:clean`.
     // See https://github.com/vercel/turborepo/issues/444
     "dev": {
+      "dependsOn": ["^build"],
       "cache": false,
       "persistent": true
     },
