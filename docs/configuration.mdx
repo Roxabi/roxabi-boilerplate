@@ -114,6 +114,20 @@ Override these when running multiple projects on the same machine to avoid conta
 
 Set these in `.env` before running `bun db:up`. The branch database scripts (`db:branch:*`) pick up `POSTGRES_CONTAINER` and `DB_BRANCH_PREFIX` automatically.
 
+### Docker Overrides (local dev — multi-project)
+
+Override these when running multiple projects on the same machine to avoid container name and volume conflicts:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `POSTGRES_CONTAINER` | Docker container name for Postgres | `roxabi-postgres` |
+| `POSTGRES_PORT` | Host port mapped to Postgres container | `5432` |
+| `MAILPIT_CONTAINER` | Docker container name for Mailpit | `roxabi-mailpit` |
+| `POSTGRES_VOLUME` | Named Docker volume for Postgres data | `postgres_data` |
+| `DB_BRANCH_PREFIX` | Prefix for per-worktree branch databases | `POSTGRES_DB` value (`roxabi`) |
+
+Set these in `.env` before running `bun db:up`. The branch database scripts (`db:branch:*`) pick up `POSTGRES_CONTAINER` and `DB_BRANCH_PREFIX` automatically.
+
 ### Public Variables (exposed to client)
 
 | Variable | Description | Default |
