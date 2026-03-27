@@ -1,7 +1,0 @@
-{
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "ignoreCommand": "[ \"$VERCEL_GIT_COMMIT_REF\" != \"main\" ] || bunx turbo-ignore @repo/docs",
-  "installCommand": "bun install --ignore-scripts",
-  "buildCommand": "cd apps/docs && bun run codegen && next build",
-  "outputDirectory": "apps/docs/.next"
-}
