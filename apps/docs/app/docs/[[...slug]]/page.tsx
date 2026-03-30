@@ -1,5 +1,5 @@
+import { DocsBody, DocsDescription, DocsPage, DocsTitle } from 'fumadocs-ui/layouts/docs/page'
 import defaultMdxComponents from 'fumadocs-ui/mdx'
-import { DocsBody, DocsDescription, DocsPage, DocsTitle } from 'fumadocs-ui/page'
 import { notFound } from 'next/navigation'
 import { Mermaid } from '@/components/mdx/Mermaid'
 import { source } from '@/lib/source'

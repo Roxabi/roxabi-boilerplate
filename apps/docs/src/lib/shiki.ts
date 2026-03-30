@@ -9,7 +9,7 @@ import type { RehypeCodeOptions } from 'fumadocs-core/mdx-plugins'
  */
 export const shikiOptions = {
   // JS engine avoids Oniguruma WASM OOM on CI; trades tokenisation fidelity for memory safety
-  experimentalJSEngine: true,
+  engine: 'js',
   themes: {
     light: 'github-light',
     dark: 'github-dark',
