@@ -32,7 +32,7 @@
     "@react-email/preview-server": "^5.2.8",
     "@repo/config": "workspace:*",
     "@repo/vitest-config": "workspace:*",
-    "esbuild": "0.27.3",
+    "esbuild": "0.27.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-email": "^5.2.8",
