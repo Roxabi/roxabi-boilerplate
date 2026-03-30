@@ -70,7 +70,7 @@ jobs:
           fetch-depth: 0
 
       - name: TruffleHog
-        uses: trufflesecurity/trufflehog@v3.93.7
+        uses: trufflesecurity/trufflehog@v3.94.1
         with:
           path: ./
           base: ${{ github.event.pull_request.base.sha || (github.event.before != '0000000000000000000000000000000000000000' && github.event.before) || '' }}
