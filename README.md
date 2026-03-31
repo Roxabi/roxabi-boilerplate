@@ -1,13 +1,13 @@
-# Roxabi Boilerplate
+# Roxabi Next 16 + Fumadocs Boilerplate
 
-[![CI](https://github.com/Roxabi/roxabi-boilerplate/actions/workflows/ci.yml/badge.svg)](https://github.com/Roxabi/roxabi-boilerplate/actions/workflows/ci.yml)
+[![CI](https://github.com/Roxabi/roxabi-next16-fumadocs/actions/workflows/ci.yml/badge.svg)](https://github.com/Roxabi/roxabi-next16-fumadocs/actions/workflows/ci.yml)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Bun](https://img.shields.io/badge/Bun-runtime-FBF0DF?logo=bun&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
 ![TurboRepo](https://img.shields.io/badge/TurboRepo-monorepo-0ea5e9)
 ![Biome](https://img.shields.io/badge/Biome-linter-60a5fa)
 
-SaaS boilerplate with AI team integration.
+SaaS boilerplate with AI team integration. Docs powered by Next.js 16 + Fumadocs 16.
 
 <!-- TODO: Add demo GIF once seed data is ready — see scripts/record-demo.ts -->
 
@@ -33,8 +33,8 @@ It pairs a modern TypeScript monorepo with an integrated AI agent team (Claude) 
 
 ```bash
 # 1. Clone and install
-git clone https://github.com/Roxabi/roxabi-boilerplate.git
-cd roxabi-boilerplate
+git clone https://github.com/Roxabi/roxabi-next16-fumadocs.git
+cd roxabi-next16-fumadocs
 cp .env.example .env
 bun install
 
@@ -58,7 +58,7 @@ bun run test          # Vitest (not `bun test`)
 ## Structure
 
 ```
-roxabi_boilerplate/
+roxabi-next16-fumadocs/
 ├── apps/
 │   ├── web/          # Frontend (TanStack Start)
 │   ├── api/          # Backend (NestJS + Fastify)
