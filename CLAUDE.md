@@ -56,20 +56,6 @@ packages/  ui(@repo/ui) types(@repo/types) config(@repo/config) email vitest-con
 
 ## Critical Rules
 
-### 1. Dev Process
-
-**Entry point: `/dev #N`** — single command that scans artifacts, shows progress, and delegates to the right phase skill. Full spec → [dev-process.mdx](docs/processes/dev-process.mdx).
-
-### 2. Worktree Setup
-
-```bash
-git worktree add ../roxabi-XXX -b feat/XXX-slug staging
-cd ../roxabi-XXX && cp .env.example .env && bun install
-cd apps/api && bun run db:branch:create --force XXX
-```
-
-Exceptions: XS (present decision) | `/dev` pre-implementation artifacts (frame, analysis, spec, plan) | `/promote` release artifacts.
-
 ### 3. Code Review
 
 MUST read [code-review.mdx](docs/standards/code-review.mdx). Conventional Comments. Block only: security, correctness, standard violations.
@@ -84,16 +70,6 @@ MUST read [code-review.mdx](docs/standards/code-review.mdx). Conventional Commen
 | Tests | [testing.mdx](docs/standards/testing.mdx) |
 | Docs | [contributing.mdx](docs/contributing.mdx) |
 | Issues | [issue-management.mdx](docs/processes/issue-management.mdx) |
-
-## Skills & Agents
-
-Skills: always use appropriate skill. Workflow skills → `dev-core` plugin. Local skills (retro, agent-browser) → `.claude/skills/*/SKILL.md`.
-Agents: rules → [AGENTS.md](AGENTS.md). Defs → `dev-core` plugin. Guide → [agent-teams.mdx](docs/guides/agent-teams.mdx).
-
-**Agent models:** Sonnet = all agents (frontend-dev, backend-dev, devops, doc-writer, fixer, tester, architect, product-lead, security-auditor).
-**Spawns:** Explore/research tasks → `model: "haiku"`. Simple mechanical tasks (grep, summarize, single-line fix) → `model: "haiku"`. Code generation, review, architecture → Sonnet/Opus (agent defaults).
-
-**Workflow skills (via `/dev #N` or standalone):** `dev` (orchestrator) | `frame` | `analyze` | `spec` | `plan` | `implement` | `fix`
 
 ## Gotchas
 
