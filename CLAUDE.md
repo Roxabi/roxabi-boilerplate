@@ -1,4 +1,5 @@
 @.claude/stack.yml
+@.claude/dev-core.md
 
 # Claude Configuration
 
@@ -6,12 +7,10 @@
 
 - **Project:** Roxabi Boilerplate — SaaS framework (Bun, TurboRepo, TypeScript, TanStack Start, NestJS, Vercel)
 - **Before work:** Use `/dev #N` as the single entry point — it determines tier (S / F-lite / F-full) and drives the full lifecycle
-- **All code changes** → worktree: `git worktree add ../roxabi-XXX -b feat/XXX-slug staging`
-- **Decisions:** summarize context → numbered options + recommendation → wait for reply (see [Decision Protocol](#decision-protocol))
+- **Decisions:** → see global patterns (@.claude/dev-core.md)
 - **¬commit** without asking, **¬push** without request, **¬**`--force`/`--hard`/`--amend`
 - **Always** use appropriate skill even without slash command
 - **Before code:** Read relevant standards doc (see [Rule 9](#9-coding-standards))
-- **Orchestrator** delegates to agents — only minor fixes directly
 
 ## Project Overview
 
@@ -61,54 +60,7 @@ packages/  ui(@repo/ui) types(@repo/types) config(@repo/config) email vitest-con
 
 **Entry point: `/dev #N`** — single command that scans artifacts, shows progress, and delegates to the right phase skill. Full spec → [dev-process.mdx](docs/processes/dev-process.mdx).
 
-| Tier | Criteria | Phases |
-|------|----------|--------|
-| **S** | ≤3 files, no arch, no risk | triage → implement → pr → validate → review → fix* → promote* → cleanup* |
-| **F-lite** | Clear scope, single domain | Frame → spec → plan → implement → verify → ship |
-| **F-full** | New arch, unclear reqs, >2 domains | Frame → analyze → spec → plan → implement → verify → ship |
-
-`*` = conditional (runs only if applicable — e.g., fix runs only if review produces findings)
-
-Phases: **Frame** (problem) → **Shape** (spec) → **Build** (code) → **Verify** (review) → **Ship** (release).
-
-### 2. Decision Protocol
-
-For all decisions, choices (≥2 options), approach proposals:
-
-1. **Summarize** — why / root cause / current behavior / target / path to reach it
-2. **Propose** — numbered options, one marked as recommended
-3. **Explain** — why the recommended option is recommended
-
-Then wait for reply.
-
-### 3. Orchestrator Delegation
-
-Orchestrator ¬modify code/docs. Delegate: FE→`frontend-dev` | BE→`backend-dev` | Infra→`devops` | Docs→`doc-writer` | Tests→`tester` | Fixes→`fixer`. Exception: typo/single-line. Deploy→`devops` only.
-
-### 4. Parallel Execution
-
-≥3 complex tasks → present decision: Sequential | Parallel (Recommended).
-F-full + ≥4 independent tasks in 1 domain → multiple same-type agents on separate file groups.
-
-### 5. Git
-
-Format: `<type>(<scope>): <desc>` + `Co-Authored-By: Claude <model> <noreply@anthropic.com>`
-Types: feat|fix|refactor|docs|style|test|chore|ci|perf
-¬push without request. ¬force/hard/amend. Hook fail → fix + NEW commit.
-Full spec → [docs/contributing.mdx](docs/contributing.mdx)
-
-### 6. Artifact Model
-
-Artifacts are the state markers `/dev` uses for progress detection and resumption.
-
-| Type | Directory | Question answered |
-|------|-----------|-------------------|
-| **Frame** | `artifacts/frames/` | What's the problem? |
-| **Analysis** | `artifacts/analyses/` | How deep is it? |
-| **Spec** | `artifacts/specs/` | What will we build? |
-| **Plan** | `artifacts/plans/` | How do we build it? |
-
-### 7. Mandatory Worktree
+### 2. Worktree Setup
 
 ```bash
 git worktree add ../roxabi-XXX -b feat/XXX-slug staging
@@ -117,13 +69,12 @@ cd apps/api && bun run db:branch:create --force XXX
 ```
 
 Exceptions: XS (present decision) | `/dev` pre-implementation artifacts (frame, analysis, spec, plan) | `/promote` release artifacts.
-**¬code on main/staging without worktree.**
 
-### 8. Code Review
+### 3. Code Review
 
 MUST read [code-review.mdx](docs/standards/code-review.mdx). Conventional Comments. Block only: security, correctness, standard violations.
 
-### 9. Coding Standards
+### 4. Coding Standards
 
 | Context | Read |
 |---------|------|
@@ -143,8 +94,6 @@ Agents: rules → [AGENTS.md](AGENTS.md). Defs → `dev-core` plugin. Guide → 
 **Spawns:** Explore/research tasks → `model: "haiku"`. Simple mechanical tasks (grep, summarize, single-line fix) → `model: "haiku"`. Code generation, review, architecture → Sonnet/Opus (agent defaults).
 
 **Workflow skills (via `/dev #N` or standalone):** `dev` (orchestrator) | `frame` | `analyze` | `spec` | `plan` | `implement` | `fix`
-
-**Shared agent rules:** ¬commit/push (lead handles git) | ¬force/hard/amend | stage specific files only | escalate blockers → lead | claim tasks from shared list | create follow-up tasks | security → lead + security-auditor | message lead on completion.
 
 ## Gotchas
 
