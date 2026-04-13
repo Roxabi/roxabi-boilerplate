@@ -71,7 +71,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Close issues referenced with closing keywords
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const body = context.payload.pull_request.body || '';
