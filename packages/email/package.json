@@ -35,7 +35,7 @@
     "esbuild": "0.27.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-email": "^5.2.8",
+    "react-email": "^6.0.0",
     "tsup": "^8.0.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"
