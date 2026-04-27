@@ -56,6 +56,6 @@
     "@types/nodemailer": "^7.0.11",
     "drizzle-kit": "^0.31.9",
     "tsx": "^4.19.4",
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.3"
   }
 }
