@@ -73,3 +73,5 @@ reports/
 .vercel
 .dashboard.pid
 .playwright-mcp/
+# CocoIndex Code (ccc)
+/.cocoindex_code/
