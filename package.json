@@ -49,7 +49,7 @@
     "@commitlint/config-conventional": "^20.4.2",
     "@fastify/cookie": "^11.0.2",
     "@fastify/helmet": "^13.0.2",
-    "@huggingface/transformers": "^3.8.1",
+    "@huggingface/transformers": "^4.2.0",
     "@nestjs/platform-fastify": "^11.1.16",
     "@playwright/test": "^1.58.2",
     "@repo/playwright-config": "workspace:*",
