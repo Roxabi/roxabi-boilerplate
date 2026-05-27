@@ -86,7 +86,7 @@
   "dependencies": {
     "@fontsource-variable/inter": "^5.2.8",
     "@fontsource/press-start-2p": "^5.2.7",
-    "lucide-react": "^0.577.0",
+    "lucide-react": "^1.11.0",
     "shiki": "^4.0.1"
   },
   "overrides": {
