@@ -54,7 +54,7 @@ RUN bun install --frozen-lockfile --production
 # ---------------------------------------------------------------------------
 # Stage 4: Production runtime (minimal image)
 # ---------------------------------------------------------------------------
-FROM node:24-slim AS runtime
+FROM node:26-slim AS runtime
 
 WORKDIR /app
 
