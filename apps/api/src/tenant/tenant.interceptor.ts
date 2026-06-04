@@ -17,6 +17,7 @@ import { SKIP_ORG_KEY } from '../common/decorators/skipOrg.decorator.js'
 import { ErrorCode } from '../common/errorCodes.js'
 import { DRIZZLE, type DrizzleDB } from '../database/drizzle.provider.js'
 import * as schema from '../database/schema/index.js'
+import { TenantResolutionException } from './exceptions/tenantResolution.exception.js'
 
 type AuthenticatedRequest = FastifyRequest & {
   session?: {
@@ -120,7 +121,7 @@ export class TenantInterceptor implements NestInterceptor {
         throw error
       }
       this.logger.error(`Failed to resolve parent org for ${orgId}`, error)
-      return orgId
+      throw new TenantResolutionException()
     }
   }
 

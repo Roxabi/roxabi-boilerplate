@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common'
 import { and, eq } from 'drizzle-orm'
 import { DRIZZLE, type DrizzleDB, type DrizzleTx } from '../../database/drizzle.provider.js'
+import { whereActive } from '../../database/helpers/whereActive.js'
 import { members } from '../../database/schema/auth.schema.js'
 import { roles } from '../../database/schema/rbac.schema.js'
 import type { MemberRow, RbacMemberRepository, RoleRow } from '../rbacMember.repository.js'
@@ -34,7 +35,8 @@ export class DrizzleRbacMemberRepository implements RbacMemberRepository {
         and(
           eq(members.userId, userId),
           eq(members.organizationId, organizationId),
-          eq(members.roleId, roleId)
+          eq(members.roleId, roleId),
+          whereActive(members)
         )
       )
       .limit(1)
@@ -55,7 +57,8 @@ export class DrizzleRbacMemberRepository implements RbacMemberRepository {
         and(
           eq(members.id, memberId),
           eq(members.organizationId, organizationId),
-          eq(members.roleId, roleId)
+          eq(members.roleId, roleId),
+          whereActive(members)
         )
       )
       .limit(1)
@@ -64,7 +67,10 @@ export class DrizzleRbacMemberRepository implements RbacMemberRepository {
 
   async updateMemberRole(memberId: string, roleId: string, tx?: DrizzleTx): Promise<void> {
     const qb = tx ?? this.db
-    await qb.update(members).set({ roleId }).where(eq(members.id, memberId))
+    await qb
+      .update(members)
+      .set({ roleId })
+      .where(and(eq(members.id, memberId), whereActive(members)))
   }
 
   async findRoleInTenant(
@@ -90,7 +96,13 @@ export class DrizzleRbacMemberRepository implements RbacMemberRepository {
     const [member] = await qb
       .select()
       .from(members)
-      .where(and(eq(members.id, memberId), eq(members.organizationId, organizationId)))
+      .where(
+        and(
+          eq(members.id, memberId),
+          eq(members.organizationId, organizationId),
+          whereActive(members)
+        )
+      )
       .limit(1)
     return member
   }
@@ -110,7 +122,13 @@ export class DrizzleRbacMemberRepository implements RbacMemberRepository {
     const ownerMembers = await qb
       .select({ id: members.id })
       .from(members)
-      .where(and(eq(members.organizationId, organizationId), eq(members.roleId, roleId)))
+      .where(
+        and(
+          eq(members.organizationId, organizationId),
+          eq(members.roleId, roleId),
+          whereActive(members)
+        )
+      )
     return ownerMembers.length
   }
 }

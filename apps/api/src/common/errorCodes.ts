@@ -69,6 +69,8 @@ export const ErrorCode = {
   // Rate Limiting
   RATE_LIMIT_EXCEEDED: 'RATE_LIMIT_EXCEEDED',
   API_KEY_RATE_LIMITED: 'API_KEY_RATE_LIMITED',
+  // Auth
+  ACCOUNT_BANNED: 'ACCOUNT_BANNED',
 } as const
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode]

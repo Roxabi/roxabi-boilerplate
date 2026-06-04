@@ -82,7 +82,8 @@ export class RbacService {
   ) {
     // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: inherent to multi-step role update with slug collision check and permission sync
     return this.tenantService.query(async (tx) => {
-      const existing = await this.repo.findRoleById(roleId, tx)
+      const tenantId = this.cls.get('tenantId') as string
+      const existing = await this.repo.findRoleById(roleId, tenantId, tx)
 
       if (!existing) {
         throw new RoleNotFoundException(roleId)
@@ -92,7 +93,6 @@ export class RbacService {
       const updates: { name?: string; slug?: string; description?: string | null } = {}
       if (data.name !== undefined) {
         const newSlug = slugify(data.name)
-        const tenantId = this.cls.get('tenantId') as string
         // Ensure the new slug doesn't collide with an existing role in the tenant
         if (newSlug !== existing.slug) {
           const collision = await this.repo.findRoleBySlug(tenantId, newSlug, tx)
@@ -108,7 +108,7 @@ export class RbacService {
       }
 
       if (Object.keys(updates).length > 0) {
-        await this.repo.updateRole(roleId, updates, tx)
+        await this.repo.updateRole(roleId, tenantId, updates, tx)
       }
 
       // Re-sync permissions if provided
@@ -125,7 +125,7 @@ export class RbacService {
       }
 
       // Return updated role
-      return this.repo.findRoleById(roleId, tx)
+      return this.repo.findRoleById(roleId, tenantId, tx)
     })
   }
 
@@ -134,7 +134,8 @@ export class RbacService {
    */
   async deleteRole(roleId: string) {
     return this.tenantService.query(async (tx) => {
-      const role = await this.repo.findRoleById(roleId, tx)
+      const tenantId = this.cls.get('tenantId') as string
+      const role = await this.repo.findRoleById(roleId, tenantId, tx)
 
       if (!role) {
         throw new RoleNotFoundException(roleId)
@@ -149,10 +150,10 @@ export class RbacService {
 
       // Reassign members to Viewer + delete role (atomic via tenant tx)
       if (viewerRole) {
-        await this.repo.reassignMembersToRole(roleId, viewerRole.id, tx)
+        await this.repo.reassignMembersToRole(roleId, viewerRole.id, tenantId, tx)
       }
 
-      await this.repo.deleteRole(roleId, tx)
+      await this.repo.deleteRole(roleId, tenantId, tx)
 
       return { deleted: true }
     })
@@ -163,13 +164,14 @@ export class RbacService {
    */
   async getRolePermissions(roleId: string) {
     return this.tenantService.query(async (tx) => {
-      const existing = await this.repo.findRoleById(roleId, tx)
+      const tenantId = this.cls.get('tenantId') as string
+      const existing = await this.repo.findRoleById(roleId, tenantId, tx)
 
       if (!existing) {
         throw new RoleNotFoundException(roleId)
       }
 
-      return this.repo.getRolePermissions(roleId, tx)
+      return this.repo.getRolePermissions(roleId, tenantId, tx)
     })
   }
 
@@ -177,7 +179,8 @@ export class RbacService {
    * List all roles for the current tenant, each with their permissions — single batched query.
    */
   async listRolesWithPermissions() {
-    return this.tenantService.query((tx) => this.repo.listRolesWithPermissions(tx))
+    const tenantId = this.cls.get('tenantId') as string
+    return this.tenantService.query((tx) => this.repo.listRolesWithPermissions(tenantId, tx))
   }
 
   /**

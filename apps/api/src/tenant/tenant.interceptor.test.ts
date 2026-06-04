@@ -2,6 +2,7 @@ import { ForbiddenException } from '@nestjs/common'
 import { lastValueFrom, of } from 'rxjs'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ErrorCode } from '../common/errorCodes.js'
+import { TenantResolutionException } from './exceptions/tenantResolution.exception.js'
 import { TenantInterceptor } from './tenant.interceptor.js'
 
 function createMockCls(store: Record<string, unknown> = {}) {
@@ -223,7 +224,7 @@ describe('TenantInterceptor', () => {
       expect(cls.set).toHaveBeenCalledWith('tenantId', 'missing-org')
     })
 
-    it('should fall back to activeOrganizationId on DB error', async () => {
+    it('should throw TenantResolutionException on DB error', async () => {
       // Arrange
       const cls = createMockCls(store)
       const db = {
@@ -245,12 +246,9 @@ describe('TenantInterceptor', () => {
       })
       const next = createMockCallHandler()
 
-      // Act
+      // Act & Assert
       const result$ = interceptor.intercept(context as never, next as never)
-      await lastValueFrom(result$)
-
-      // Assert
-      expect(cls.set).toHaveBeenCalledWith('tenantId', 'org-1')
+      await expect(lastValueFrom(result$)).rejects.toThrow(TenantResolutionException)
     })
 
     it('should cache resolved tenant ID in CLS and reuse it', async () => {

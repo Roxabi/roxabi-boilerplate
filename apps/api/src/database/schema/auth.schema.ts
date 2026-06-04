@@ -128,12 +128,14 @@ export const members = pgTable(
       .references(() => organizations.id, { onDelete: 'cascade' }),
     role: text('role').notNull().default('member'),
     roleId: text('role_id'),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
     ...timestamps,
   },
   (table) => [
     index('members_user_id_idx').on(table.userId),
     index('members_organization_id_idx').on(table.organizationId),
     index('members_role_id_idx').on(table.roleId),
+    index('members_deleted_at_idx').on(table.deletedAt).where(isNotNull(table.deletedAt)),
   ]
 )
 

@@ -42,6 +42,10 @@ export class UserService {
     return result
   }
 
+  async getBanStatus(userId: string) {
+    return this.repo.getBanStatus(userId)
+  }
+
   /** Invalidate the soft-delete status cache for a user */
   private invalidateSoftDeleteCache(userId: string) {
     this.softDeleteCache.delete(userId)

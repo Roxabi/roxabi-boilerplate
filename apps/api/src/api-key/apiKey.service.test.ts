@@ -46,8 +46,14 @@ function createMockAuditService() {
   return { log: vi.fn().mockResolvedValue(undefined) }
 }
 
-function createMockCls() {
-  return { getId: vi.fn().mockReturnValue('cls-correlation-id') }
+function createMockCls(tenantId: string | null = 'tenant-uuid-1') {
+  return {
+    getId: vi.fn().mockReturnValue('cls-correlation-id'),
+    get: vi.fn().mockImplementation((key: string) => {
+      if (key === 'tenantId') return tenantId
+      return
+    }),
+  }
 }
 
 function createSession(overrides: Partial<AuthenticatedSession> = {}): AuthenticatedSession {
@@ -501,7 +507,8 @@ describe('ApiKeyService', () => {
       // biome-ignore lint/style/noNonNullAssertion: verified toHaveBeenCalledOnce above
       const markRevokedArgs = (mockRepo.markRevoked as ReturnType<typeof vi.fn>).mock.calls[0]!
       expect(markRevokedArgs[0]).toBe('key-1')
-      expect(markRevokedArgs[1]).toBeInstanceOf(Date)
+      expect(markRevokedArgs[1]).toBe('org-1')
+      expect(markRevokedArgs[2]).toBeInstanceOf(Date)
     })
 
     it('should log api_key.revoked audit event', async () => {
@@ -875,29 +882,31 @@ describe('ApiKeyService', () => {
   // touchLastUsedAt() — fire-and-forget tests
   // -----------------------------------------------------------------------
   describe('touchLastUsedAt()', () => {
-    it('should call repo.touchLastUsedAt with the correct key id and not throw', () => {
+    it('should call repo.touchLastUsedAt with the correct key id and tenantId and not throw', () => {
       // Arrange
       const keyId = 'key-uuid-touch'
+      const tenantId = 'tenant-uuid-touch'
       const mockRepo = createMockApiKeyRepo()
       ;(mockRepo.touchLastUsedAt as ReturnType<typeof vi.fn>).mockResolvedValue(undefined)
       const service = createService(mockRepo)
 
       // Act — fire-and-forget, returns void synchronously
-      expect(() => service.touchLastUsedAt(keyId)).not.toThrow()
+      expect(() => service.touchLastUsedAt(keyId, tenantId)).not.toThrow()
 
       // Assert
-      expect(mockRepo.touchLastUsedAt).toHaveBeenCalledWith(keyId, expect.any(Date))
+      expect(mockRepo.touchLastUsedAt).toHaveBeenCalledWith(keyId, tenantId, expect.any(Date))
     })
 
     it('should return undefined synchronously (fire-and-forget — callers must not await)', () => {
       // Arrange
       const keyId = 'key-uuid-ff'
+      const tenantId = 'tenant-uuid-ff'
       const mockRepo = createMockApiKeyRepo()
       ;(mockRepo.touchLastUsedAt as ReturnType<typeof vi.fn>).mockResolvedValue(undefined)
       const service = createService(mockRepo)
 
       // Act
-      const returnValue = service.touchLastUsedAt(keyId)
+      const returnValue = service.touchLastUsedAt(keyId, tenantId)
 
       // Assert
       expect(returnValue).toBeUndefined()

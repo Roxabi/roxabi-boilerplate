@@ -27,6 +27,11 @@ export interface UserRepository {
     tx?: DrizzleTx
   ): Promise<{ deletedAt: Date | null; deleteScheduledFor: Date | null } | null>
 
+  getBanStatus(
+    userId: string,
+    tx?: DrizzleTx
+  ): Promise<{ banned: boolean | null; banExpires: Date | null } | null>
+
   getProfile(userId: string, tx?: DrizzleTx): Promise<UserProfile | null>
 
   getNameFields(

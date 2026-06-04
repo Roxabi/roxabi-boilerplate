@@ -47,6 +47,19 @@ export class DrizzleUserRepository implements UserRepository {
     return user ?? null
   }
 
+  async getBanStatus(
+    userId: string,
+    tx?: DrizzleTx
+  ): Promise<{ banned: boolean | null; banExpires: Date | null } | null> {
+    const qb = tx ?? this.db
+    const [user] = await qb
+      .select({ banned: users.banned, banExpires: users.banExpires })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1)
+    return user ?? null
+  }
+
   async getProfile(userId: string, tx?: DrizzleTx): Promise<UserProfile | null> {
     const qb = tx ?? this.db
     const [user] = await qb.select(profileColumns).from(users).where(eq(users.id, userId)).limit(1)
