@@ -3,6 +3,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter'
 import type { OrgOwnershipResolution } from '@repo/types'
 import { DELETION_GRACE_PERIOD_MS } from '../common/constants.js'
 import { USER_SOFT_DELETED, UserSoftDeletedEvent } from '../common/events/userSoftDeleted.event.js'
+import { MEMBERSHIP_REPO, type MembershipRepository } from '../membership/membership.repository.js'
 import { OrgNotOwnerException } from '../organization/exceptions/orgNotOwner.exception.js'
 import { AccountAlreadyDeletedException } from './exceptions/accountAlreadyDeleted.exception.js'
 import { EmailConfirmationMismatchException } from './exceptions/emailConfirmationMismatch.exception.js'
@@ -24,6 +25,7 @@ export class UserService {
 
   constructor(
     @Inject(USER_REPO) private readonly repo: UserRepository,
+    @Inject(MEMBERSHIP_REPO) private readonly membershipRepo: MembershipRepository,
     private readonly eventEmitter: EventEmitter2,
     private readonly userPurgeService: UserPurgeService
   ) {}
@@ -136,14 +138,18 @@ export class UserService {
     const updated = await this.repo.transaction(async (tx) => {
       for (const resolution of orgResolutions) {
         // Verify the deleting user is an owner of this organization
-        const membership = await this.repo.verifyOrgOwnership(resolution.organizationId, userId, tx)
+        const membership = await this.membershipRepo.verifyOrgOwnership(
+          resolution.organizationId,
+          userId,
+          tx
+        )
         if (!membership || membership.role !== 'owner') {
           throw new OrgNotOwnerException(resolution.organizationId)
         }
 
         if (resolution.action === 'transfer') {
           // Verify transferToUserId is an existing member of the org
-          const targetMember = await this.repo.verifyTargetMember(
+          const targetMember = await this.membershipRepo.verifyTargetMember(
             resolution.organizationId,
             resolution.transferToUserId,
             tx
@@ -154,16 +160,21 @@ export class UserService {
               resolution.organizationId
             )
           }
-          await this.repo.transferOrgOwnership(
+          await this.membershipRepo.transferOrgOwnership(
             resolution.organizationId,
             resolution.transferToUserId,
             now,
             tx
           )
         } else if (resolution.action === 'delete') {
-          await this.repo.softDeleteOrg(resolution.organizationId, now, deleteScheduledFor, tx)
-          await this.repo.clearOrgSessions(resolution.organizationId, tx)
-          await this.repo.expireOrgInvitations(resolution.organizationId, tx)
+          await this.membershipRepo.softDeleteOrg(
+            resolution.organizationId,
+            now,
+            deleteScheduledFor,
+            tx
+          )
+          await this.membershipRepo.clearOrgSessions(resolution.organizationId, tx)
+          await this.membershipRepo.expireOrgInvitations(resolution.organizationId, tx)
         }
       }
 
@@ -196,7 +207,7 @@ export class UserService {
   }
 
   async getOwnedOrganizations(userId: string) {
-    return this.repo.getOwnedOrganizations(userId)
+    return this.membershipRepo.getOwnedOrganizations(userId)
   }
 
   async purge(userId: string, confirmEmail: string) {

@@ -23,10 +23,10 @@ export class RbacListener {
   async handleOrganizationCreated(event: OrganizationCreatedEvent) {
     this.logger.log(`Seeding default roles for organization ${event.organizationId}`)
 
-    await this.rbacService.seedDefaultRoles(event.organizationId)
-
-    // Assign Owner role to the creator
     await this.tenantService.queryAs(event.organizationId, async (tx) => {
+      await this.rbacService.seedDefaultRoles(event.organizationId, tx)
+
+      // Assign Owner role to the creator
       const [ownerRole] = await tx
         .select({ id: roles.id })
         .from(roles)

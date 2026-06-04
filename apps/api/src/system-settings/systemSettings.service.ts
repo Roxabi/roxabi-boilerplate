@@ -30,34 +30,36 @@ export class SystemSettingsService {
       return { updated: [], beforeState: {} }
     }
 
-    // Phase 1: Read all settings and validate before any writes
-    const existingSettings: SystemSetting[] = []
+    return this.repo.transaction(async (tx) => {
+      // Phase 1: Read all settings and validate before any writes
+      const existingSettings: SystemSetting[] = []
 
-    for (const update of updates) {
-      const existing = await this.repo.findByKey(update.key)
-      if (!existing) {
-        throw new SettingNotFoundException(update.key)
+      for (const update of updates) {
+        const existing = await this.repo.findByKey(update.key, tx)
+        if (!existing) {
+          throw new SettingNotFoundException(update.key)
+        }
+
+        this.validateSettingValue(update.key, update.value, existing.type, existing.metadata)
+        existingSettings.push(existing)
       }
 
-      this.validateSettingValue(update.key, update.value, existing.type, existing.metadata)
-      existingSettings.push(existing)
-    }
-
-    // Phase 2: Build beforeState and perform all updates
-    const beforeState: Record<string, unknown> = {}
-    for (const existing of existingSettings) {
-      beforeState[existing.key] = existing.value
-    }
-
-    const updated: SystemSetting[] = []
-    for (const update of updates) {
-      const result = await this.repo.updateByKey(update.key, update.value)
-      if (result) {
-        updated.push(result)
+      // Phase 2: Build beforeState and perform all updates
+      const beforeState: Record<string, unknown> = {}
+      for (const existing of existingSettings) {
+        beforeState[existing.key] = existing.value
       }
-    }
 
-    return { updated, beforeState }
+      const updated: SystemSetting[] = []
+      for (const update of updates) {
+        const result = await this.repo.updateByKey(update.key, update.value, tx)
+        if (result) {
+          updated.push(result)
+        }
+      }
+
+      return { updated, beforeState }
+    })
   }
 
   private validateSettingValue(

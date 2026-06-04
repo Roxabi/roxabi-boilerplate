@@ -239,7 +239,7 @@ function buildOrganizationPlugin(onOrganizationCreated?: OrganizationCreatedCall
     organizationHooks: onOrganizationCreated
       ? {
           afterCreateOrganization: async ({ organization: org, member }) => {
-            onOrganizationCreated({
+            await onOrganizationCreated({
               organizationId: org.id,
               creatorUserId: member.userId,
             })

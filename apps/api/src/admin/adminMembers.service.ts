@@ -235,9 +235,11 @@ export class AdminMembersService {
       throw new SelfRemovalException()
     }
 
-    await this.ensureNotLastOwner(member, orgId)
+    await this.db.transaction(async (tx) => {
+      await this.ensureNotLastOwner(tx, member, orgId)
 
-    await this.db.delete(members).where(eq(members.id, memberId))
+      await tx.delete(members).where(eq(members.id, memberId))
+    })
 
     this.logMemberAudit('member.removed', 'member', orgId, memberId, actorId, {
       before: {
@@ -288,10 +290,10 @@ export class AdminMembersService {
     const [ownerCount] = await tx
       .select({ count: count() })
       .from(members)
-      // biome-ignore lint/style/noNonNullAssertion: roleId is guaranteed by the owner role check above
       .where(
         and(
           eq(members.organizationId, orgId),
+          // biome-ignore lint/style/noNonNullAssertion: roleId is guaranteed by the owner role check above
           eq(members.roleId, member.roleId!),
           whereActive(members)
         )
@@ -303,18 +305,19 @@ export class AdminMembersService {
   }
 
   private async ensureNotLastOwner(
+    tx: DrizzleTx,
     member: { roleSlug: string | null; role: string; roleId: string | null },
     orgId: string
   ) {
     if (member.roleSlug !== 'owner' && member.role !== 'owner') return
 
-    const [ownerCount] = await this.db
+    const [ownerCount] = await tx
       .select({ count: count() })
       .from(members)
-      // biome-ignore lint/style/noNonNullAssertion: roleId is guaranteed by the owner role check above
       .where(
         and(
           eq(members.organizationId, orgId),
+          // biome-ignore lint/style/noNonNullAssertion: roleId is guaranteed by the owner role check above
           eq(members.roleId, member.roleId!),
           whereActive(members)
         )

@@ -59,17 +59,16 @@ export class ConsentController {
       action: body.action,
     })
 
-    // httpOnly is intentionally false — the frontend reads this cookie client-side
-    // to hydrate the consent banner without an extra API call.
-    reply.setCookie(CONSENT_COOKIE_NAME, cookiePayload, {
-      path: '/',
-      sameSite: 'lax',
-      maxAge: CONSENT_COOKIE_MAX_AGE,
-      secure: this.isProduction,
-      httpOnly: false,
-    })
-
     if (!session) {
+      // httpOnly is intentionally false — the frontend reads this cookie client-side
+      // to hydrate the consent banner without an extra API call.
+      reply.setCookie(CONSENT_COOKIE_NAME, cookiePayload, {
+        path: '/',
+        sameSite: 'lax',
+        maxAge: CONSENT_COOKIE_MAX_AGE,
+        secure: this.isProduction,
+        httpOnly: false,
+      })
       reply.status(204)
       return
     }
@@ -81,6 +80,15 @@ export class ConsentController {
       ...body,
       ipAddress,
       userAgent,
+    })
+
+    // Set cookie only after DB write succeeds to avoid DB/cookie mismatch on failure
+    reply.setCookie(CONSENT_COOKIE_NAME, cookiePayload, {
+      path: '/',
+      sameSite: 'lax',
+      maxAge: CONSENT_COOKIE_MAX_AGE,
+      secure: this.isProduction,
+      httpOnly: false,
     })
 
     return record

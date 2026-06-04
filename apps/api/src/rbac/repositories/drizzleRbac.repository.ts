@@ -190,6 +190,9 @@ export class DrizzleRbacRepository implements RbacRepository {
     tx: DrizzleTx
   ): Promise<void> {
     const qb = tx ?? this.db
+    const allPerms = await qb.select().from(permissions)
+    const permMap = new Map(allPerms.map((p) => [`${p.resource}:${p.action}`, p.id]))
+
     for (const def of defaultRoles) {
       const [role] = await qb
         .insert(roles)
@@ -206,9 +209,6 @@ export class DrizzleRbacRepository implements RbacRepository {
         this.logger.warn(`Failed to insert default role "${def.name}" for org ${organizationId}`)
         continue
       }
-
-      const allPerms = await qb.select().from(permissions)
-      const permMap = new Map(allPerms.map((p) => [`${p.resource}:${p.action}`, p.id]))
 
       const inserts = def.permissions
         .map((perm) => ({ roleId: role.id, permissionId: permMap.get(perm) }))

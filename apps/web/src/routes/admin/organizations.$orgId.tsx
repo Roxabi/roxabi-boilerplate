@@ -444,9 +444,9 @@ function AdminOrgDetailPage() {
     },
   })
 
-  function handleActionComplete() {
-    queryClient.invalidateQueries({ queryKey: adminOrgKeys.detail(orgId) })
-    queryClient.invalidateQueries({ queryKey: adminOrgKeys.all })
+  async function handleActionComplete() {
+    await queryClient.invalidateQueries({ queryKey: adminOrgKeys.detail(orgId) })
+    await queryClient.invalidateQueries({ queryKey: adminOrgKeys.all })
   }
 
   function handleEditSave() {

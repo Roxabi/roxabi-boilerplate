@@ -267,10 +267,10 @@ function useEditUserMutation({
       toast.success('User updated successfully')
       onSave()
     },
-    onError: (err) => {
+    onError: async (err) => {
       setError(err instanceof Error ? err.message : 'Failed to update user')
       // Refetch user detail to update isLastActiveSuperadmin flag
-      queryClient.invalidateQueries({ queryKey: adminUserKeys.detail(user.id) })
+      await queryClient.invalidateQueries({ queryKey: adminUserKeys.detail(user.id) })
     },
   })
 
@@ -528,9 +528,9 @@ function AdminUserDetailPage() {
     },
   })
 
-  function handleActionComplete() {
-    queryClient.invalidateQueries({ queryKey: adminUserKeys.detail(userId) })
-    queryClient.invalidateQueries({ queryKey: adminUserKeys.all })
+  async function handleActionComplete() {
+    await queryClient.invalidateQueries({ queryKey: adminUserKeys.detail(userId) })
+    await queryClient.invalidateQueries({ queryKey: adminUserKeys.all })
   }
 
   function handleEditSave() {

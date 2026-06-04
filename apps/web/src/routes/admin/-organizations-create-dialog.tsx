@@ -163,9 +163,9 @@ function useCreateOrgForm(
   }
 
   const mutation = useCreateOrgMutation({
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       toast.success('Organization created successfully')
-      queryClient.invalidateQueries({ queryKey: adminOrgKeys.all })
+      await queryClient.invalidateQueries({ queryKey: adminOrgKeys.all })
       onOpenChange(false)
       reset()
       navigate({ to: '/admin/organizations/$orgId', params: { orgId: data.id } })

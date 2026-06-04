@@ -317,10 +317,10 @@ function AdminMembersPage() {
         <h1 className="text-2xl font-bold">{m.org_members_title()}</h1>
         <InviteDialog
           roles={roles}
-          onSuccess={() => {
+          onSuccess={async () => {
             // TODO: migrate to adminMemberKeys factory (follow-up to #410)
-            queryClient.invalidateQueries({ queryKey: ['admin-members'] })
-            queryClient.invalidateQueries({ queryKey: ['admin-invitations'] })
+            await queryClient.invalidateQueries({ queryKey: ['admin-members'] })
+            await queryClient.invalidateQueries({ queryKey: ['admin-invitations'] })
           }}
         />
       </div>
@@ -335,9 +335,9 @@ function AdminMembersPage() {
           searchInput={search.searchInput}
           orgId={activeOrg.id}
           currentUserId={currentUserId}
-          onActionComplete={() => {
+          onActionComplete={async () => {
             // TODO: migrate to adminMemberKeys factory (follow-up to #410)
-            queryClient.invalidateQueries({ queryKey: ['admin-members'] })
+            await queryClient.invalidateQueries({ queryKey: ['admin-members'] })
           }}
           onPageChange={search.setPage}
         />

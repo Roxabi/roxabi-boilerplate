@@ -1,57 +1,26 @@
 import { Module } from '@nestjs/common'
-import { AuditModule } from '../audit/audit.module.js'
-import { AuthModule } from '../auth/auth.module.js'
-import { FeatureFlagsModule } from '../feature-flags/featureFlags.module.js'
-import { SystemSettingsModule } from '../system-settings/systemSettings.module.js'
-import { AdminAuditLogsController } from './adminAuditLogs.controller.js'
-import { AdminAuditLogsService } from './adminAuditLogs.service.js'
-import { AdminFeatureFlagsController } from './adminFeatureFlags.controller.js'
-import { AdminInvitationsController } from './adminInvitations.controller.js'
-import { AdminInvitationsService } from './adminInvitations.service.js'
-import { AdminMembersController } from './adminMembers.controller.js'
-import { AdminMembersService } from './adminMembers.service.js'
-import { AdminOrganizationsController } from './adminOrganizations.controller.js'
-import { AdminOrganizationsDeletionService } from './adminOrganizations.deletion.js'
-import { AdminOrganizationsQueryService } from './adminOrganizations.query.js'
-import { AdminOrganizationsService } from './adminOrganizations.service.js'
-import { AdminSettingsController } from './adminSettings.controller.js'
-import { AdminUsersController } from './adminUsers.controller.js'
-import { AdminUsersLifecycleService } from './adminUsers.lifecycle.js'
-import { AdminUsersQueryService } from './adminUsers.query.js'
-import { AdminUsersService } from './adminUsers.service.js'
+import { AdminAuditLogsModule } from './adminAuditLogs.module.js'
+import { AdminFeatureFlagsModule } from './adminFeatureFlags.module.js'
+import { AdminMembersModule } from './adminMembers.module.js'
+import { AdminOrganizationsModule } from './adminOrganizations.module.js'
+import { AdminSettingsModule } from './adminSettings.module.js'
+import { AdminUsersModule } from './adminUsers.module.js'
 
+/**
+ * AdminModule is a thin compatibility wrapper that re-exports all admin sub-modules.
+ *
+ * @deprecated Prefer importing the specific sub-module (AdminUsersModule,
+ * AdminOrganizationsModule, AdminMembersModule, AdminAuditLogsModule, etc.)
+ * to avoid pulling in unused providers.
+ */
 @Module({
-  imports: [AuthModule, AuditModule, SystemSettingsModule, FeatureFlagsModule],
-  controllers: [
-    AdminMembersController,
-    AdminInvitationsController,
-    AdminUsersController,
-    AdminOrganizationsController,
-    AdminAuditLogsController,
-    AdminSettingsController,
-    AdminFeatureFlagsController,
-  ],
-  providers: [
-    AdminMembersService,
-    AdminInvitationsService,
-    AdminUsersService,
-    AdminUsersQueryService,
-    AdminUsersLifecycleService,
-    AdminOrganizationsService,
-    AdminOrganizationsQueryService,
-    AdminOrganizationsDeletionService,
-    AdminAuditLogsService,
-  ],
-  exports: [
-    AdminMembersService,
-    AdminInvitationsService,
-    AdminUsersService,
-    AdminUsersQueryService,
-    AdminUsersLifecycleService,
-    AdminOrganizationsService,
-    AdminOrganizationsQueryService,
-    AdminOrganizationsDeletionService,
-    AdminAuditLogsService,
+  imports: [
+    AdminUsersModule,
+    AdminOrganizationsModule,
+    AdminMembersModule,
+    AdminAuditLogsModule,
+    AdminSettingsModule,
+    AdminFeatureFlagsModule,
   ],
 })
 export class AdminModule {}

@@ -150,34 +150,37 @@ export class AdminOrganizationsService {
     data: { name: string; slug: string; parentOrganizationId?: string | null },
     actorId: string
   ) {
-    // Validate parent depth if parentOrganizationId is provided
-    if (data.parentOrganizationId) {
-      const depth = await getDepth(this.db, data.parentOrganizationId)
-      if (depth + 1 >= 3) {
-        throw new OrgDepthExceededException()
-      }
-    }
-
-    // Insert the organization
     let createdOrg: typeof organizations.$inferSelect
-    try {
-      const [result] = await this.db
-        .insert(organizations)
-        .values({
-          name: data.name,
-          slug: data.slug,
-          parentOrganizationId: data.parentOrganizationId ?? null,
-        })
-        .returning()
-      if (!result) throw new AdminOrgNotFoundException('insert returned no rows')
-      createdOrg = result
-    } catch (err) {
-      const pgErr = err as { code?: string }
-      if (pgErr.code === PG_UNIQUE_VIOLATION) {
-        throw new OrgSlugConflictException()
+
+    await this.db.transaction(async (tx) => {
+      // Validate parent depth if parentOrganizationId is provided
+      if (data.parentOrganizationId) {
+        const depth = await getDepth(tx, data.parentOrganizationId)
+        if (depth + 1 >= 3) {
+          throw new OrgDepthExceededException()
+        }
       }
-      throw err
-    }
+
+      // Insert the organization
+      try {
+        const [result] = await tx
+          .insert(organizations)
+          .values({
+            name: data.name,
+            slug: data.slug,
+            parentOrganizationId: data.parentOrganizationId ?? null,
+          })
+          .returning()
+        if (!result) throw new AdminOrgNotFoundException('insert returned no rows')
+        createdOrg = result
+      } catch (err) {
+        const pgErr = err as { code?: string }
+        if (pgErr.code === PG_UNIQUE_VIOLATION) {
+          throw new OrgSlugConflictException()
+        }
+        throw err
+      }
+    })
 
     // Fire-and-forget audit log
     this.auditService

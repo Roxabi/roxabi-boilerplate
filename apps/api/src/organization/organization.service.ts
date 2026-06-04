@@ -53,16 +53,18 @@ export class OrganizationService {
   }
 
   async reactivate(orgId: string, userId: string) {
-    const org = await this.repo.findOrgForReactivate(orgId)
-    if (!org) throw new OrgNotFoundException(orgId)
-    if (!org.deletedAt) throw new OrgNotDeletedException(orgId)
+    return this.repo.transaction(async (tx) => {
+      const org = await this.repo.findOrgForReactivate(orgId, tx)
+      if (!org) throw new OrgNotFoundException(orgId)
+      if (!org.deletedAt) throw new OrgNotDeletedException(orgId)
 
-    const membership = await this.repo.checkOwnership(orgId, userId)
-    if (!membership || membership.role !== 'owner') {
-      throw new OrgNotOwnerException(orgId)
-    }
+      const membership = await this.repo.checkOwnership(orgId, userId, tx)
+      if (!membership || membership.role !== 'owner') {
+        throw new OrgNotOwnerException(orgId)
+      }
 
-    return this.repo.reactivateOrg(orgId, new Date())
+      return this.repo.reactivateOrg(orgId, new Date(), tx)
+    })
   }
 
   async getDeletionImpact(orgId: string) {

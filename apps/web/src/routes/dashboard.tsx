@@ -66,6 +66,7 @@ function useAutoSelectOrg(
 ) {
   const autoSelectAttempted = useRef(false)
   const prevOrgsLength = useRef<number | undefined>(undefined)
+  const activePromiseRef = useRef<Promise<unknown> | null>(null)
 
   useEffect(() => {
     if (!(accountChecked && orgs)) return
@@ -81,9 +82,17 @@ function useAutoSelectOrg(
     const firstOrg = orgs[0]
     autoSelectAttempted.current = true
     if (firstOrg) {
-      authClient.organization.setActive({ organizationId: firstOrg.id }).catch(() => {})
+      activePromiseRef.current = authClient.organization
+        .setActive({ organizationId: firstOrg.id })
+        .catch(() => {})
     } else if (activeOrg) {
-      authClient.organization.setActive({ organizationId: '' }).catch(() => {})
+      activePromiseRef.current = authClient.organization
+        .setActive({ organizationId: '' })
+        .catch(() => {})
+    }
+
+    return () => {
+      activePromiseRef.current = null
     }
   }, [accountChecked, activeOrg, orgs])
 }
