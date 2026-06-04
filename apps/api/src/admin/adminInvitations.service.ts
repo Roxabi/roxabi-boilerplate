@@ -3,6 +3,7 @@ import { and, eq } from 'drizzle-orm'
 import { ClsService } from 'nestjs-cls'
 import { AuditService } from '../audit/audit.service.js'
 import { DRIZZLE, type DrizzleDB } from '../database/drizzle.provider.js'
+import { whereActive } from '../database/helpers/whereActive.js'
 import { PG_UNIQUE_VIOLATION } from '../database/pgErrorCodes.js'
 import { invitations, members, users } from '../database/schema/auth.schema.js'
 import { roles } from '../database/schema/rbac.schema.js'
@@ -85,7 +86,7 @@ export class AdminInvitationsService {
       .select({ id: members.id })
       .from(members)
       .innerJoin(users, eq(members.userId, users.id))
-      .where(and(eq(members.organizationId, orgId), eq(users.email, email)))
+      .where(and(eq(members.organizationId, orgId), eq(users.email, email), whereActive(members)))
       .limit(1)
 
     if (existingMember) {

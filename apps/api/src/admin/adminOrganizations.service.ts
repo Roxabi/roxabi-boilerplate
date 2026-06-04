@@ -1,8 +1,9 @@
 import { Inject, Injectable, Logger } from '@nestjs/common'
-import { count, eq } from 'drizzle-orm'
+import { and, count, eq } from 'drizzle-orm'
 import { ClsService } from 'nestjs-cls'
 import { AuditService } from '../audit/audit.service.js'
 import { DRIZZLE, type DrizzleDB } from '../database/drizzle.provider.js'
+import { whereActive } from '../database/helpers/whereActive.js'
 import { PG_UNIQUE_VIOLATION } from '../database/pgErrorCodes.js'
 import { members, organizations, users } from '../database/schema/auth.schema.js'
 import { roles } from '../database/schema/rbac.schema.js'
@@ -124,7 +125,7 @@ export class AdminOrganizationsService {
       })
       .from(members)
       .innerJoin(users, eq(members.userId, users.id))
-      .where(eq(members.organizationId, orgId))
+      .where(and(eq(members.organizationId, orgId), whereActive(members)))
   }
 
   private fetchChildOrgs(orgId: string) {
@@ -137,7 +138,7 @@ export class AdminOrganizationsService {
         memberCount: count(members.id),
       })
       .from(organizations)
-      .leftJoin(members, eq(organizations.id, members.organizationId))
+      .leftJoin(members, and(eq(organizations.id, members.organizationId), whereActive(members)))
       .where(eq(organizations.parentOrganizationId, orgId))
       .groupBy(organizations.id)
   }

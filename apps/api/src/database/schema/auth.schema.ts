@@ -13,6 +13,10 @@ import { timestamps } from './timestamps.js'
 
 const genId = () => crypto.randomUUID()
 
+// NOTE: Auth tables (users, accounts, sessions, verifications) are user-global
+// and do not carry tenantId. RLS is applied at the api_keys / roles / members
+// layer instead. User-level access is enforced by AuthGuard and session checks.
+
 export const users = pgTable(
   'users',
   {

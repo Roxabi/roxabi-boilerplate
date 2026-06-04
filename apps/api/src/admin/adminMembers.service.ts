@@ -3,6 +3,7 @@ import { and, count, eq, ilike, or } from 'drizzle-orm'
 import { ClsService } from 'nestjs-cls'
 import { AuditService } from '../audit/audit.service.js'
 import { DRIZZLE, type DrizzleDB, type DrizzleTx } from '../database/drizzle.provider.js'
+import { whereActive } from '../database/helpers/whereActive.js'
 import { members, users } from '../database/schema/auth.schema.js'
 import { roles } from '../database/schema/rbac.schema.js'
 import { LastOwnerConstraintException } from './exceptions/lastOwnerConstraint.exception.js'
@@ -63,7 +64,7 @@ export class AdminMembersService {
   }
 
   private buildMemberSearchClause(orgId: string, search?: string) {
-    const conditions = [eq(members.organizationId, orgId)]
+    const conditions = [eq(members.organizationId, orgId), whereActive(members)]
     if (search) {
       const pattern = `%${escapeIlikePattern(search)}%`
       const searchCondition = or(ilike(users.name, pattern), ilike(users.email, pattern))
@@ -168,7 +169,9 @@ export class AdminMembersService {
       await tx
         .update(members)
         .set({ roleId: data.roleId, role: newRole.slug })
-        .where(and(eq(members.id, memberId), eq(members.organizationId, orgId)))
+        .where(
+          and(eq(members.id, memberId), eq(members.organizationId, orgId), whereActive(members))
+        )
     })
 
     this.logMemberAudit('member.role_changed', 'member', orgId, memberId, actorId, {
@@ -212,7 +215,7 @@ export class AdminMembersService {
       })
       .from(members)
       .leftJoin(roles, eq(members.roleId, roles.id))
-      .where(and(eq(members.id, memberId), eq(members.organizationId, orgId)))
+      .where(and(eq(members.id, memberId), eq(members.organizationId, orgId), whereActive(members)))
       .limit(1)
 
     if (!memberWithRole) {
@@ -258,7 +261,7 @@ export class AdminMembersService {
       })
       .from(members)
       .leftJoin(roles, eq(members.roleId, roles.id))
-      .where(and(eq(members.id, memberId), eq(members.organizationId, orgId)))
+      .where(and(eq(members.id, memberId), eq(members.organizationId, orgId), whereActive(members)))
       .limit(1)
 
     if (!member) {
@@ -286,7 +289,13 @@ export class AdminMembersService {
       .select({ count: count() })
       .from(members)
       // biome-ignore lint/style/noNonNullAssertion: roleId is guaranteed by the owner role check above
-      .where(and(eq(members.organizationId, orgId), eq(members.roleId, member.roleId!)))
+      .where(
+        and(
+          eq(members.organizationId, orgId),
+          eq(members.roleId, member.roleId!),
+          whereActive(members)
+        )
+      )
 
     if ((ownerCount?.count ?? 0) <= 1) {
       throw new LastOwnerConstraintException()
@@ -303,7 +312,13 @@ export class AdminMembersService {
       .select({ count: count() })
       .from(members)
       // biome-ignore lint/style/noNonNullAssertion: roleId is guaranteed by the owner role check above
-      .where(and(eq(members.organizationId, orgId), eq(members.roleId, member.roleId!)))
+      .where(
+        and(
+          eq(members.organizationId, orgId),
+          eq(members.roleId, member.roleId!),
+          whereActive(members)
+        )
+      )
 
     if ((ownerCount?.count ?? 0) <= 1) {
       throw new LastOwnerConstraintException()

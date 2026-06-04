@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { DRIZZLE, type DrizzleDB } from '../database/drizzle.provider.js'
+import { whereActive } from '../database/helpers/whereActive.js'
 import {
   accounts,
   invitations,
@@ -127,7 +128,7 @@ export class GdprService {
         })
         .from(members)
         .innerJoin(organizations, eq(members.organizationId, organizations.id))
-        .where(eq(members.userId, userId)),
+        .where(and(eq(members.userId, userId), whereActive(members))),
       this.db
         .select({
           categories: consentRecords.categories,
