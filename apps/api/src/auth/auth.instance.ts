@@ -22,8 +22,37 @@ import type { QueueEnqueuer } from '../queue/queue.provider.js'
 
 const logger = new Logger('AuthInstance')
 
-const APP_NAME = process.env.APP_NAME ?? 'App'
 const SUPPORTED_LOCALES = ['en', 'fr']
+
+type EmailContent = { html: string; text?: string; subject: string }
+
+async function sendTemplatedEmail(
+  queueService: QueueEnqueuer,
+  to: string,
+  render: () => Promise<EmailContent>,
+  fallback: EmailContent,
+  logLabel: string,
+  shouldThrowOnEnqueueError: boolean
+): Promise<void> {
+  let emailContent: EmailContent
+  try {
+    emailContent = await render()
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    logger.warn(`Failed to render ${logLabel} email template, using plain fallback`, { message })
+    emailContent = fallback
+  }
+
+  try {
+    await queueService.enqueue(QUEUE_NAMES.EMAIL_SEND, { to, ...emailContent })
+  } catch (error) {
+    const cause = toError(error)
+    logger.error(`Failed to enqueue ${logLabel} email to ${to}`, cause.stack)
+    if (shouldThrowOnEnqueueError) {
+      throw new APIError('INTERNAL_SERVER_ERROR', { message: 'EMAIL_SEND_FAILED' })
+    }
+  }
+}
 
 // Better Auth does not infer additionalFields on callback user parameters.
 // The locale field is declared in user.additionalFields above but the callback
@@ -35,6 +64,7 @@ export type AuthInstanceConfig = {
   secret: string
   baseURL: string
   appURL?: string
+  appName?: string
   googleClientId?: string
   googleClientSecret?: string
   githubClientId?: string
@@ -71,33 +101,22 @@ function buildEmailAndPasswordConfig(queueService: QueueEnqueuer, config: AuthIn
       // No token URL to transform — construct login URL directly
       const loginUrl = config.appURL ? `${config.appURL}/login` : '/login'
       const locale = user.locale ?? 'en'
-
-      let emailContent: { html: string; text?: string; subject: string }
-      try {
-        const { html, text, subject } = await renderExistingAccountEmail(loginUrl, locale, {
-          appUrl: config.appURL,
-          appName: APP_NAME,
-        })
-        emailContent = { html, text, subject }
-      } catch {
-        logger.warn('Failed to render existing account email template, using plain fallback')
-        emailContent = {
+      await sendTemplatedEmail(
+        queueService,
+        user.email,
+        () =>
+          renderExistingAccountEmail(loginUrl, locale, {
+            appUrl: config.appURL,
+            appName: config.appName ?? 'App',
+          }),
+        {
           subject: 'Someone tried to sign up with your email',
           html: `<p>Someone tried to create an account using your email. <a href="${escapeHtml(loginUrl)}">Sign in</a> to your existing account instead.</p>`,
           text: `Someone tried to create an account using your email. Sign in instead: ${loginUrl}`,
-        }
-      }
-
-      try {
-        await queueService.enqueue(QUEUE_NAMES.EMAIL_SEND, { to: user.email, ...emailContent })
-      } catch (error) {
-        // Best-effort: unlike other handlers, must not throw — would break enumeration protection
-        const cause = toError(error)
-        logger.error(
-          `Failed to enqueue existing account notification to ${user.email}`,
-          cause.stack
-        )
-      }
+        },
+        'existing account',
+        false
+      )
     },
     async sendResetPassword({
       user,
@@ -107,31 +126,23 @@ function buildEmailAndPasswordConfig(queueService: QueueEnqueuer, config: AuthIn
       url: string
     }) {
       const emailUrl = buildFrontendUrl(url, config.appURL, '/reset-password/confirm')
-
-      let emailContent: { html: string; text?: string; subject: string }
-      try {
-        const locale = (user as UserWithLocale).locale ?? 'en'
-        const { html, text, subject } = await renderResetEmail(emailUrl, locale, {
-          appUrl: config.appURL,
-          appName: APP_NAME,
-        })
-        emailContent = { html, text, subject }
-      } catch {
-        logger.warn('Failed to render reset password email template, using plain fallback')
-        emailContent = {
+      const locale = (user as UserWithLocale).locale ?? 'en'
+      await sendTemplatedEmail(
+        queueService,
+        user.email,
+        () =>
+          renderResetEmail(emailUrl, locale, {
+            appUrl: config.appURL,
+            appName: config.appName ?? 'App',
+          }),
+        {
           subject: 'Reset your password',
           html: `<p>Click <a href="${escapeHtml(emailUrl)}">here</a> to reset your password.</p>`,
           text: `Reset your password: ${emailUrl}`,
-        }
-      }
-
-      try {
-        await queueService.enqueue(QUEUE_NAMES.EMAIL_SEND, { to: user.email, ...emailContent })
-      } catch (error) {
-        const cause = toError(error)
-        logger.error(`Failed to enqueue reset password email to ${user.email}`, cause.stack)
-        throw new APIError('INTERNAL_SERVER_ERROR', { message: 'EMAIL_SEND_FAILED' })
-      }
+        },
+        'reset password',
+        true
+      )
     },
   }
 }
@@ -151,31 +162,23 @@ function buildEmailVerificationConfig(queueService: QueueEnqueuer, config: AuthI
       url: string
     }) {
       const emailUrl = buildFrontendUrl(url, config.appURL, '/verify-email')
-
-      let emailContent: { html: string; text?: string; subject: string }
-      try {
-        const locale = (user as UserWithLocale).locale ?? 'en'
-        const { html, text, subject } = await renderVerificationEmail(emailUrl, locale, {
-          appUrl: config.appURL,
-          appName: APP_NAME,
-        })
-        emailContent = { html, text, subject }
-      } catch {
-        logger.warn('Failed to render verification email template, using plain fallback')
-        emailContent = {
+      const locale = (user as UserWithLocale).locale ?? 'en'
+      await sendTemplatedEmail(
+        queueService,
+        user.email,
+        () =>
+          renderVerificationEmail(emailUrl, locale, {
+            appUrl: config.appURL,
+            appName: config.appName ?? 'App',
+          }),
+        {
           subject: 'Verify your email',
           html: `<p>Click <a href="${escapeHtml(emailUrl)}">here</a> to verify your email.</p>`,
           text: `Verify your email: ${emailUrl}`,
-        }
-      }
-
-      try {
-        await queueService.enqueue(QUEUE_NAMES.EMAIL_SEND, { to: user.email, ...emailContent })
-      } catch (error) {
-        const cause = toError(error)
-        logger.error(`Failed to enqueue verification email to ${user.email}`, cause.stack)
-        throw new APIError('INTERNAL_SERVER_ERROR', { message: 'EMAIL_SEND_FAILED' })
-      }
+        },
+        'verification',
+        true
+      )
     },
   }
 }
@@ -198,30 +201,23 @@ function buildMagicLinkPlugin(
         throw new APIError('BAD_REQUEST', { message: 'USER_NOT_FOUND' })
       }
 
-      let emailContent: { html: string; text?: string; subject: string }
-      try {
-        const locale = userData.locale ?? 'en'
-        const { html, text, subject } = await renderMagicLinkEmail(emailUrl, locale, {
-          appUrl: config.appURL,
-          appName: APP_NAME,
-        })
-        emailContent = { html, text, subject }
-      } catch {
-        logger.warn('Failed to render magic link email template, using plain fallback')
-        emailContent = {
-          subject: `Sign in to ${escapeHtml(APP_NAME)}`,
+      const locale = userData.locale ?? 'en'
+      await sendTemplatedEmail(
+        queueService,
+        email,
+        () =>
+          renderMagicLinkEmail(emailUrl, locale, {
+            appUrl: config.appURL,
+            appName: config.appName ?? 'App',
+          }),
+        {
+          subject: `Sign in to ${escapeHtml(config.appName ?? 'App')}`,
           html: `<p>Click <a href="${escapeHtml(emailUrl)}">here</a> to sign in.</p>`,
-          text: `Sign in to ${escapeHtml(APP_NAME)}: ${emailUrl}`,
-        }
-      }
-
-      try {
-        await queueService.enqueue(QUEUE_NAMES.EMAIL_SEND, { to: email, ...emailContent })
-      } catch (error) {
-        const cause = toError(error)
-        logger.error(`Failed to enqueue magic link email to ${email}`, cause.stack)
-        throw new APIError('INTERNAL_SERVER_ERROR', { message: 'EMAIL_SEND_FAILED' })
-      }
+          text: `Sign in to ${escapeHtml(config.appName ?? 'App')}: ${emailUrl}`,
+        },
+        'magic link',
+        true
+      )
     },
   })
 }

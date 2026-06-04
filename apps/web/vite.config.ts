@@ -22,6 +22,7 @@ function validateEnvPlugin(): Plugin {
         const envVars = loadEnv(config.mode, config.envDir ?? process.cwd(), 'VITE_')
         const schema = z.object({
           VITE_APP_NAME: z.string().optional(),
+          VITE_APP_URL: z.string().url().min(1),
           VITE_GITHUB_REPO_URL: z.string().url().optional(),
           VITE_TALKS_URL: z.string().url().optional(),
           VITE_DOCS_URL: z.string().url().optional(),
@@ -87,6 +88,10 @@ const config = defineConfig(async ({ mode }) => {
   const envDir = '../..'
   const env = loadEnv(mode, envDir, '')
   process.env.VITE_APP_NAME ??= env.APP_NAME ?? 'App'
+  process.env.VITE_APP_URL ??= env.APP_URL ?? ''
+  if (mode === 'production' && !process.env.VITE_APP_URL) {
+    throw new Error('APP_URL must be set in environment for production builds')
+  }
 
   return {
     envDir: '../..',

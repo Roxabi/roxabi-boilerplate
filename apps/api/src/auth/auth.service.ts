@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common'
-import { ConfigService } from '@nestjs/config'
-import { EventEmitter2 } from '@nestjs/event-emitter'
+import type { ConfigService } from '@nestjs/config'
+import type { EventEmitter2 } from '@nestjs/event-emitter'
 import type { FastifyRequest } from 'fastify'
 import {
   ORGANIZATION_CREATED,
@@ -37,8 +37,9 @@ export class AuthService {
       this.queueService,
       {
         secret: config.getOrThrow<string>('BETTER_AUTH_SECRET'),
-        baseURL: config.get<string>('BETTER_AUTH_URL', 'http://localhost:4000'),
-        appURL: config.get<string>('APP_URL', 'http://localhost:3000'),
+        baseURL: config.getOrThrow<string>('BETTER_AUTH_URL'),
+        appURL: config.getOrThrow<string>('APP_URL'),
+        appName: config.get<string>('APP_NAME', 'App'),
         googleClientId,
         googleClientSecret,
         githubClientId,

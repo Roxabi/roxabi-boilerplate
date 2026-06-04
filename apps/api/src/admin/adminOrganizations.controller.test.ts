@@ -156,21 +156,10 @@ describe('AdminOrganizationsController', () => {
       )
     })
 
-    it('should clamp limit to range [1, 100]', async () => {
-      // Arrange
-      vi.mocked(mockAdminOrganizationsQueryService.listOrganizations).mockResolvedValue({
-        data: [],
-        cursor: { next: null, hasMore: false },
-      })
-
-      // Act — limit exceeds max
-      await controller.listOrganizations(undefined, '500')
-
-      // Assert
-      expect(mockAdminOrganizationsQueryService.listOrganizations).toHaveBeenCalledWith(
-        expect.anything(),
-        undefined,
-        100
+    it('should reject limit outside range [1, 100]', async () => {
+      // Act & Assert — limit exceeds max
+      await expect(controller.listOrganizations(undefined, '500')).rejects.toThrow(
+        BadRequestException
       )
     })
 

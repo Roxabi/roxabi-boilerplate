@@ -1,8 +1,17 @@
 import { magicLinkClient, organizationClient } from 'better-auth/client/plugins'
 import { createAuthClient } from 'better-auth/react'
 
+const ssrBaseURL =
+  typeof import.meta.env !== 'undefined'
+    ? (import.meta.env.VITE_APP_URL as string | undefined)
+    : undefined
+
+if (typeof window === 'undefined' && !ssrBaseURL) {
+  throw new Error('VITE_APP_URL must be set for SSR authClient')
+}
+
 export const authClient = createAuthClient({
-  baseURL: typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000',
+  baseURL: typeof window !== 'undefined' ? window.location.origin : (ssrBaseURL as string),
   // Better Auth admin client plugin removed in Phase 1 (#268)
   // All admin actions go through NestJS AdminModule with guards + audit logging
   plugins: [organizationClient(), magicLinkClient()],

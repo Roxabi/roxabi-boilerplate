@@ -74,14 +74,16 @@ function getErrorMessage(errorCode: string): string {
 }
 
 function WarningState({ email }: { email: string }) {
+  const navigate = useNavigate()
   const [signingOut, setSigningOut] = useState(false)
 
   async function handleSignOut() {
     setSigningOut(true)
     try {
       await authClient.signOut()
-      window.location.reload()
-    } catch {
+      navigate({ to: '/login' })
+    } catch (err) {
+      console.error('Sign out failed:', err)
       setSigningOut(false)
     }
   }
@@ -148,6 +150,8 @@ function GuestVerifyFlow({
   token: string | undefined
   error: string | undefined
 }) {
+  const navigate = useNavigate()
+
   // Navigate to API verify endpoint for server-side token processing.
   // Skipped when error is present (returning from API redirect) or token is missing.
   useEffect(() => {
@@ -156,8 +160,11 @@ function GuestVerifyFlow({
       token,
       errorCallbackURL: `${window.location.origin}/magic-link/verify`,
     })
-    window.location.href = `/api/auth/magic-link/verify?${params.toString()}`
-  }, [token, error])
+    navigate({
+      to: `/api/auth/magic-link/verify?${params.toString()}`,
+      reloadDocument: true,
+    })
+  }, [token, error, navigate])
 
   // Error code from API redirect (e.g., ?error=EXPIRED_TOKEN)
   if (error) {

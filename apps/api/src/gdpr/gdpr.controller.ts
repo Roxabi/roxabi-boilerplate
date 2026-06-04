@@ -1,14 +1,18 @@
-import { Controller, Get, Header, Res } from '@nestjs/common'
+import { Controller, Get, Header, Inject, Res } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger'
 import type { FastifyReply } from 'fastify'
 import { Session } from '../auth/decorators/session.decorator.js'
-import { GdprService } from './gdpr.service.js'
+import type { GdprService } from './gdpr.service.js'
 
 @ApiTags('GDPR')
 @ApiBearerAuth()
 @Controller('api/gdpr')
 export class GdprController {
-  constructor(private readonly gdprService: GdprService) {}
+  constructor(
+    private readonly gdprService: GdprService,
+    @Inject(ConfigService) private readonly configService: ConfigService
+  ) {}
 
   @Get('export')
   @ApiOperation({ summary: 'Export all user data (GDPR data portability)' })
@@ -22,7 +26,7 @@ export class GdprController {
     const data = await this.gdprService.exportUserData(session.user.id)
 
     const date = new Date().toISOString().split('T')[0]
-    const slug = (process.env.APP_NAME ?? 'App').toLowerCase().replace(/[^\w-]/g, '-')
+    const slug = (this.configService.get('APP_NAME') ?? 'App').toLowerCase().replace(/[^\w-]/g, '-')
     reply.header('Content-Disposition', `attachment; filename="${slug}-data-export-${date}.json"`)
 
     return data

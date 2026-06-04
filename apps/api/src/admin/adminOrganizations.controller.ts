@@ -21,10 +21,10 @@ import { Session } from '../auth/decorators/session.decorator.js'
 import type { AuthenticatedSession } from '../auth/types.js'
 import { SkipOrg } from '../common/decorators/skipOrg.decorator.js'
 import { ZodValidationPipe } from '../common/pipes/zodValidation.pipe.js'
-import { AdminMembersService } from './adminMembers.service.js'
-import { AdminOrganizationsDeletionService } from './adminOrganizations.deletion.js'
-import { AdminOrganizationsQueryService } from './adminOrganizations.query.js'
-import { AdminOrganizationsService } from './adminOrganizations.service.js'
+import type { AdminMembersService } from './adminMembers.service.js'
+import type { AdminOrganizationsDeletionService } from './adminOrganizations.deletion.js'
+import type { AdminOrganizationsQueryService } from './adminOrganizations.query.js'
+import type { AdminOrganizationsService } from './adminOrganizations.service.js'
 import { AdminBadRequestFilter } from './filters/adminBadRequest.filter.js'
 import { AdminConflictFilter } from './filters/adminConflict.filter.js'
 import { AdminInternalErrorFilter } from './filters/adminInternalError.filter.js'
@@ -62,11 +62,7 @@ type UpdateOrgDto = z.infer<typeof updateOrgSchema>
 
 const listOrgsQuerySchema = z.object({
   cursor: z.string().min(1).optional(),
-  limit: z.preprocess((val) => {
-    if (val === undefined || val === null || val === '') return 20
-    const n = Number(val)
-    return Number.isNaN(n) ? 20 : Math.min(Math.max(Math.floor(n), 1), 100)
-  }, z.number().int()),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
   status: z.enum(['active', 'archived']).optional(),
   search: z.string().max(200).optional(),
   view: z.enum(['list', 'tree']).optional(),

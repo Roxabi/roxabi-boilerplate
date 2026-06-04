@@ -12,10 +12,11 @@ import {
   Input,
   Label,
 } from '@repo/ui'
-import { createFileRoute, useBlocker } from '@tanstack/react-router'
+import { createFileRoute, useBlocker, useNavigate } from '@tanstack/react-router'
 import { AlertTriangleIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { AdminErrorBoundary } from '@/components/admin/AdminErrorBoundary'
 import { appName } from '@/lib/appName'
 import { authClient } from '@/lib/authClient'
 import { isErrorWithMessage } from '@/lib/errorUtils'
@@ -41,6 +42,7 @@ export const Route = createFileRoute('/admin/settings')({
   staticData: { permission: 'members:write' },
   beforeLoad: enforceRoutePermission,
   component: AdminSettingsPage,
+  errorComponent: ({ error }) => <AdminErrorBoundary error={error as Error} />,
   head: () => ({
     meta: [{ title: `${m.org_settings_title()} | ${appName}` }],
   }),
@@ -72,8 +74,8 @@ async function fetchDeletionImpact(orgId: string): Promise<DeletionImpact | null
       credentials: 'include',
     })
     if (res.ok) return (await res.json()) as DeletionImpact
-  } catch {
-    // Proceed without impact summary
+  } catch (error) {
+    console.error('Failed to fetch deletion impact:', error)
   }
   return null
 }
@@ -132,7 +134,8 @@ function DangerZoneCard({ orgId, orgName, onDeleted }: DangerZoneCardProps) {
         setDeleteOpen(false)
         onDeleted()
       }
-    } catch {
+    } catch (error) {
+      console.error('Failed to delete organization:', error)
       toast.error(m.auth_toast_error())
     } finally {
       setDeleting(false)
@@ -218,7 +221,8 @@ function useGeneralSettingsForm(
       const { error } = await authClient.organization.update({ data: { name, slug } })
       if (error) toast.error(error.message ?? m.auth_toast_error())
       else toast.success(m.org_toast_updated())
-    } catch {
+    } catch (error) {
+      console.error('Failed to update organization:', error)
       toast.error(m.auth_toast_error())
     } finally {
       setSaving(false)
@@ -376,6 +380,7 @@ type ReactivationBannerProps = {
 }
 
 function ReactivationBanner({ orgId, deleteScheduledFor, canReactivate }: ReactivationBannerProps) {
+  const navigate = useNavigate()
   const [reactivating, setReactivating] = useState(false)
 
   const formattedDate = new Date(deleteScheduledFor).toLocaleDateString(getLocale())
@@ -396,8 +401,9 @@ function ReactivationBanner({ orgId, deleteScheduledFor, canReactivate }: Reacti
 
       toast.success(m.org_reactivation_success())
       // Force session refresh to clear cached state
-      window.location.reload()
-    } catch {
+      navigate({ to: '/dashboard', reloadDocument: true })
+    } catch (error) {
+      console.error('Failed to reactivate organization:', error)
       toast.error(m.org_reactivation_error())
     } finally {
       setReactivating(false)
@@ -436,6 +442,7 @@ function useOrgDeletionStatus(
 }
 
 function AdminSettingsPage() {
+  const navigate = useNavigate()
   const { data: session } = useEnrichedSession()
   const { data: activeOrg } = authClient.useActiveOrganization()
   const { data: orgs } = useOrganizations(session?.user?.id)
@@ -492,7 +499,7 @@ function AdminSettingsPage() {
           orgName={activeOrg.name}
           onDeleted={() => {
             setIsDirty(false)
-            window.location.href = '/'
+            navigate({ to: '/' })
           }}
         />
       )}
