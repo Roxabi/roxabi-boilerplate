@@ -107,7 +107,7 @@ export class TenantInterceptor implements NestInterceptor {
 
       if (!org) {
         this.logger.warn(`Organization ${orgId} not found during tenant resolution`)
-        return orgId
+        throw new TenantResolutionException(`Organization ${orgId} not found`)
       }
 
       if (org.deletedAt) {
