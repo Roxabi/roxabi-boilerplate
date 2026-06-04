@@ -13,7 +13,7 @@
   "dependencies": {
     "dompurify": "^3.3.2",
     "fumadocs-core": "^16.7.7",
-    "fumadocs-mdx": "^14.2.11",
+    "fumadocs-mdx": "^15.0.10",
     "fumadocs-ui": "^16.7.7",
     "mermaid": "^11.4.1",
     "next": "^16.1.6",
