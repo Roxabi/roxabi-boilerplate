@@ -252,7 +252,7 @@ describe('DrizzleApiKeyRepository', () => {
       const repo = new DrizzleApiKeyRepository(db as never)
 
       // Act
-      const result = await repo.findCandidatesByLastFour('abcd')
+      const result = await repo.findCandidatesByLastFour('abcd', null)
 
       // Assert
       expect(result).toEqual(candidates)
@@ -270,7 +270,7 @@ describe('DrizzleApiKeyRepository', () => {
       const repo = new DrizzleApiKeyRepository(db as never)
 
       // Act
-      const result = await repo.findCandidatesByLastFour('zzzz')
+      const result = await repo.findCandidatesByLastFour('zzzz', null)
 
       // Assert
       expect(result).toEqual([])

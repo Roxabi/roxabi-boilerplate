@@ -526,7 +526,7 @@ describe('DrizzleRbacRepository', () => {
       // insert role → returning → empty (role insert failed, logger.warn is called, continue)
       const tx = {
         select: vi.fn().mockReturnThis(),
-        from: vi.fn().mockReturnThis(),
+        from: vi.fn().mockResolvedValueOnce([]),
         where: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
         innerJoin: vi.fn().mockReturnThis(),

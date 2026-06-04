@@ -150,9 +150,7 @@ export class AdminOrganizationsService {
     data: { name: string; slug: string; parentOrganizationId?: string | null },
     actorId: string
   ) {
-    let createdOrg: typeof organizations.$inferSelect
-
-    await this.db.transaction(async (tx) => {
+    const createdOrg = await this.db.transaction(async (tx) => {
       // Validate parent depth if parentOrganizationId is provided
       if (data.parentOrganizationId) {
         const depth = await getDepth(tx, data.parentOrganizationId)
@@ -172,7 +170,7 @@ export class AdminOrganizationsService {
           })
           .returning()
         if (!result) throw new AdminOrgNotFoundException('insert returned no rows')
-        createdOrg = result
+        return result
       } catch (err) {
         const pgErr = err as { code?: string }
         if (pgErr.code === PG_UNIQUE_VIOLATION) {

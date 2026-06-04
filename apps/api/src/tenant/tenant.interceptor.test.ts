@@ -58,6 +58,10 @@ function createMockDb(rows: Record<string, unknown>[] = []) {
   const selectFn = vi.fn().mockReturnValue({ from: fromFn })
   return {
     select: selectFn,
+    findById: vi.fn().mockImplementation((id: string) => {
+      const row = rows.find((r) => r.id === id)
+      return Promise.resolve(row ?? null)
+    }),
     _mocks: { selectFn, fromFn, whereFn, limitFn },
   }
 }
@@ -228,13 +232,7 @@ describe('TenantInterceptor', () => {
       // Arrange
       const cls = createMockCls(store)
       const db = {
-        select: vi.fn().mockReturnValue({
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              limit: vi.fn().mockRejectedValue(new Error('DB connection lost')),
-            }),
-          }),
-        }),
+        findById: vi.fn().mockRejectedValue(new Error('DB connection lost')),
       }
       const interceptor = new TenantInterceptor(
         cls as never,
@@ -273,8 +271,8 @@ describe('TenantInterceptor', () => {
       const result2$ = interceptor.intercept(context as never, next as never)
       await lastValueFrom(result2$)
 
-      // Assert - DB select should have been called only once
-      expect(db.select).toHaveBeenCalledTimes(1)
+      // Assert - DB lookup should have been called only once
+      expect(db.findById).toHaveBeenCalledTimes(1)
       // tenantId should be set twice (once per intercept call)
       const allCalls = (cls.set as ReturnType<typeof vi.fn>).mock.calls as unknown[][]
       const tenantIdCalls = allCalls.filter((call) => call[0] === 'tenantId')

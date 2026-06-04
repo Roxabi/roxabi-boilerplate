@@ -167,7 +167,7 @@ describe('ApiKeyExceptionFilter', () => {
       // Assert
       const body = getSentBody()
       expect(body.errorCode).toBe('API_KEY_INSERT_FAILED')
-      expect(body.message).toBe('Failed to insert API key')
+      expect(body.message).toBe('An internal error occurred')
     })
   })
 
