@@ -189,9 +189,9 @@ export function PendingInvitations() {
 
   const revokeMutation = useMutation({
     mutationFn: (invitationId: string) => revokeInvitationApi(invitationId),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success(m.org_toast_invitation_revoked())
-      queryClient.invalidateQueries({ queryKey: ['admin-invitations'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin-invitations'] })
     },
     onError: () => toast.error(m.auth_toast_error()),
     onSettled: () => setInvitationToRevoke(null),

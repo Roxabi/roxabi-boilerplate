@@ -29,8 +29,8 @@ export function useOrganizations(sessionKey?: string | null) {
     enabled: sessionKey !== undefined,
   })
 
-  const refetch = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ORGANIZATIONS_QUERY_KEY })
+  const refetch = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ORGANIZATIONS_QUERY_KEY })
   }, [queryClient])
 
   return { data, isLoading, error, refetch }

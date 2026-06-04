@@ -184,11 +184,11 @@ export class UserService {
       // Delete all sessions for this user (force logout)
       await this.repo.deleteUserSessions(userId, tx)
 
-      // Invalidate cached soft-delete status after successful deletion
-      this.invalidateSoftDeleteCache(userId)
-
       return result
     })
+
+    // Invalidate cached soft-delete status after transaction commits
+    this.invalidateSoftDeleteCache(userId)
 
     // Emit after transaction commits to prevent listeners from running on partial state
     await this.eventEmitter.emitAsync(USER_SOFT_DELETED, new UserSoftDeletedEvent(userId))
