@@ -134,12 +134,17 @@ function FeatureFlagsPage() {
               key={flag.id}
               flag={flag}
               onToggle={(id, enabled) =>
-                toggleMutation
-                  .mutateAsync({ id, enabled })
-                  .then(() => {})
-                  .catch(() => {})
+                toggleMutation.mutateAsync({ id, enabled }).catch((err: unknown) => {
+                  console.error('Failed to toggle feature flag:', err)
+                  toast.error('Failed to toggle feature flag')
+                })
               }
-              onDelete={(id) => deleteMutation.mutateAsync(id).catch(() => {})}
+              onDelete={(id) =>
+                deleteMutation.mutateAsync(id).catch((err: unknown) => {
+                  console.error('Failed to delete feature flag:', err)
+                  toast.error('Failed to delete feature flag')
+                })
+              }
             />
           ))}
         </div>

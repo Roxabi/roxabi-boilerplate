@@ -30,6 +30,6 @@ import { UserPurgeService } from './userPurge.service.js'
     { provide: APP_FILTER, useClass: AccountAlreadyDeletedFilter },
     { provide: APP_FILTER, useClass: AccountNotDeletedFilter },
   ],
-  exports: [UserService, UserPurgeService],
+  exports: [UserService, UserPurgeService, USER_PURGE_REPO],
 })
 export class UserModule {}

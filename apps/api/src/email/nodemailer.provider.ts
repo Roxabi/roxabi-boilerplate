@@ -1,5 +1,5 @@
 import { Logger } from '@nestjs/common'
-import { ConfigService } from '@nestjs/config'
+import type { ConfigService } from '@nestjs/config'
 import nodemailer from 'nodemailer'
 import { toError } from '../common/utils/toError.js'
 import type { EmailProvider } from './email.provider.js'

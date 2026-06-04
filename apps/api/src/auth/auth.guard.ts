@@ -8,15 +8,15 @@ import {
   Logger,
   UnauthorizedException,
 } from '@nestjs/common'
-import { Reflector } from '@nestjs/core'
+import type { Reflector } from '@nestjs/core'
 import type { Role } from '@repo/types'
 import type { FastifyRequest } from 'fastify'
-import { ApiKeyService } from '../api-key/apiKey.service.js'
+import type { ApiKeyService } from '../api-key/apiKey.service.js'
 import { ApiKeyInvalidException } from '../api-key/exceptions/apiKeyInvalid.exception.js'
 import { ErrorCode } from '../common/errorCodes.js'
-import { PermissionService } from '../rbac/permission.service.js'
+import type { PermissionService } from '../rbac/permission.service.js'
 import { UserService } from '../user/user.service.js'
-import { SessionEnrichmentService } from './sessionEnrichment.service.js'
+import type { SessionEnrichmentService } from './sessionEnrichment.service.js'
 import type { AuthenticatedSession } from './types.js'
 
 function isAuthenticatedSession(value: unknown): value is AuthenticatedSession {
@@ -131,8 +131,9 @@ export class AuthGuard implements CanActivate {
     const effectiveScopes = keyData.scopes.filter((s) => orgPermissions.includes(s))
     try {
       this.apiKeyService.touchLastUsedAt(keyData.id, keyData.tenantId)
-    } catch {
-      // fire-and-forget — never block auth on a last-used update failure
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      this.logger.warn(`[buildApiKeySession] touchLastUsedAt failed: ${message}`)
     }
     return {
       user: { id: keyData.userId, role: keyData.role as Role },

@@ -11,6 +11,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { SearchIcon, UsersIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { AdminErrorBoundary } from '@/components/admin/AdminErrorBoundary'
 import { ErrorCard } from '@/components/admin/ErrorCard'
 import { InviteDialog } from '@/components/admin/InviteDialog'
 import { MembersTable } from '@/components/admin/MembersTable'
@@ -27,6 +28,7 @@ export const Route = createFileRoute('/admin/members')({
   staticData: { permission: 'members:write' },
   beforeLoad: enforceRoutePermission,
   component: AdminMembersPage,
+  errorComponent: ({ error }) => <AdminErrorBoundary error={error as Error} />,
   head: () => ({
     meta: [{ title: `${m.org_members_title()} | ${appName}` }],
   }),
@@ -42,6 +44,8 @@ const SEARCH_DEBOUNCE_MS = 300
 // ---------------------------------------------------------------------------
 // API helpers
 // ---------------------------------------------------------------------------
+
+import { ApiError } from '@/lib/apiClient'
 
 async function fetchMembers(
   page: number,
@@ -60,15 +64,22 @@ async function fetchMembers(
     signal,
   })
   if (!res.ok) {
-    const data: unknown = await res.json().catch(() => null)
-    throw new Error(parseErrorMessage(data, m.auth_toast_error()))
+    const body: unknown = await res.json().catch(() => {
+      throw new ApiError(res.status, 'Malformed JSON response')
+    })
+    throw new ApiError(res.status, parseErrorMessage(body, m.auth_toast_error()), body)
   }
   return (await res.json()) as MembersResponse
 }
 
 async function fetchRoles(signal?: AbortSignal): Promise<OrgRole[]> {
   const res = await fetch('/api/roles', { credentials: 'include', signal })
-  if (!res.ok) return []
+  if (!res.ok) {
+    const body: unknown = await res.json().catch(() => {
+      throw new ApiError(res.status, 'Malformed JSON response')
+    })
+    throw new ApiError(res.status, parseErrorMessage(body, m.auth_toast_error()), body)
+  }
   return (await res.json()) as OrgRole[]
 }
 

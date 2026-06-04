@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback } from 'react'
 import { fetchOrganizations } from '@/lib/api'
+import { ApiError } from '@/lib/apiClient'
 
 type Organization = {
   id: string
@@ -23,7 +24,10 @@ export function useOrganizations(sessionKey?: string | null) {
     queryKey: [...ORGANIZATIONS_QUERY_KEY, sessionKey],
     queryFn: async ({ signal }) => {
       const res = await fetchOrganizations(signal)
-      return res.ok ? res.json() : []
+      if (!res.ok) {
+        throw new ApiError(res.status, `Failed to fetch organizations`)
+      }
+      return res.json()
     },
     staleTime: 30_000,
     enabled: sessionKey !== undefined,

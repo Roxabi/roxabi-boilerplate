@@ -17,12 +17,14 @@ import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, Link, Outlet, useMatch } from '@tanstack/react-router'
 import { ShieldIcon, UsersIcon } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { AdminErrorBoundary } from '@/components/admin/AdminErrorBoundary'
 import type { FilterConfig } from '@/components/admin/FilterBar'
 import { FilterBar } from '@/components/admin/FilterBar'
 import { LoadMoreButton } from '@/components/admin/LoadMoreButton'
 import { UserContextMenu, UserKebabButton } from '@/components/admin/UserContextMenu'
 import { useCursorPagination } from '@/hooks/useCursorPagination'
 import { adminOrgKeys, adminUserKeys } from '@/lib/admin/queryKeys'
+import { ApiError } from '@/lib/apiClient'
 import { appName } from '@/lib/appName'
 import { formatDate } from '@/lib/formatDate'
 import { formatRelativeTime } from '@/lib/formatRelativeTime'
@@ -33,6 +35,7 @@ export const Route = createFileRoute('/admin/users')({
   staticData: { permission: 'role:superadmin' },
   beforeLoad: enforceRoutePermission,
   component: AdminUsersPage,
+  errorComponent: ({ error }) => <AdminErrorBoundary error={error as Error} />,
   head: () => ({ meta: [{ title: `Users | Admin | ${appName}` }] }),
 })
 
@@ -109,7 +112,12 @@ function useOrgFilterConfigs(): FilterConfig[] {
     queryKey: adminOrgKeys.filterOptions(),
     queryFn: async () => {
       const res = await fetch('/api/admin/organizations?limit=100')
-      if (!res.ok) throw new Error('Failed to fetch organizations')
+      if (!res.ok) {
+        const body: unknown = await res.json().catch(() => {
+          throw new ApiError(res.status, 'Malformed JSON response')
+        })
+        throw new ApiError(res.status, 'Failed to fetch organizations', body)
+      }
       return res.json()
     },
   })
@@ -156,7 +164,12 @@ function AdminUsersList() {
       if (filters.organizationId) params.set('organizationId', filters.organizationId)
       if (filters.search) params.set('search', filters.search)
       const res = await fetch(`/api/admin/users?${params}`)
-      if (!res.ok) throw new Error('Failed to fetch users')
+      if (!res.ok) {
+        const body: unknown = await res.json().catch(() => {
+          throw new ApiError(res.status, 'Malformed JSON response')
+        })
+        throw new ApiError(res.status, 'Failed to fetch users', body)
+      }
       return res.json()
     },
   })

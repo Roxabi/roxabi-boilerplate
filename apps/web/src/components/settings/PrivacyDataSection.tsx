@@ -1,6 +1,7 @@
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui'
 import { Download } from 'lucide-react'
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { m } from '@/paraglide/messages'
 
 export function PrivacyDataSection() {
@@ -29,8 +30,9 @@ export function PrivacyDataSection() {
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
-    } catch {
-      // Export failure — could show a toast, but keeping it simple for now
+    } catch (error) {
+      console.error('GDPR export failed:', error)
+      toast.error(m.auth_toast_error())
     } finally {
       setLoading(false)
     }

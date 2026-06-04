@@ -3,12 +3,12 @@ import { OnEvent } from '@nestjs/event-emitter'
 import { and, eq } from 'drizzle-orm'
 import {
   ORGANIZATION_CREATED,
-  OrganizationCreatedEvent,
+  type OrganizationCreatedEvent,
 } from '../common/events/organizationCreated.event.js'
 import { members } from '../database/schema/auth.schema.js'
 import { roles } from '../database/schema/rbac.schema.js'
-import { TenantService } from '../tenant/tenant.service.js'
-import { RbacService } from './rbac.service.js'
+import type { TenantService } from '../tenant/tenant.service.js'
+import type { RbacService } from './rbac.service.js'
 
 @Injectable()
 export class RbacListener {

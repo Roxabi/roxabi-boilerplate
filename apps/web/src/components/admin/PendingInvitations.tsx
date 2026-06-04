@@ -41,12 +41,19 @@ type InvitationsResponse = {
   data: Invitation[]
 }
 
+import { ApiError } from '@/lib/apiClient'
+
 async function fetchInvitations(signal?: AbortSignal): Promise<Invitation[]> {
   const res = await fetch('/api/admin/invitations', {
     credentials: 'include',
     signal,
   })
-  if (!res.ok) return []
+  if (!res.ok) {
+    const body: unknown = await res.json().catch(() => {
+      throw new ApiError(res.status, 'Malformed JSON response')
+    })
+    throw new ApiError(res.status, 'Failed to fetch invitations', body)
+  }
   const json = (await res.json()) as InvitationsResponse
   return json.data ?? []
 }
@@ -57,7 +64,10 @@ async function revokeInvitationApi(invitationId: string): Promise<void> {
     credentials: 'include',
   })
   if (!res.ok) {
-    throw new Error(m.auth_toast_error())
+    const body: unknown = await res.json().catch(() => {
+      throw new ApiError(res.status, 'Malformed JSON response')
+    })
+    throw new ApiError(res.status, m.auth_toast_error(), body)
   }
 }
 
@@ -193,7 +203,10 @@ export function PendingInvitations() {
       toast.success(m.org_toast_invitation_revoked())
       await queryClient.invalidateQueries({ queryKey: ['admin-invitations'] })
     },
-    onError: () => toast.error(m.auth_toast_error()),
+    onError: (err: unknown) => {
+      console.error('Failed to revoke invitation:', err)
+      toast.error(m.auth_toast_error())
+    },
     onSettled: () => setInvitationToRevoke(null),
   })
 

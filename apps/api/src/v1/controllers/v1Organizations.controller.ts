@@ -4,7 +4,7 @@ import { Permissions } from '../../auth/decorators/permissions.decorator.js'
 import { RequireApiKey } from '../../auth/decorators/requireApiKey.decorator.js'
 import { Session } from '../../auth/decorators/session.decorator.js'
 import type { AuthenticatedSession } from '../../auth/types.js'
-import { OrganizationService } from '../../organization/organization.service.js'
+import type { OrganizationService } from '../../organization/organization.service.js'
 import type { V1OrganizationResponse } from '../dto/v1Responses.js'
 import { V1ExceptionFilter } from '../filters/v1Exception.filter.js'
 

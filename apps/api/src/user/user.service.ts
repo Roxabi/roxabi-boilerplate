@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common'
-import { EventEmitter2 } from '@nestjs/event-emitter'
+import type { EventEmitter2 } from '@nestjs/event-emitter'
 import type { OrgOwnershipResolution } from '@repo/types'
 import { DELETION_GRACE_PERIOD_MS } from '../common/constants.js'
 import { USER_SOFT_DELETED, UserSoftDeletedEvent } from '../common/events/userSoftDeleted.event.js'
@@ -10,7 +10,7 @@ import { EmailConfirmationMismatchException } from './exceptions/emailConfirmati
 import { TransferTargetNotMemberException } from './exceptions/transferTargetNotMember.exception.js'
 import { UserNotFoundException } from './exceptions/userNotFound.exception.js'
 import { USER_REPO, type UserRepository } from './user.repository.js'
-import { UserPurgeService } from './userPurge.service.js'
+import type { UserPurgeService } from './userPurge.service.js'
 
 /** Simple in-memory TTL cache for soft-delete status lookups */
 const SOFT_DELETE_CACHE_TTL_MS = 60_000

@@ -43,8 +43,8 @@ function useAccountDeletionCheck(navigate: ReturnType<typeof useNavigate>) {
             search: { deleteScheduledFor: profile.deleteScheduledFor as string | undefined },
           })
         }
-      } catch {
-        // Non-blocking: profile check is best-effort
+      } catch (err) {
+        console.error('Account deletion check failed:', err)
       } finally {
         if (!controller.signal.aborted) {
           accountCheckDone.current = true
@@ -84,11 +84,15 @@ function useAutoSelectOrg(
     if (firstOrg) {
       activePromiseRef.current = authClient.organization
         .setActive({ organizationId: firstOrg.id })
-        .catch(() => {})
+        .catch((err: unknown) => {
+          console.error('Failed to auto-select organization:', err)
+        })
     } else if (activeOrg) {
       activePromiseRef.current = authClient.organization
         .setActive({ organizationId: '' })
-        .catch(() => {})
+        .catch((err: unknown) => {
+          console.error('Failed to clear active organization:', err)
+        })
     }
 
     return () => {

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import type { FastifyRequest } from 'fastify'
-import { PermissionService } from '../rbac/permission.service.js'
-import { AuthService } from './auth.service.js'
+import type { PermissionService } from '../rbac/permission.service.js'
+import type { AuthService } from './auth.service.js'
 
 @Injectable()
 export class SessionEnrichmentService {

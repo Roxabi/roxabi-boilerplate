@@ -14,12 +14,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@repo/ui'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { ExternalLinkIcon, MoreHorizontalIcon, RotateCcwIcon, Trash2Icon } from 'lucide-react'
 import { useState } from 'react'
-import { toast } from 'sonner'
+import { fetchAdminOrgDeletionImpact } from '@/lib/admin/api'
+import { useOrgMutations } from '@/lib/admin/mutations'
 import { adminOrgKeys } from '@/lib/admin/queryKeys'
+import { ImpactSummary } from './ImpactSummary'
 
 type OrgListContextMenuProps = {
   org: AdminOrganization
@@ -39,70 +41,6 @@ type OrgListMenuContentProps = {
 }
 
 // ---------------------------------------------------------------------------
-// Hooks
-// ---------------------------------------------------------------------------
-
-function useOrgMenuMutations(orgId: string, orgName: string, onActionComplete: () => void) {
-  const deleteMutation = useMutation({
-    mutationFn: async () => {
-      const res = await fetch(`/api/admin/organizations/${orgId}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      })
-      if (!res.ok) throw new Error('Failed to delete organization')
-    },
-    onSuccess: () => {
-      toast.success(`${orgName} has been archived`)
-      onActionComplete()
-    },
-    onError: (err) => {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete organization')
-    },
-  })
-
-  const restoreMutation = useMutation({
-    mutationFn: async () => {
-      const res = await fetch(`/api/admin/organizations/${orgId}/restore`, {
-        method: 'POST',
-        credentials: 'include',
-      })
-      if (!res.ok) throw new Error('Failed to restore organization')
-    },
-    onSuccess: () => {
-      toast.success(`${orgName} has been restored`)
-      onActionComplete()
-    },
-    onError: (err) => {
-      toast.error(err instanceof Error ? err.message : 'Failed to restore organization')
-    },
-  })
-
-  return { deleteMutation, restoreMutation }
-}
-
-// ---------------------------------------------------------------------------
-// ImpactSummary
-// ---------------------------------------------------------------------------
-
-function ImpactSummary({ orgName, impact }: { orgName: string; impact: OrgDeletionImpact }) {
-  const childMsg = `${impact.childMemberCount} member${impact.childMemberCount !== 1 ? 's' : ''} across ${impact.childOrgCount} child org${impact.childOrgCount !== 1 ? 's' : ''} will be affected`
-
-  return (
-    <div className="rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm">
-      <p>
-        This will archive <strong>{orgName}</strong>.
-      </p>
-      <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
-        <li>
-          {impact.memberCount} member{impact.memberCount !== 1 ? 's' : ''} will be affected
-        </li>
-        {impact.childOrgCount > 0 && <li>{childMsg}</li>}
-      </ul>
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
 // OrgListMenuDialogs
 // ---------------------------------------------------------------------------
 
@@ -112,8 +50,8 @@ type OrgListMenuDialogsProps = {
   setShowDeleteDialog: (open: boolean) => void
   showRestoreDialog: boolean
   setShowRestoreDialog: (open: boolean) => void
-  deleteMutation: ReturnType<typeof useOrgMenuMutations>['deleteMutation']
-  restoreMutation: ReturnType<typeof useOrgMenuMutations>['restoreMutation']
+  deleteMutation: ReturnType<typeof useOrgMutations>['deleteMutation']
+  restoreMutation: ReturnType<typeof useOrgMutations>['restoreMutation']
 }
 
 function OrgListMenuDialogs({
@@ -127,13 +65,7 @@ function OrgListMenuDialogs({
 }: OrgListMenuDialogsProps) {
   const { data: impact } = useQuery<OrgDeletionImpact>({
     queryKey: adminOrgKeys.deletionImpact(org.id),
-    queryFn: async () => {
-      const res = await fetch(`/api/admin/organizations/${org.id}/deletion-impact`, {
-        credentials: 'include',
-      })
-      if (!res.ok) throw new Error('Failed to fetch deletion impact')
-      return res.json()
-    },
+    queryFn: async () => fetchAdminOrgDeletionImpact(org.id),
     enabled: showDeleteDialog,
     staleTime: 30_000,
   })
@@ -176,11 +108,7 @@ function OrgListMenuDialogs({
 function OrgListMenuContent({ org, onActionComplete, variant }: OrgListMenuContentProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showRestoreDialog, setShowRestoreDialog] = useState(false)
-  const { deleteMutation, restoreMutation } = useOrgMenuMutations(
-    org.id,
-    org.name,
-    onActionComplete
-  )
+  const { deleteMutation, restoreMutation } = useOrgMutations(org.id, org.name, onActionComplete)
 
   const MenuItem = variant === 'context' ? ContextMenuItem : DropdownMenuItem
   const MenuSeparator = variant === 'context' ? ContextMenuSeparator : DropdownMenuSeparator

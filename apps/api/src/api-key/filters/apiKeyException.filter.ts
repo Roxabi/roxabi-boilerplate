@@ -1,8 +1,9 @@
 import { type ArgumentsHost, Catch, type ExceptionFilter, HttpStatus } from '@nestjs/common'
 import type { FastifyReply, FastifyRequest } from 'fastify'
-import { ClsService } from 'nestjs-cls'
+import type { ClsService } from 'nestjs-cls'
 import { sendErrorResponse } from '../../common/filters/sendErrorResponse.js'
 import { ApiKeyExpiryInPastException } from '../exceptions/apiKeyExpiryInPast.exception.js'
+import { ApiKeyInsertFailedException } from '../exceptions/apiKeyInsertFailed.exception.js'
 import { ApiKeyNoActiveOrgException } from '../exceptions/apiKeyNoActiveOrg.exception.js'
 import { ApiKeyNotFoundException } from '../exceptions/apiKeyNotFound.exception.js'
 import { ApiKeyScopesExceededException } from '../exceptions/apiKeyScopesExceeded.exception.js'
@@ -12,12 +13,14 @@ type ApiKeyException =
   | ApiKeyScopesExceededException
   | ApiKeyExpiryInPastException
   | ApiKeyNoActiveOrgException
+  | ApiKeyInsertFailedException
 
 @Catch(
   ApiKeyNotFoundException,
   ApiKeyScopesExceededException,
   ApiKeyExpiryInPastException,
-  ApiKeyNoActiveOrgException
+  ApiKeyNoActiveOrgException,
+  ApiKeyInsertFailedException
 )
 export class ApiKeyExceptionFilter implements ExceptionFilter {
   constructor(private readonly cls: ClsService) {}
@@ -31,6 +34,8 @@ export class ApiKeyExceptionFilter implements ExceptionFilter {
     let statusCode: number
     if (exception instanceof ApiKeyNotFoundException) {
       statusCode = HttpStatus.NOT_FOUND
+    } else if (exception instanceof ApiKeyInsertFailedException) {
+      statusCode = HttpStatus.INTERNAL_SERVER_ERROR
     } else {
       statusCode = HttpStatus.BAD_REQUEST
     }

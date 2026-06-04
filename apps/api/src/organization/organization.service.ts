@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common'
-import { EventEmitter2 } from '@nestjs/event-emitter'
+import type { EventEmitter2 } from '@nestjs/event-emitter'
 import { DELETION_GRACE_PERIOD_MS } from '../common/constants.js'
 import {
   ORGANIZATION_SOFT_DELETED,

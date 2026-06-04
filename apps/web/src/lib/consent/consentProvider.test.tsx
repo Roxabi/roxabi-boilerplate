@@ -70,9 +70,21 @@ function ConsentTestConsumer() {
   )
 }
 
+function DummyBanner() {
+  return <div data-testid="consent-banner">Banner</div>
+}
+
+function DummyModal() {
+  return <div data-testid="consent-modal">Modal</div>
+}
+
 function renderWithProvider(initialConsent: ConsentCookiePayload | null) {
   return render(
-    <ConsentProvider initialConsent={initialConsent}>
+    <ConsentProvider
+      initialConsent={initialConsent}
+      banner={<DummyBanner />}
+      modal={<DummyModal />}
+    >
       <ConsentTestConsumer />
     </ConsentProvider>
   )

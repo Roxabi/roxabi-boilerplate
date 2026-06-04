@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common'
-import { and, eq, isNotNull } from 'drizzle-orm'
+import { and, eq, isNotNull, lt } from 'drizzle-orm'
 import { DRIZZLE, type DrizzleDB, type DrizzleTx } from '../../database/drizzle.provider.js'
 import {
   accounts,
@@ -28,6 +28,15 @@ export class DrizzleUserPurgeRepository implements UserPurgeRepository {
       .where(eq(users.id, userId))
       .limit(1)
     return user ?? null
+  }
+
+  async findExpiredUsers(now: Date, tx?: DrizzleTx): Promise<{ id: string; email: string }[]> {
+    const qb = tx ?? this.db
+    return qb
+      .select({ id: users.id, email: users.email })
+      .from(users)
+      .where(and(isNotNull(users.deleteScheduledFor), lt(users.deleteScheduledFor, now)))
+      .limit(100)
   }
 
   async anonymizeUserRecords(

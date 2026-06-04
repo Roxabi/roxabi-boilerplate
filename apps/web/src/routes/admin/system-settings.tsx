@@ -4,8 +4,10 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { SettingsIcon } from 'lucide-react'
 import { toast } from 'sonner'
+import { AdminErrorBoundary } from '@/components/admin/AdminErrorBoundary'
 import { SettingsCard } from '@/components/admin/SettingsCard'
 import { adminSettingsKeys } from '@/lib/admin/queryKeys'
+import { ApiError } from '@/lib/apiClient'
 import { appName } from '@/lib/appName'
 import { isErrorWithMessage } from '@/lib/errorUtils'
 import { enforceRoutePermission } from '@/lib/routePermissions'
@@ -14,6 +16,7 @@ export const Route = createFileRoute('/admin/system-settings')({
   staticData: { permission: 'role:superadmin' },
   beforeLoad: enforceRoutePermission,
   component: SystemSettingsPage,
+  errorComponent: ({ error }) => <AdminErrorBoundary error={error as Error} />,
   head: () => ({ meta: [{ title: `System Settings | Admin | ${appName}` }] }),
 })
 
@@ -58,7 +61,12 @@ function SystemSettingsPage() {
     queryKey: adminSettingsKeys.all,
     queryFn: async () => {
       const res = await fetch('/api/admin/settings', { credentials: 'include' })
-      if (!res.ok) throw new Error('Failed to fetch system settings')
+      if (!res.ok) {
+        const body: unknown = await res.json().catch(() => {
+          throw new ApiError(res.status, 'Malformed JSON response')
+        })
+        throw new ApiError(res.status, 'Failed to fetch system settings', body)
+      }
       return res.json()
     },
   })
@@ -75,10 +83,12 @@ function SystemSettingsPage() {
     })
 
     if (!res.ok) {
-      const body: unknown = await res.json().catch(() => null)
+      const body: unknown = await res.json().catch(() => {
+        throw new ApiError(res.status, 'Malformed JSON response')
+      })
       const message = isErrorWithMessage(body) ? body.message : 'Failed to save settings'
       toast.error(message)
-      throw new Error(message)
+      throw new ApiError(res.status, message, body)
     }
 
     toast.success('Settings updated successfully')

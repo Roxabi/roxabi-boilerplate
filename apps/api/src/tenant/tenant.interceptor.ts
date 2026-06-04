@@ -8,16 +8,17 @@ import {
   type NestInterceptor,
   Optional,
 } from '@nestjs/common'
-import { Reflector } from '@nestjs/core'
-import { eq } from 'drizzle-orm'
+import type { Reflector } from '@nestjs/core'
 import type { FastifyRequest } from 'fastify'
-import { ClsService } from 'nestjs-cls'
+import type { ClsService } from 'nestjs-cls'
 import { from, type Observable, switchMap } from 'rxjs'
 import { SKIP_ORG_KEY } from '../common/decorators/skipOrg.decorator.js'
 import { ErrorCode } from '../common/errorCodes.js'
-import { DRIZZLE, type DrizzleDB } from '../database/drizzle.provider.js'
-import * as schema from '../database/schema/index.js'
 import { TenantResolutionException } from './exceptions/tenantResolution.exception.js'
+import {
+  ORGANIZATION_LOOKUP_REPO,
+  type OrganizationLookupRepository,
+} from './organizationLookup.repository.js'
 
 type AuthenticatedRequest = FastifyRequest & {
   session?: {
@@ -45,7 +46,9 @@ export class TenantInterceptor implements NestInterceptor {
   constructor(
     private readonly cls: ClsService,
     private readonly reflector: Reflector,
-    @Optional() @Inject(DRIZZLE) private readonly db: DrizzleDB | null // RLS-BYPASS: tenant resolution — org lookup before RLS context
+    @Optional()
+    @Inject(ORGANIZATION_LOOKUP_REPO)
+    private readonly orgLookup: OrganizationLookupRepository | null
   ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
@@ -72,8 +75,8 @@ export class TenantInterceptor implements NestInterceptor {
       return next.handle()
     }
 
-    // If no DB is available, fall back to using activeOrganizationId directly
-    if (!this.db) {
+    // If no repository is available, fall back to using activeOrganizationId directly
+    if (!this.orgLookup) {
       this.cls.set('tenantId', activeOrganizationId)
       return next.handle()
     }
@@ -95,12 +98,12 @@ export class TenantInterceptor implements NestInterceptor {
    * non-allowed operations if so.
    */
   private async resolveParentOrg(orgId: string, request: AuthenticatedRequest): Promise<string> {
-    if (!this.db) {
+    if (!this.orgLookup) {
       return orgId
     }
 
     try {
-      const org = await this.lookupOrganization(orgId)
+      const org = await this.orgLookup.findById(orgId)
 
       if (!org) {
         this.logger.warn(`Organization ${orgId} not found during tenant resolution`)
@@ -123,26 +126,6 @@ export class TenantInterceptor implements NestInterceptor {
       this.logger.error(`Failed to resolve parent org for ${orgId}`, error)
       throw new TenantResolutionException()
     }
-  }
-
-  private async lookupOrganization(orgId: string) {
-    // biome-ignore lint/style/noNonNullAssertion: caller guards against null db before invoking
-    const orgs = await this.db!.select({
-      id: schema.organizations.id,
-      name: schema.organizations.name,
-      slug: schema.organizations.slug,
-      logo: schema.organizations.logo,
-      metadata: schema.organizations.metadata,
-      deletedAt: schema.organizations.deletedAt,
-      deleteScheduledFor: schema.organizations.deleteScheduledFor,
-      createdAt: schema.organizations.createdAt,
-      updatedAt: schema.organizations.updatedAt,
-    })
-      .from(schema.organizations)
-      .where(eq(schema.organizations.id, orgId))
-      .limit(1)
-
-    return orgs[0] ?? null
   }
 
   private enforceDeletedOrgRestriction(

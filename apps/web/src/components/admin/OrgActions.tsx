@@ -1,66 +1,18 @@
 import type { OrgDeletionImpact } from '@repo/types'
 import { Button, ConfirmDialog, DestructiveConfirmDialog } from '@repo/ui'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { RotateCcwIcon, Trash2Icon } from 'lucide-react'
 import { useState } from 'react'
-import { toast } from 'sonner'
+import { fetchAdminOrgDeletionImpact } from '@/lib/admin/api'
+import { useOrgMutations } from '@/lib/admin/mutations'
 import { adminOrgKeys } from '@/lib/admin/queryKeys'
+import { ImpactSummary } from './ImpactSummary'
 
 type OrgActionsProps = {
   orgId: string
   orgName: string
   isArchived: boolean
   onActionComplete: () => void
-}
-
-function useOrgMutations(orgId: string, orgName: string, onActionComplete: () => void) {
-  const deleteMutation = useMutation({
-    mutationFn: async () => {
-      const res = await fetch(`/api/admin/organizations/${orgId}`, { method: 'DELETE' })
-      if (!res.ok) throw new Error('Failed to delete organization')
-    },
-    onSuccess: () => {
-      toast.success(`${orgName} has been archived`)
-      onActionComplete()
-    },
-    onError: (err) => {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete organization')
-    },
-  })
-
-  const restoreMutation = useMutation({
-    mutationFn: async () => {
-      const res = await fetch(`/api/admin/organizations/${orgId}/restore`, { method: 'POST' })
-      if (!res.ok) throw new Error('Failed to restore organization')
-    },
-    onSuccess: () => {
-      toast.success(`${orgName} has been restored`)
-      onActionComplete()
-    },
-    onError: (err) => {
-      toast.error(err instanceof Error ? err.message : 'Failed to restore organization')
-    },
-  })
-
-  return { deleteMutation, restoreMutation }
-}
-
-function ImpactSummary({ orgName, impact }: { orgName: string; impact: OrgDeletionImpact }) {
-  const childMsg = `${impact.childMemberCount} member${impact.childMemberCount !== 1 ? 's' : ''} across ${impact.childOrgCount} child org${impact.childOrgCount !== 1 ? 's' : ''} will be affected`
-
-  return (
-    <div className="rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm">
-      <p>
-        This will archive <strong>{orgName}</strong>.
-      </p>
-      <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
-        <li>
-          {impact.memberCount} member{impact.memberCount !== 1 ? 's' : ''} will be affected
-        </li>
-        {impact.childOrgCount > 0 && <li>{childMsg}</li>}
-      </ul>
-    </div>
-  )
 }
 
 function ActionButton({
@@ -113,11 +65,7 @@ export function OrgActions({ orgId, orgName, isArchived, onActionComplete }: Org
 
   const { data: impact } = useQuery<OrgDeletionImpact>({
     queryKey: adminOrgKeys.deletionImpact(orgId),
-    queryFn: async () => {
-      const res = await fetch(`/api/admin/organizations/${orgId}/deletion-impact`)
-      if (!res.ok) throw new Error('Failed to fetch deletion impact')
-      return res.json()
-    },
+    queryFn: async () => fetchAdminOrgDeletionImpact(orgId),
     enabled: showDeleteDialog,
   })
 

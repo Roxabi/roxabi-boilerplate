@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common'
 import { sql } from 'drizzle-orm'
-import { ClsService } from 'nestjs-cls'
+import type { ClsService } from 'nestjs-cls'
 import { DRIZZLE, type DrizzleDB } from '../database/drizzle.provider.js'
 import { DatabaseUnavailableException } from './exceptions/databaseUnavailable.exception.js'
 import { TenantContextMissingException } from './exceptions/tenantContextMissing.exception.js'
