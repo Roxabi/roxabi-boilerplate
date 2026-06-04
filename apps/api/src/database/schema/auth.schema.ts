@@ -13,6 +13,16 @@ import { timestamps } from './timestamps.js'
 
 const genId = () => crypto.randomUUID()
 
+/**
+ * Auth-level tables (users, sessions, accounts, verifications) intentionally do NOT
+ * include a `tenantId` column. These tables are global to the application:
+ * a single user can belong to multiple organizations via the `members` junction table.
+ * RLS policies that rely on `tenant_id = current_setting('app.tenant_id', true)`
+ * cannot be applied to these tables. Tenant isolation for user data is enforced
+ * at the application layer (TenantInterceptor + repository WHERE clauses) rather than
+ * at the database Row-Level Security layer.
+ */
+
 export const users = pgTable(
   'users',
   {
@@ -128,12 +138,14 @@ export const members = pgTable(
       .references(() => organizations.id, { onDelete: 'cascade' }),
     role: text('role').notNull().default('member'),
     roleId: text('role_id'),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
     ...timestamps,
   },
   (table) => [
     index('members_user_id_idx').on(table.userId),
     index('members_organization_id_idx').on(table.organizationId),
     index('members_role_id_idx').on(table.roleId),
+    index('members_deleted_at_idx').on(table.deletedAt).where(isNotNull(table.deletedAt)),
   ]
 )
 
