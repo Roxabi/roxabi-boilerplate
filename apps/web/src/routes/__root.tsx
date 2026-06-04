@@ -154,20 +154,21 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         <AppShell>{children}</AppShell>
-        {import.meta.env.DEV && (
-          <TanStackDevtools
-            config={{
-              position: 'bottom-right',
-            }}
-            plugins={[
-              {
-                name: 'Tanstack Router',
-                render: <TanStackRouterDevtoolsPanel />,
-              },
-              TanStackQueryDevtools,
-            ]}
-          />
-        )}
+        {/* Rendered unconditionally: @tanstack/devtools-vite strips this from
+            production builds. Wrapping in `import.meta.env.DEV && (...)` left an
+            empty parenthesized expression after stripping → rolldown build error. */}
+        <TanStackDevtools
+          config={{
+            position: 'bottom-right',
+          }}
+          plugins={[
+            {
+              name: 'Tanstack Router',
+              render: <TanStackRouterDevtoolsPanel />,
+            },
+            TanStackQueryDevtools,
+          ]}
+        />
         <Scripts />
       </body>
     </html>
