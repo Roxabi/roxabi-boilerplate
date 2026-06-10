@@ -11,7 +11,7 @@
     "lint": "echo 'no-op'"
   },
   "devDependencies": {
-    "@playwright/test": "^1.58.2",
+    "@playwright/test": "^1.60.0",
     "@repo/config": "workspace:*",
     "typescript": "^5.9.3"
   }
