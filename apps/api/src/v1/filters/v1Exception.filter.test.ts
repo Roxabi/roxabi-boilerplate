@@ -374,6 +374,49 @@ describe('V1ExceptionFilter', () => {
     })
   })
 
+  describe('logger.error includes stack on 5xx (Fix #7)', () => {
+    it('passes exception stack as second arg to logger.error for plain Error', () => {
+      // Arrange
+      const loggerSpy = vi.spyOn(filter['logger'], 'error')
+      const exception = new Error('boom')
+      exception.stack = 'Error: boom\n  at test:1:1'
+
+      // Act
+      filter.catch(exception, host as never)
+
+      // Assert
+      expect(loggerSpy).toHaveBeenCalledOnce()
+      const [, secondArg] = loggerSpy.mock.calls[0]!
+      expect(secondArg).toBe(exception.stack)
+    })
+
+    it('passes String(exception) as second arg to logger.error for non-Error 5xx', () => {
+      // Arrange
+      const loggerSpy = vi.spyOn(filter['logger'], 'error')
+      const exception = 'raw string thrown'
+
+      // Act
+      filter.catch(exception, host as never)
+
+      // Assert
+      expect(loggerSpy).toHaveBeenCalledOnce()
+      const [, secondArg] = loggerSpy.mock.calls[0]!
+      expect(secondArg).toBe('raw string thrown')
+    })
+
+    it('does not call logger.error for 4xx exceptions', () => {
+      // Arrange
+      const loggerSpy = vi.spyOn(filter['logger'], 'error')
+      const exception = new HttpException('Not found', HttpStatus.NOT_FOUND)
+
+      // Act
+      filter.catch(exception, host as never)
+
+      // Assert
+      expect(loggerSpy).not.toHaveBeenCalled()
+    })
+  })
+
   describe('unknown error handling', () => {
     it('returns 500 with generic message for plain Error', () => {
       // Arrange

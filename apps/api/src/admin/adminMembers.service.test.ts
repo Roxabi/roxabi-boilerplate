@@ -614,5 +614,50 @@ describe('AdminMembersService', () => {
         },
       })
     })
+
+    it('should delete via tx with org-scoped WHERE (Fix #1: includes organizationId)', async () => {
+      // Arrange -- non-owner member so ensureNotLastOwner is a no-op
+      const member = {
+        id: 'm-1',
+        userId: 'u-1',
+        role: 'admin',
+        roleId: 'r-admin',
+        roleSlug: 'admin',
+      }
+
+      db.select.mockReturnValueOnce(createChainMock([member]))
+      const tx = mockTransaction(db)
+      tx.delete.mockReturnValueOnce(createChainMock(undefined))
+
+      // Act
+      await service.removeMember('m-1', 'org-1', 'actor-1')
+
+      // Assert — delete must be called on tx (not db) so it runs inside the transaction
+      expect(tx.delete).toHaveBeenCalled()
+      // db.delete must NOT have been called directly (would bypass org scope guard)
+      expect(db.delete).not.toHaveBeenCalled()
+    })
+
+    it('should throw LastOwnerConstraintException when removing owner with null roleId (Fix #2)', async () => {
+      // Arrange — owner identified by role field only (roleId is null, roleSlug is null)
+      // This exercises the isNull(members.roleId) branch in ensureNotLastOwner
+      const member = {
+        id: 'm-1',
+        userId: 'u-1',
+        role: 'owner',
+        roleId: null,
+        roleSlug: null,
+      }
+
+      db.select.mockReturnValueOnce(createChainMock([member]))
+      const tx = mockTransaction(db)
+      // count query returns 1 → last owner
+      tx.select.mockReturnValueOnce(createChainMock([{ count: 1 }]))
+
+      // Act & Assert
+      await expect(service.removeMember('m-1', 'org-1', 'actor-1')).rejects.toThrow(
+        LastOwnerConstraintException
+      )
+    })
   })
 })

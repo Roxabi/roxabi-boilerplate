@@ -98,30 +98,17 @@ describe('DrizzleGdprExportRepository', () => {
 
   describe('fetchCoreUserData', () => {
     it('should return a 5-tuple with data from all sub-queries', async () => {
-      // fetchCoreUserData calls fetchUserRecord + 4 parallel queries
-      // Queries ending with .limit() use terminal; org query ends with .where() returning this
+      // fetchCoreUserData calls fetchUserRecord + 4 parallel queries.
+      // Fix #5: org query now ends with .limit() — all 5 queries use terminal via limit.
       const { db, terminal } = createMockDb()
 
-      // Queries that call limit: fetchUserRecord, sessions, accounts, consents (4 limit calls)
+      // All 5 queries end with .limit() → terminal is called 5 times
       terminal
         .mockResolvedValueOnce([mockUserData]) // fetchUserRecord (limit 1)
         .mockResolvedValueOnce([mockSessionData]) // sessions (limit 10000)
         .mockResolvedValueOnce([mockAccountData]) // accounts (limit 10000)
+        .mockResolvedValueOnce([mockOrgData]) // orgs (limit 10000) — Fix #5
         .mockResolvedValueOnce([mockConsentData]) // consents (limit 10000)
-
-      // org query: select.from.innerJoin.where → where returns this (mockDb)
-      // Override where to resolve the 3rd call (org query) — but since where is called
-      // multiple times (once per query), use mockResolvedValueOnce for the org call
-      // Actually: sessions, accounts, consents call where then limit → where returns this
-      // Only the org query relies on where as terminal (4th where call)
-      // We'll override where for the org call specifically via call count tracking
-      // Simpler: make where resolve to [] on 4th call (org query)
-      db.where
-        .mockReturnValueOnce(db) // fetchUserRecord: where returns this → then limit
-        .mockReturnValueOnce(db) // sessions: where returns this → then limit
-        .mockReturnValueOnce(db) // accounts: where returns this → then limit
-        .mockResolvedValueOnce([mockOrgData]) // orgs: where is terminal
-        .mockReturnValueOnce(db) // consents: where returns this → then limit
 
       const repo = new DrizzleGdprExportRepository(db as never)
 
@@ -133,20 +120,15 @@ describe('DrizzleGdprExportRepository', () => {
       expect(result[2]).toEqual([mockAccountData])
       expect(result[3]).toEqual([mockOrgData])
       expect(result[4]).toEqual([mockConsentData])
+      // verify limit was called for the org query (Fix #5)
+      expect(db.limit).toHaveBeenCalledWith(10_000)
     })
 
     it('should return empty arrays when user has no data', async () => {
       const { db, terminal } = createMockDb()
 
-      // All limit-terminated queries return []
+      // Fix #5: all 5 queries use terminal via limit
       terminal.mockResolvedValue([])
-      // Org query (where-terminated) also returns []
-      db.where
-        .mockReturnValueOnce(db) // fetchUserRecord
-        .mockReturnValueOnce(db) // sessions
-        .mockReturnValueOnce(db) // accounts
-        .mockResolvedValueOnce([]) // orgs (terminal)
-        .mockReturnValueOnce(db) // consents
 
       const repo = new DrizzleGdprExportRepository(db as never)
 
@@ -162,7 +144,7 @@ describe('DrizzleGdprExportRepository', () => {
     it('should use tx when provided', async () => {
       const { db } = createMockDb()
       const txTerminal = vi.fn().mockResolvedValue([])
-      // Build tx as a self-referential chainable mock
+      // Fix #5: org query now chains .where → .limit, so all where calls return this
       const tx = {
         select: vi.fn(),
         from: vi.fn(),
@@ -173,13 +155,7 @@ describe('DrizzleGdprExportRepository', () => {
       tx.select.mockReturnThis()
       tx.from.mockReturnThis()
       tx.innerJoin.mockReturnThis()
-      // where chains to limit for most, resolves directly for org query (4th call)
-      tx.where
-        .mockReturnValueOnce(tx) // fetchUserRecord
-        .mockReturnValueOnce(tx) // sessions
-        .mockReturnValueOnce(tx) // accounts
-        .mockResolvedValueOnce([]) // orgs
-        .mockReturnValueOnce(tx) // consents
+      tx.where.mockReturnThis() // all where calls chain to limit
 
       const repo = new DrizzleGdprExportRepository(db as never)
 

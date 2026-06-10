@@ -6,14 +6,12 @@ import {
   Injectable,
   Logger,
   type NestInterceptor,
-  Optional,
 } from '@nestjs/common'
 import { Reflector } from '@nestjs/core'
 import type { FastifyRequest } from 'fastify'
 import { ClsService } from 'nestjs-cls'
 import { from, type Observable, switchMap } from 'rxjs'
 import { SKIP_ORG_KEY } from '../common/decorators/skipOrg.decorator.js'
-import { DRIZZLE, type DrizzleDB } from '../database/drizzle.provider.js'
 import { TenantResolutionException } from './exceptions/tenantResolution.exception.js'
 import { DeletedOrgRestrictionService } from './services/deletedOrgRestriction.service.js'
 import { TENANT_REPO, type TenantRepository } from './tenant.repository.js'
@@ -39,8 +37,7 @@ export class TenantInterceptor implements NestInterceptor {
     private readonly cls: ClsService,
     private readonly reflector: Reflector,
     @Inject(TENANT_REPO) private readonly tenantRepo: TenantRepository,
-    private readonly deletedOrgRestrictionService: DeletedOrgRestrictionService,
-    @Optional() @Inject(DRIZZLE) private readonly db: DrizzleDB | null // RLS-BYPASS: tenant resolution — fallback when repository is unavailable
+    private readonly deletedOrgRestrictionService: DeletedOrgRestrictionService
   ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
@@ -67,12 +64,6 @@ export class TenantInterceptor implements NestInterceptor {
       return next.handle()
     }
 
-    // If no DB is available, fall back to using activeOrganizationId directly
-    if (!this.db) {
-      this.cls.set('tenantId', activeOrganizationId)
-      return next.handle()
-    }
-
     // Resolve child org -> parent org asynchronously
     return from(this.resolveParentOrg(activeOrganizationId, request)).pipe(
       switchMap((tenantId) => {
@@ -90,10 +81,6 @@ export class TenantInterceptor implements NestInterceptor {
    * non-allowed operations if so.
    */
   private async resolveParentOrg(orgId: string, request: AuthenticatedRequest): Promise<string> {
-    if (!this.db) {
-      return orgId
-    }
-
     try {
       const org = await this.tenantRepo.lookupOrganization(orgId)
 

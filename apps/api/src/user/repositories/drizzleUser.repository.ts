@@ -110,6 +110,19 @@ export class DrizzleUserRepository implements UserRepository {
     return result
   }
 
+  async getBanStatus(
+    userId: string,
+    tx?: DrizzleTx
+  ): Promise<{ banned: boolean | null; banExpires: Date | null } | null> {
+    const qb = tx ?? this.db
+    const [user] = await qb
+      .select({ banned: users.banned, banExpires: users.banExpires })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1)
+    return user ?? null
+  }
+
   async reactivateUser(userId: string, tx?: DrizzleTx): Promise<UserProfile | undefined> {
     const qb = tx ?? this.db
     const [updated] = await qb

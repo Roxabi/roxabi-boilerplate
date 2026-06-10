@@ -33,22 +33,6 @@ export class DrizzleOrgRepository implements OrgRepository {
       .orderBy(organizations.name)
   }
 
-  async getOwnedOrganizations(
-    userId: string,
-    tx?: DrizzleTx
-  ): Promise<{ orgId: string; orgName: string; orgSlug: string | null }[]> {
-    const qb = tx ?? this.db
-    return qb
-      .select({
-        orgId: organizations.id,
-        orgName: organizations.name,
-        orgSlug: organizations.slug,
-      })
-      .from(members)
-      .innerJoin(organizations, eq(members.organizationId, organizations.id))
-      .where(and(eq(members.userId, userId), eq(members.role, 'owner'), whereActive(organizations)))
-  }
-
   async findActiveOrg(orgId: string, tx?: DrizzleTx): Promise<OrgFindRow | undefined> {
     const qb = tx ?? this.db
     const [org] = await qb
@@ -84,33 +68,6 @@ export class DrizzleOrgRepository implements OrgRepository {
       .where(and(eq(members.organizationId, orgId), eq(members.userId, userId)))
       .limit(1)
     return membership
-  }
-
-  async verifyTargetMember(
-    orgId: string,
-    userId: string,
-    tx?: DrizzleTx
-  ): Promise<{ id: string } | undefined> {
-    const qb = tx ?? this.db
-    const [targetMember] = await qb
-      .select({ id: members.id })
-      .from(members)
-      .where(and(eq(members.organizationId, orgId), eq(members.userId, userId)))
-      .limit(1)
-    return targetMember
-  }
-
-  async transferOrgOwnership(
-    orgId: string,
-    targetUserId: string,
-    now: Date,
-    tx?: DrizzleTx
-  ): Promise<void> {
-    const qb = tx ?? this.db
-    await qb
-      .update(members)
-      .set({ role: 'owner', updatedAt: now })
-      .where(and(eq(members.organizationId, orgId), eq(members.userId, targetUserId)))
   }
 
   async softDeleteOrg(
@@ -196,11 +153,6 @@ export class DrizzleOrgRepository implements OrgRepository {
       invitationCount: invitationResult?.count ?? 0,
       customRoleCount: roleResult?.count ?? 0,
     }
-  }
-
-  async deleteUserSessions(userId: string, tx?: DrizzleTx): Promise<void> {
-    const qb = tx ?? this.db
-    await qb.delete(sessions).where(eq(sessions.userId, userId))
   }
 
   transaction<T>(fn: (tx: DrizzleTx) => Promise<T>): Promise<T> {

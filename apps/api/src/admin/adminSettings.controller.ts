@@ -33,10 +33,6 @@ export const settingsUpdateSchema = z.object({
           key: z.string().min(1),
           value: z.unknown(),
         })
-        .refine((obj) => 'value' in obj, {
-          message: 'Value is required',
-          path: ['value'],
-        })
         .refine(
           (obj) => {
             const schema = knownSettingValueSchemas[obj.key]

@@ -15,6 +15,7 @@ function createMockDb() {
     set: vi.fn().mockReturnThis(),
     returning: vi.fn().mockImplementation(() => terminal()),
     delete: vi.fn().mockReturnThis(),
+    transaction: vi.fn(),
     _terminal: terminal,
   }
 
@@ -295,6 +296,55 @@ describe('DrizzleMembershipRepository', () => {
       const repo = new DrizzleMembershipRepository(db as never)
 
       await expect(repo.expireOrgInvitations('org-no-invites')).resolves.toBeUndefined()
+    })
+  })
+
+  describe('deleteUserSessions', () => {
+    it('should delete all sessions for the given user', async () => {
+      const { db } = createMockDb()
+      db.where.mockResolvedValue([])
+      const repo = new DrizzleMembershipRepository(db as never)
+
+      await repo.deleteUserSessions('user-1')
+
+      expect(db.delete).toHaveBeenCalled()
+      expect(db.where).toHaveBeenCalled()
+    })
+
+    it('should use tx when provided', async () => {
+      const { db } = createMockDb()
+      const tx = {
+        delete: vi.fn().mockReturnThis(),
+        where: vi.fn().mockResolvedValue([]),
+      }
+      const repo = new DrizzleMembershipRepository(db as never)
+
+      await repo.deleteUserSessions('user-1', tx as never)
+
+      expect(tx.delete).toHaveBeenCalled()
+      expect(db.delete).not.toHaveBeenCalled()
+    })
+
+    it('should not throw when user has no sessions', async () => {
+      const { db } = createMockDb()
+      db.where.mockResolvedValue([])
+      const repo = new DrizzleMembershipRepository(db as never)
+
+      await expect(repo.deleteUserSessions('user-no-sessions')).resolves.toBeUndefined()
+    })
+  })
+
+  describe('transaction', () => {
+    it('should delegate to db.transaction', async () => {
+      const { db } = createMockDb()
+      const txFn = vi.fn().mockResolvedValue('result')
+      db.transaction.mockResolvedValue('result')
+      const repo = new DrizzleMembershipRepository(db as never)
+
+      const result = await repo.transaction(txFn)
+
+      expect(db.transaction).toHaveBeenCalledWith(txFn)
+      expect(result).toBe('result')
     })
   })
 })

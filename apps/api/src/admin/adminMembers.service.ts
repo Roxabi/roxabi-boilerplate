@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common'
-import { and, count, eq, ilike, or } from 'drizzle-orm'
+import { and, count, eq, ilike, isNull, or } from 'drizzle-orm'
 import type { ClsService } from 'nestjs-cls'
 import type { AuditService } from '../audit/audit.service.js'
 import { DRIZZLE, type DrizzleDB, type DrizzleTx } from '../database/drizzle.provider.js'
@@ -238,7 +238,9 @@ export class AdminMembersService {
     await this.db.transaction(async (tx) => {
       await this.ensureNotLastOwner(tx, member, orgId)
 
-      await tx.delete(members).where(eq(members.id, memberId))
+      await tx
+        .delete(members)
+        .where(and(eq(members.id, memberId), eq(members.organizationId, orgId)))
     })
 
     this.logMemberAudit('member.removed', 'member', orgId, memberId, actorId, {
@@ -287,17 +289,15 @@ export class AdminMembersService {
   ) {
     if (member.roleSlug !== 'owner' && member.role !== 'owner') return
 
+    const roleCondition =
+      member.roleId != null
+        ? eq(members.roleId, member.roleId)
+        : and(eq(members.role, 'owner'), isNull(members.roleId))
+
     const [ownerCount] = await tx
       .select({ count: count() })
       .from(members)
-      .where(
-        and(
-          eq(members.organizationId, orgId),
-          // biome-ignore lint/style/noNonNullAssertion: roleId is guaranteed by the owner role check above
-          eq(members.roleId, member.roleId!),
-          whereActive(members)
-        )
-      )
+      .where(and(eq(members.organizationId, orgId), roleCondition, whereActive(members)))
 
     if ((ownerCount?.count ?? 0) <= 1) {
       throw new LastOwnerConstraintException()
@@ -311,17 +311,15 @@ export class AdminMembersService {
   ) {
     if (member.roleSlug !== 'owner' && member.role !== 'owner') return
 
+    const roleCondition =
+      member.roleId != null
+        ? eq(members.roleId, member.roleId)
+        : and(eq(members.role, 'owner'), isNull(members.roleId))
+
     const [ownerCount] = await tx
       .select({ count: count() })
       .from(members)
-      .where(
-        and(
-          eq(members.organizationId, orgId),
-          // biome-ignore lint/style/noNonNullAssertion: roleId is guaranteed by the owner role check above
-          eq(members.roleId, member.roleId!),
-          whereActive(members)
-        )
-      )
+      .where(and(eq(members.organizationId, orgId), roleCondition, whereActive(members)))
 
     if ((ownerCount?.count ?? 0) <= 1) {
       throw new LastOwnerConstraintException()

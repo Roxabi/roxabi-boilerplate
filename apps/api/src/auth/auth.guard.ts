@@ -152,10 +152,22 @@ export class AuthGuard implements CanActivate {
   ): Promise<void> {
     if (session.actorType !== 'api_key') {
       await this.checkSoftDeleted(request, session)
+      await this.checkBanned(session)
     }
     this.checkRoles(context, session)
     this.checkOrgRequired(context, session)
     this.checkPermissions(context, session)
+  }
+
+  private async checkBanned(session: AuthenticatedSession) {
+    const user = await this.userService.getBanStatus(session.user.id)
+    if (!user?.banned) return
+    const now = new Date()
+    if (user.banExpires !== null && user.banExpires <= now) return
+    throw new ForbiddenException({
+      message: 'Account is banned',
+      errorCode: ErrorCode.ACCOUNT_BANNED,
+    })
   }
 
   private async checkSoftDeleted(request: AuthenticatedRequest, session: AuthenticatedSession) {

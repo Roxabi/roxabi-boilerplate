@@ -53,7 +53,8 @@ export class V1ExceptionFilter implements ExceptionFilter {
 
     if (statusCode >= 500) {
       this.logger.error(
-        `[${request.method}] ${request.url} → ${statusCode} | ${code} | ${exception instanceof Error ? exception.message : String(exception)}`
+        `[${request.method}] ${request.url} → ${statusCode} | ${code} | ${exception instanceof Error ? exception.message : String(exception)}`,
+        exception instanceof Error ? exception.stack : String(exception)
       )
       message = 'Internal server error'
       code = 'INTERNAL_ERROR'

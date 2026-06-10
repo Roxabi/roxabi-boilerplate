@@ -423,6 +423,72 @@ describe('AuthGuard', () => {
     })
   })
 
+  describe('checkBanned', () => {
+    const validSession = {
+      user: { id: 'user-1', role: 'user' },
+      session: { id: 'sess-1', activeOrganizationId: null },
+      permissions: [],
+    }
+
+    it('should throw ForbiddenException with ACCOUNT_BANNED when user is banned with no expiry', async () => {
+      // Arrange — banned: true, banExpires: null → permanent ban
+      const userService = createMockUserService(null, null, { banned: true, banExpires: null })
+      const { guard } = createGuard(validSession, {}, userService)
+      const { context } = createMockContext()
+
+      // Act & Assert
+      try {
+        await guard.canActivate(context as never)
+        expect.unreachable('Should have thrown ForbiddenException')
+      } catch (error) {
+        expect(error).toBeInstanceOf(ForbiddenException)
+        const response = (error as ForbiddenException).getResponse() as Record<string, unknown>
+        expect(response.message).toBe('Account is banned')
+        expect(response.errorCode).toBe(ErrorCode.ACCOUNT_BANNED)
+      }
+    })
+
+    it('should throw ForbiddenException with ACCOUNT_BANNED when banExpires is in the future', async () => {
+      // Arrange — ban still active: expires tomorrow
+      const tomorrow = new Date(Date.now() + 86_400_000)
+      const userService = createMockUserService(null, null, { banned: true, banExpires: tomorrow })
+      const { guard } = createGuard(validSession, {}, userService)
+      const { context } = createMockContext()
+
+      // Act & Assert
+      await expect(guard.canActivate(context as never)).rejects.toMatchObject({
+        response: { errorCode: ErrorCode.ACCOUNT_BANNED },
+      })
+    })
+
+    it('should allow through when banExpires is in the past (lapsed ban)', async () => {
+      // Arrange — ban expired yesterday → treat as not banned
+      const yesterday = new Date(Date.now() - 86_400_000)
+      const userService = createMockUserService(null, null, { banned: true, banExpires: yesterday })
+      const { guard } = createGuard(validSession, {}, userService)
+      const { context } = createMockContext()
+
+      // Act
+      const result = await guard.canActivate(context as never)
+
+      // Assert
+      expect(result).toBe(true)
+    })
+
+    it('should allow through when user is not banned', async () => {
+      // Arrange
+      const userService = createMockUserService(null, null, { banned: false, banExpires: null })
+      const { guard } = createGuard(validSession, {}, userService)
+      const { context } = createMockContext()
+
+      // Act
+      const result = await guard.canActivate(context as never)
+
+      // Assert
+      expect(result).toBe(true)
+    })
+  })
+
   // -----------------------------------------------------------------------
   // API key auth — RED phase tests (#319)
   // -----------------------------------------------------------------------
@@ -537,6 +603,23 @@ describe('AuthGuard', () => {
 
       // Assert
       expect(userService.getSoftDeleteStatus).not.toHaveBeenCalled()
+    })
+
+    it('should NOT call checkBanned (userService.getBanStatus) for API key auth', async () => {
+      // Arrange
+      const apiKeyService = createMockApiKeyService(validKeyData)
+      const permissionService = createMockPermissionService(['api:read'])
+      const userService = createMockUserService()
+      const { guard } = createGuard(null, {}, userService, apiKeyService, permissionService)
+      const { context } = createMockContext({
+        headers: { authorization: `Bearer ${VALID_API_KEY_TOKEN}` },
+      })
+
+      // Act
+      await guard.canActivate(context as never)
+
+      // Assert
+      expect(userService.getBanStatus).not.toHaveBeenCalled()
     })
 
     it('should throw ForbiddenException with API_KEY_SCOPE_DENIED when route requires @Roles() but no @Permissions()', async () => {

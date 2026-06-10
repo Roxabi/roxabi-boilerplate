@@ -62,9 +62,15 @@ export async function walkParentChain(
   let depth = 0
   let iterations = 0
   let currentId: string | null = startId
+  const visited = new Set<string>()
 
   while (currentId) {
     if (iterations++ >= MAX_PARENT_WALK_ITERATIONS) break
+    if (visited.has(currentId)) {
+      throw new OrgCycleDetectedException()
+    }
+    visited.add(currentId)
+
     const [org] = await tx
       .select({
         id: organizations.id,
@@ -119,15 +125,16 @@ export async function getDescendantOrgIds(
 ): Promise<string[]> {
   const result = await db.execute(sql`
     WITH RECURSIVE descendants AS (
-      SELECT id, parent_organization_id
+      SELECT id, parent_organization_id, 1 AS depth
       FROM organizations
       WHERE parent_organization_id = ${orgId}
 
       UNION ALL
 
-      SELECT o.id, o.parent_organization_id
+      SELECT o.id, o.parent_organization_id, d.depth + 1
       FROM organizations o
       INNER JOIN descendants d ON o.parent_organization_id = d.id
+      WHERE d.depth < ${MAX_PARENT_WALK_ITERATIONS}
     )
     SELECT id FROM descendants
     LIMIT 1000

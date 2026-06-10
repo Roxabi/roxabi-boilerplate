@@ -56,6 +56,11 @@ export interface UserRepository {
     tx?: DrizzleTx
   ): Promise<UserProfile | undefined>
 
+  getBanStatus(
+    userId: string,
+    tx?: DrizzleTx
+  ): Promise<{ banned: boolean | null; banExpires: Date | null } | null>
+
   reactivateUser(userId: string, tx?: DrizzleTx): Promise<UserProfile | undefined>
 
   transaction<T>(fn: (tx: DrizzleTx) => Promise<T>): Promise<T>

@@ -32,4 +32,8 @@ export interface MembershipRepository {
   clearOrgSessions(orgId: string, tx?: DrizzleTx): Promise<void>
 
   expireOrgInvitations(orgId: string, tx?: DrizzleTx): Promise<void>
+
+  deleteUserSessions(userId: string, tx?: DrizzleTx): Promise<void>
+
+  transaction<T>(fn: (tx: DrizzleTx) => Promise<T>): Promise<T>
 }

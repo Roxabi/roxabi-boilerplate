@@ -1,6 +1,6 @@
-import { forwardRef, Module } from '@nestjs/common'
+import { Module } from '@nestjs/common'
 import { APP_FILTER } from '@nestjs/core'
-import { OrganizationModule } from '../organization/organization.module.js'
+import { MembershipModule } from '../membership/membership.module.js'
 import { AccountAlreadyDeletedFilter } from './filters/accountAlreadyDeleted.filter.js'
 import { AccountNotDeletedFilter } from './filters/accountNotDeleted.filter.js'
 import { EmailConfirmationMismatchFilter } from './filters/emailConfirmationMismatch.filter.js'
@@ -15,7 +15,7 @@ import { USER_PURGE_REPO } from './userPurge.repository.js'
 import { UserPurgeService } from './userPurge.service.js'
 
 @Module({
-  imports: [forwardRef(() => OrganizationModule)],
+  imports: [MembershipModule],
   controllers: [UserController],
   providers: [
     UserService,

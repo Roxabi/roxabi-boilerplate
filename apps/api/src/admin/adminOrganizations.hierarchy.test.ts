@@ -214,6 +214,23 @@ describe('admin-organizations.hierarchy', () => {
       // Assert
       expect(result.depth).toBe(0)
     })
+
+    it('should throw OrgCycleDetectedException when a pure A→B→A cycle is detected (visited Set, Fix #4)', async () => {
+      // Arrange -- A→B→A cycle where neither A nor B equals 'org-target'
+      // This exercises the visited Set path (not the targetOrgId === currentId path):
+      //   iter1: add 'org-A' to visited, fetch → parent 'org-B'
+      //   iter2: add 'org-B' to visited, fetch → parent 'org-A'
+      //   iter3: visited.has('org-A') = true → throw OrgCycleDetectedException
+      const tx = createMockTx()
+      tx.select
+        .mockReturnValueOnce(createChainMock([{ id: 'org-A', parentOrganizationId: 'org-B' }]))
+        .mockReturnValueOnce(createChainMock([{ id: 'org-B', parentOrganizationId: 'org-A' }]))
+
+      // Act & Assert
+      await expect(walkParentChain(tx as never, 'org-target', 'org-A')).rejects.toThrow(
+        OrgCycleDetectedException
+      )
+    })
   })
 
   // -------------------------------------------------------------------------

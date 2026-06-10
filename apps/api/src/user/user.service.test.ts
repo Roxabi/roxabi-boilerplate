@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { OrgRepository } from '../organization/org.repository.js'
+import type { MembershipRepository } from '../membership/membership.repository.js'
 import { AccountNotDeletedException } from './exceptions/accountNotDeleted.exception.js'
 import { EmailConfirmationMismatchException } from './exceptions/emailConfirmationMismatch.exception.js'
 import { TransferTargetNotMemberException } from './exceptions/transferTargetNotMember.exception.js'
@@ -12,18 +12,18 @@ const mockEventEmitter = {
   emitAsync: vi.fn().mockResolvedValue([]),
 }
 
-function createMockOrgRepo(): OrgRepository {
+function createMockMembershipRepo(): MembershipRepository {
   return {
     getOwnedOrganizations: vi.fn(),
-    checkOwnership: vi.fn(),
+    verifyOrgOwnership: vi.fn(),
     verifyTargetMember: vi.fn(),
     transferOrgOwnership: vi.fn(),
-    deleteUserSessions: vi.fn(),
     softDeleteOrg: vi.fn(),
     clearOrgSessions: vi.fn(),
     expireOrgInvitations: vi.fn(),
+    deleteUserSessions: vi.fn(),
     transaction: vi.fn(),
-  } as unknown as OrgRepository
+  } as unknown as MembershipRepository
 }
 
 function createMockUserPurgeService(overrides?: Partial<Record<keyof UserPurgeService, unknown>>) {
@@ -57,6 +57,7 @@ const mockUser = {
 function createMockUserRepo(): UserRepository {
   return {
     getSoftDeleteStatus: vi.fn(),
+    getBanStatus: vi.fn(),
     getProfile: vi.fn(),
     getNameFields: vi.fn(),
     updateProfile: vi.fn(),
@@ -80,7 +81,7 @@ describe('UserService', () => {
       })
       const service = new UserService(
         mockRepo as never,
-        createMockOrgRepo() as never,
+        createMockMembershipRepo() as never,
         mockEventEmitter as never,
         createMockUserPurgeService()
       )
@@ -101,7 +102,7 @@ describe('UserService', () => {
       })
       const service = new UserService(
         mockRepo as never,
-        createMockOrgRepo() as never,
+        createMockMembershipRepo() as never,
         mockEventEmitter as never,
         createMockUserPurgeService()
       )
@@ -120,13 +121,78 @@ describe('UserService', () => {
       ;(mockRepo.getSoftDeleteStatus as ReturnType<typeof vi.fn>).mockResolvedValue(null)
       const service = new UserService(
         mockRepo as never,
-        createMockOrgRepo() as never,
+        createMockMembershipRepo() as never,
         mockEventEmitter as never,
         createMockUserPurgeService()
       )
 
       // Act
       const result = await service.getSoftDeleteStatus('nonexistent')
+
+      // Assert
+      expect(result).toBeNull()
+    })
+  })
+
+  describe('getBanStatus', () => {
+    it('should return ban status from repository on cache miss', async () => {
+      // Arrange
+      const mockRepo = createMockUserRepo()
+      ;(mockRepo.getBanStatus as ReturnType<typeof vi.fn>).mockResolvedValue({
+        banned: true,
+        banExpires: null,
+      })
+      const service = new UserService(
+        mockRepo as never,
+        createMockMembershipRepo() as never,
+        mockEventEmitter as never,
+        createMockUserPurgeService()
+      )
+
+      // Act -- unique userId to avoid cache collisions
+      const result = await service.getBanStatus('user-banned-1')
+
+      // Assert
+      expect(mockRepo.getBanStatus).toHaveBeenCalledOnce()
+      expect(result).toEqual({ banned: true, banExpires: null })
+    })
+
+    it('should return cached value and NOT hit repository on cache hit', async () => {
+      // Arrange
+      const mockRepo = createMockUserRepo()
+      ;(mockRepo.getBanStatus as ReturnType<typeof vi.fn>).mockResolvedValue({
+        banned: false,
+        banExpires: null,
+      })
+      const service = new UserService(
+        mockRepo as never,
+        createMockMembershipRepo() as never,
+        mockEventEmitter as never,
+        createMockUserPurgeService()
+      )
+
+      // Act -- call twice, should only hit DB once
+      await service.getBanStatus('user-banned-2')
+      const result = await service.getBanStatus('user-banned-2')
+
+      // Assert
+      expect(mockRepo.getBanStatus).toHaveBeenCalledOnce()
+      expect(result).toEqual({ banned: false, banExpires: null })
+    })
+
+    it('should return null when user does not exist', async () => {
+      // Arrange
+      const mockRepo = createMockUserRepo()
+      ;(mockRepo.getBanStatus as ReturnType<typeof vi.fn>).mockResolvedValue(null)
+      const service = new UserService(
+        mockRepo as never,
+        createMockMembershipRepo() as never,
+        mockEventEmitter as never,
+        createMockUserPurgeService()
+      )
+
+      // Act
+      const result = await service.getBanStatus('user-banned-nonexistent')
 
       // Assert
       expect(result).toBeNull()
@@ -140,7 +206,7 @@ describe('UserService', () => {
       ;(mockRepo.getProfile as ReturnType<typeof vi.fn>).mockResolvedValue(mockUser)
       const service = new UserService(
         mockRepo as never,
-        createMockOrgRepo() as never,
+        createMockMembershipRepo() as never,
         mockEventEmitter as never,
         createMockUserPurgeService()
       )
@@ -167,7 +233,7 @@ describe('UserService', () => {
       ;(mockRepo.getProfile as ReturnType<typeof vi.fn>).mockResolvedValue(null)
       const service = new UserService(
         mockRepo as never,
-        createMockOrgRepo() as never,
+        createMockMembershipRepo() as never,
         mockEventEmitter as never,
         createMockUserPurgeService()
       )
@@ -190,7 +256,7 @@ describe('UserService', () => {
       ;(mockRepo.updateProfile as ReturnType<typeof vi.fn>).mockResolvedValue(updatedUser)
       const service = new UserService(
         mockRepo as never,
-        createMockOrgRepo() as never,
+        createMockMembershipRepo() as never,
         mockEventEmitter as never,
         createMockUserPurgeService()
       )
@@ -210,7 +276,7 @@ describe('UserService', () => {
       ;(mockRepo.updateProfile as ReturnType<typeof vi.fn>).mockResolvedValue(updatedUser)
       const service = new UserService(
         mockRepo as never,
-        createMockOrgRepo() as never,
+        createMockMembershipRepo() as never,
         mockEventEmitter as never,
         createMockUserPurgeService()
       )
@@ -229,7 +295,7 @@ describe('UserService', () => {
       ;(mockRepo.updateProfile as ReturnType<typeof vi.fn>).mockResolvedValue(undefined)
       const service = new UserService(
         mockRepo as never,
-        createMockOrgRepo() as never,
+        createMockMembershipRepo() as never,
         mockEventEmitter as never,
         createMockUserPurgeService()
       )
@@ -252,7 +318,7 @@ describe('UserService', () => {
       })
       const service = new UserService(
         mockRepo as never,
-        createMockOrgRepo() as never,
+        createMockMembershipRepo() as never,
         mockEventEmitter as never,
         createMockUserPurgeService()
       )
@@ -269,7 +335,7 @@ describe('UserService', () => {
       ;(mockRepo.findForValidation as ReturnType<typeof vi.fn>).mockResolvedValue(null)
       const service = new UserService(
         mockRepo as never,
-        createMockOrgRepo() as never,
+        createMockMembershipRepo() as never,
         mockEventEmitter as never,
         createMockUserPurgeService()
       )
@@ -283,23 +349,25 @@ describe('UserService', () => {
     it('should throw TransferTargetNotMemberException when transfer target is not a member of the org', async () => {
       // Arrange
       const mockRepo = createMockUserRepo()
-      const mockOrgRepo = createMockOrgRepo()
+      const mockMembershipRepo = createMockMembershipRepo()
       ;(mockRepo.findForValidation as ReturnType<typeof vi.fn>).mockResolvedValue({
         id: 'user-1',
         email: 'john@example.com',
         deletedAt: null,
       })
-      ;(mockOrgRepo.transaction as ReturnType<typeof vi.fn>).mockImplementation(
+      ;(mockMembershipRepo.transaction as ReturnType<typeof vi.fn>).mockImplementation(
         async (fn: (tx: unknown) => Promise<unknown>) => fn(undefined)
       )
-      ;(mockOrgRepo.checkOwnership as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ;(mockMembershipRepo.verifyOrgOwnership as ReturnType<typeof vi.fn>).mockResolvedValue({
         role: 'owner',
       })
-      ;(mockOrgRepo.verifyTargetMember as ReturnType<typeof vi.fn>).mockResolvedValue(undefined)
+      ;(mockMembershipRepo.verifyTargetMember as ReturnType<typeof vi.fn>).mockResolvedValue(
+        undefined
+      )
 
       const service = new UserService(
         mockRepo as never,
-        mockOrgRepo as never,
+        mockMembershipRepo as never,
         mockEventEmitter as never,
         createMockUserPurgeService()
       )
@@ -316,7 +384,7 @@ describe('UserService', () => {
     it('should process transfer resolution by updating target member role to owner', async () => {
       // Arrange
       const mockRepo = createMockUserRepo()
-      const mockOrgRepo = createMockOrgRepo()
+      const mockMembershipRepo = createMockMembershipRepo()
       ;(mockRepo.findForValidation as ReturnType<typeof vi.fn>).mockResolvedValue({
         id: 'user-1',
         email: 'john@example.com',
@@ -327,22 +395,26 @@ describe('UserService', () => {
         deletedAt: new Date(),
         deleteScheduledFor: new Date(),
       }
-      ;(mockOrgRepo.transaction as ReturnType<typeof vi.fn>).mockImplementation(
+      ;(mockMembershipRepo.transaction as ReturnType<typeof vi.fn>).mockImplementation(
         async (fn: (tx: unknown) => Promise<unknown>) => fn(undefined)
       )
-      ;(mockOrgRepo.checkOwnership as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ;(mockMembershipRepo.verifyOrgOwnership as ReturnType<typeof vi.fn>).mockResolvedValue({
         role: 'owner',
       })
-      ;(mockOrgRepo.verifyTargetMember as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ;(mockMembershipRepo.verifyTargetMember as ReturnType<typeof vi.fn>).mockResolvedValue({
         id: 'member-2',
       })
-      ;(mockOrgRepo.transferOrgOwnership as ReturnType<typeof vi.fn>).mockResolvedValue(undefined)
+      ;(mockMembershipRepo.transferOrgOwnership as ReturnType<typeof vi.fn>).mockResolvedValue(
+        undefined
+      )
       ;(mockRepo.softDeleteUser as ReturnType<typeof vi.fn>).mockResolvedValue(deletedUser)
-      ;(mockOrgRepo.deleteUserSessions as ReturnType<typeof vi.fn>).mockResolvedValue(undefined)
+      ;(mockMembershipRepo.deleteUserSessions as ReturnType<typeof vi.fn>).mockResolvedValue(
+        undefined
+      )
 
       const service = new UserService(
         mockRepo as never,
-        mockOrgRepo as never,
+        mockMembershipRepo as never,
         mockEventEmitter as never,
         createMockUserPurgeService()
       )
@@ -355,14 +427,14 @@ describe('UserService', () => {
 
       // Assert
       expect(result).toEqual(deletedUser)
-      expect(mockOrgRepo.transaction).toHaveBeenCalledOnce()
-      expect(mockOrgRepo.transferOrgOwnership).toHaveBeenCalledOnce()
+      expect(mockMembershipRepo.transaction).toHaveBeenCalledOnce()
+      expect(mockMembershipRepo.transferOrgOwnership).toHaveBeenCalledOnce()
     })
 
     it('should process delete resolution by soft-deleting org, clearing sessions, and expiring invitations', async () => {
       // Arrange
       const mockRepo = createMockUserRepo()
-      const mockOrgRepo = createMockOrgRepo()
+      const mockMembershipRepo = createMockMembershipRepo()
       ;(mockRepo.findForValidation as ReturnType<typeof vi.fn>).mockResolvedValue({
         id: 'user-1',
         email: 'john@example.com',
@@ -373,21 +445,27 @@ describe('UserService', () => {
         deletedAt: new Date(),
         deleteScheduledFor: new Date(),
       }
-      ;(mockOrgRepo.transaction as ReturnType<typeof vi.fn>).mockImplementation(
+      ;(mockMembershipRepo.transaction as ReturnType<typeof vi.fn>).mockImplementation(
         async (fn: (tx: unknown) => Promise<unknown>) => fn(undefined)
       )
-      ;(mockOrgRepo.checkOwnership as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ;(mockMembershipRepo.verifyOrgOwnership as ReturnType<typeof vi.fn>).mockResolvedValue({
         role: 'owner',
       })
-      ;(mockOrgRepo.softDeleteOrg as ReturnType<typeof vi.fn>).mockResolvedValue(undefined)
-      ;(mockOrgRepo.clearOrgSessions as ReturnType<typeof vi.fn>).mockResolvedValue(undefined)
-      ;(mockOrgRepo.expireOrgInvitations as ReturnType<typeof vi.fn>).mockResolvedValue(undefined)
+      ;(mockMembershipRepo.softDeleteOrg as ReturnType<typeof vi.fn>).mockResolvedValue(undefined)
+      ;(mockMembershipRepo.clearOrgSessions as ReturnType<typeof vi.fn>).mockResolvedValue(
+        undefined
+      )
+      ;(mockMembershipRepo.expireOrgInvitations as ReturnType<typeof vi.fn>).mockResolvedValue(
+        undefined
+      )
       ;(mockRepo.softDeleteUser as ReturnType<typeof vi.fn>).mockResolvedValue(deletedUser)
-      ;(mockOrgRepo.deleteUserSessions as ReturnType<typeof vi.fn>).mockResolvedValue(undefined)
+      ;(mockMembershipRepo.deleteUserSessions as ReturnType<typeof vi.fn>).mockResolvedValue(
+        undefined
+      )
 
       const service = new UserService(
         mockRepo as never,
-        mockOrgRepo as never,
+        mockMembershipRepo as never,
         mockEventEmitter as never,
         createMockUserPurgeService()
       )
@@ -398,16 +476,16 @@ describe('UserService', () => {
 
       // Assert
       expect(result).toEqual(deletedUser)
-      expect(mockOrgRepo.transaction).toHaveBeenCalledOnce()
-      expect(mockOrgRepo.softDeleteOrg).toHaveBeenCalledOnce()
-      expect(mockOrgRepo.clearOrgSessions).toHaveBeenCalledOnce()
-      expect(mockOrgRepo.expireOrgInvitations).toHaveBeenCalledOnce()
+      expect(mockMembershipRepo.transaction).toHaveBeenCalledOnce()
+      expect(mockMembershipRepo.softDeleteOrg).toHaveBeenCalledOnce()
+      expect(mockMembershipRepo.clearOrgSessions).toHaveBeenCalledOnce()
+      expect(mockMembershipRepo.expireOrgInvitations).toHaveBeenCalledOnce()
     })
 
     it('should accept case-insensitive email confirmation', async () => {
       // Arrange
       const mockRepo = createMockUserRepo()
-      const mockOrgRepo = createMockOrgRepo()
+      const mockMembershipRepo = createMockMembershipRepo()
       ;(mockRepo.findForValidation as ReturnType<typeof vi.fn>).mockResolvedValue({
         id: 'user-1',
         email: 'John@Example.com',
@@ -418,15 +496,17 @@ describe('UserService', () => {
         deletedAt: new Date(),
         deleteScheduledFor: new Date(),
       }
-      ;(mockOrgRepo.transaction as ReturnType<typeof vi.fn>).mockImplementation(
+      ;(mockMembershipRepo.transaction as ReturnType<typeof vi.fn>).mockImplementation(
         async (fn: (tx: unknown) => Promise<unknown>) => fn(undefined)
       )
       ;(mockRepo.softDeleteUser as ReturnType<typeof vi.fn>).mockResolvedValue(deletedUser)
-      ;(mockOrgRepo.deleteUserSessions as ReturnType<typeof vi.fn>).mockResolvedValue(undefined)
+      ;(mockMembershipRepo.deleteUserSessions as ReturnType<typeof vi.fn>).mockResolvedValue(
+        undefined
+      )
 
       const service = new UserService(
         mockRepo as never,
-        mockOrgRepo as never,
+        mockMembershipRepo as never,
         mockEventEmitter as never,
         createMockUserPurgeService()
       )
@@ -447,7 +527,7 @@ describe('UserService', () => {
       ;(mockRepo.reactivateUser as ReturnType<typeof vi.fn>).mockResolvedValue(reactivatedUser)
       const service = new UserService(
         mockRepo as never,
-        createMockOrgRepo() as never,
+        createMockMembershipRepo() as never,
         mockEventEmitter as never,
         createMockUserPurgeService()
       )
@@ -466,7 +546,7 @@ describe('UserService', () => {
       ;(mockRepo.reactivateUser as ReturnType<typeof vi.fn>).mockResolvedValue(undefined)
       const service = new UserService(
         mockRepo as never,
-        createMockOrgRepo() as never,
+        createMockMembershipRepo() as never,
         mockEventEmitter as never,
         createMockUserPurgeService()
       )
@@ -480,7 +560,7 @@ describe('UserService', () => {
     it('should return organizations where user has owner role', async () => {
       // Arrange
       const mockRepo = createMockUserRepo()
-      const mockMembershipRepo = createMockOrgRepo()
+      const mockMembershipRepo = createMockMembershipRepo()
       const ownedOrgs = [
         { orgId: 'org-1', orgName: 'Org One', orgSlug: 'org-one' },
         { orgId: 'org-2', orgName: 'Org Two', orgSlug: 'org-two' },
@@ -506,7 +586,7 @@ describe('UserService', () => {
     it('should return empty array when user owns no organizations', async () => {
       // Arrange
       const mockRepo = createMockUserRepo()
-      const mockMembershipRepo = createMockOrgRepo()
+      const mockMembershipRepo = createMockMembershipRepo()
       ;(mockMembershipRepo.getOwnedOrganizations as ReturnType<typeof vi.fn>).mockResolvedValue([])
       const service = new UserService(
         mockRepo as never,
@@ -534,7 +614,7 @@ describe('UserService', () => {
       })
       const service = new UserService(
         mockRepo as never,
-        createMockOrgRepo() as never,
+        createMockMembershipRepo() as never,
         mockEventEmitter as never,
         mockPurgeService
       )
@@ -553,7 +633,7 @@ describe('UserService', () => {
       })
       const service = new UserService(
         mockRepo as never,
-        createMockOrgRepo() as never,
+        createMockMembershipRepo() as never,
         mockEventEmitter as never,
         mockPurgeService
       )
@@ -574,7 +654,7 @@ describe('UserService', () => {
       })
       const service = new UserService(
         mockRepo as never,
-        createMockOrgRepo() as never,
+        createMockMembershipRepo() as never,
         mockEventEmitter as never,
         mockPurgeService
       )
@@ -597,7 +677,7 @@ describe('UserService', () => {
       )
       const service = new UserService(
         mockRepo as never,
-        createMockOrgRepo() as never,
+        createMockMembershipRepo() as never,
         mockEventEmitter as never,
         mockPurgeService
       )
@@ -631,7 +711,7 @@ describe('UserService', () => {
       })
       const cacheService = new UserService(
         cacheRepo as never,
-        createMockOrgRepo() as never,
+        createMockMembershipRepo() as never,
         mockEventEmitter as never,
         createMockUserPurgeService()
       )
@@ -644,7 +724,7 @@ describe('UserService', () => {
       )
       const purgeService = new UserService(
         purgeRepo as never,
-        createMockOrgRepo() as never,
+        createMockMembershipRepo() as never,
         mockEventEmitter as never,
         mockPurgeService
       )
@@ -655,7 +735,7 @@ describe('UserService', () => {
       ;(freshRepo.getSoftDeleteStatus as ReturnType<typeof vi.fn>).mockResolvedValue(null)
       const freshService = new UserService(
         freshRepo as never,
-        createMockOrgRepo() as never,
+        createMockMembershipRepo() as never,
         mockEventEmitter as never,
         createMockUserPurgeService()
       )

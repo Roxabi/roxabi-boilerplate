@@ -144,7 +144,8 @@ export class DrizzleGdprExportRepository implements GdprExportRepository {
         })
         .from(members)
         .innerJoin(organizations, eq(members.organizationId, organizations.id))
-        .where(and(eq(members.userId, userId), whereActive(members))),
+        .where(and(eq(members.userId, userId), whereActive(members)))
+        .limit(EXPORT_QUERY_LIMIT),
       qb
         .select({
           categories: consentRecords.categories,

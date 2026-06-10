@@ -94,4 +94,13 @@ export class DrizzleMembershipRepository implements MembershipRepository {
       .set({ status: 'expired' })
       .where(and(eq(invitations.organizationId, orgId), eq(invitations.status, 'pending')))
   }
+
+  async deleteUserSessions(userId: string, tx?: DrizzleTx): Promise<void> {
+    const qb = tx ?? this.db
+    await qb.delete(sessions).where(eq(sessions.userId, userId))
+  }
+
+  transaction<T>(fn: (tx: DrizzleTx) => Promise<T>): Promise<T> {
+    return this.db.transaction(fn)
+  }
 }
