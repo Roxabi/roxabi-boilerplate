@@ -75,3 +75,4 @@ reports/
 .playwright-mcp/
 # CocoIndex Code (ccc)
 /.cocoindex_code/
+blob-report/
