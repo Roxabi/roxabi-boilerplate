@@ -46,7 +46,7 @@
     "@types/node": "^24.11.0",
     "@biomejs/biome": "^2.4.5",
     "@commitlint/cli": "^20.4.2",
-    "@commitlint/config-conventional": "^20.4.2",
+    "@commitlint/config-conventional": "^21.0.2",
     "@fastify/cookie": "^11.0.2",
     "@fastify/helmet": "^13.0.2",
     "@huggingface/transformers": "^4.2.0",
