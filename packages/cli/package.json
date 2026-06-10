@@ -14,7 +14,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "commander": "^14.0.0"
+    "commander": "^15.0.0"
   },
   "devDependencies": {
     "@repo/vitest-config": "workspace:*",
