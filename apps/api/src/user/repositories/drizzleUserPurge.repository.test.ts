@@ -143,9 +143,10 @@ describe('DrizzleUserPurgeRepository', () => {
       await repo.purgeOwnedOrganizations('user-1', now)
 
       // Assert
-      // Per org: 1 update + 3 deletes = 4 where calls per org × 2 orgs + 1 initial + 1 final
+      // Phase 1: 1 update per org × 2 orgs = 2 updates
+      // Phase 2: 3 batch inArray deletes (members, invitations, roles) + 1 final user membership delete = 4
       expect(db.update).toHaveBeenCalledTimes(2) // once per org
-      expect(db.delete).toHaveBeenCalledTimes(7) // 3 per org × 2 + 1 final for user memberships
+      expect(db.delete).toHaveBeenCalledTimes(4) // 3 batched inArray + 1 final for user memberships
     })
 
     it('should skip loop and only delete memberships when no owned orgs', async () => {

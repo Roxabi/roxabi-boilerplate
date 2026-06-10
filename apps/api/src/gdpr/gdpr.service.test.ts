@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { GdprService } from './gdpr.service.js'
+import type { GdprExportRepository } from './repositories/gdprExport.repository.js'
 
 const mockUserData = [
   {
@@ -46,94 +47,55 @@ const mockConsentData = [
   },
 ]
 
-const mockSentInvitations = [
+const mockInvitations = [
   {
     email: 'invitee@example.com',
     organizationName: 'Test Organization',
     role: 'member',
     status: 'pending',
+    direction: 'sent' as const,
   },
-]
-
-const mockReceivedInvitations = [
   {
     email: 'ada@example.com',
     organizationName: 'Other Org',
     role: 'admin',
     status: 'accepted',
+    direction: 'received' as const,
   },
 ]
 
-/**
- * Creates a mock DB that simulates the Drizzle query chains used by GdprService.
- * The service uses 5 parallel select queries (Promise.all), then 2 more for invitations.
- * Each query chain: select({...}).from(table).where(eq(...)) [.innerJoin(...)] [.limit(1)]
- */
-function createMockDb(
+function createMockExportRepo(
   overrides: {
     userData?: unknown[]
     sessionData?: unknown[]
     accountData?: unknown[]
     orgData?: unknown[]
     consentData?: unknown[]
-    sentInvitations?: unknown[]
-    receivedInvitations?: unknown[]
+    invitations?: unknown[]
   } = {}
-) {
-  const data = {
-    userData: overrides.userData ?? mockUserData,
-    sessionData: overrides.sessionData ?? mockSessionData,
-    accountData: overrides.accountData ?? mockAccountData,
-    orgData: overrides.orgData ?? mockOrgData,
-    consentData: overrides.consentData ?? mockConsentData,
-    sentInvitations: overrides.sentInvitations ?? mockSentInvitations,
-    receivedInvitations: overrides.receivedInvitations ?? mockReceivedInvitations,
-  }
+): GdprExportRepository {
+  const userData = overrides.userData ?? mockUserData
+  const sessionData = overrides.sessionData ?? mockSessionData
+  const accountData = overrides.accountData ?? mockAccountData
+  const orgData = overrides.orgData ?? mockOrgData
+  const consentData = overrides.consentData ?? mockConsentData
+  const invitations = overrides.invitations ?? mockInvitations
 
-  // Track call order to return the correct dataset
-  let selectCallCount = 0
-  const datasets = [
-    data.userData, // 1: users
-    data.sessionData, // 2: sessions
-    data.accountData, // 3: accounts
-    data.orgData, // 4: organizations (via members join)
-    data.consentData, // 5: consent records
-    data.sentInvitations, // 6: sent invitations
-    data.receivedInvitations, // 7: received invitations
-  ]
-
-  const selectFn = vi.fn().mockImplementation(() => {
-    const currentIndex = selectCallCount++
-    const currentData = datasets[currentIndex] ?? []
-
-    // For queries without .limit(), .where() resolves directly as a promise.
-    // For queries with .limit(), .where() returns an object with .limit().
-    // We use Object.assign to merge promise behavior with .limit() support,
-    // avoiding a literal `then` property (which Biome flags as noThenProperty).
-    return {
-      from: vi.fn().mockReturnValue({
-        where: vi.fn().mockImplementation(() => {
-          const promise = Promise.resolve(currentData)
-          return Object.assign(promise, {
-            limit: vi.fn().mockResolvedValue(currentData),
-          })
-        }),
-        innerJoin: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue(currentData),
-        }),
-      }),
-    }
-  })
-
-  return { select: selectFn }
+  return {
+    fetchUserRecord: vi.fn().mockResolvedValue(userData),
+    fetchCoreUserData: vi
+      .fn()
+      .mockResolvedValue([userData, sessionData, accountData, orgData, consentData]),
+    fetchAndDeduplicateInvitations: vi.fn().mockResolvedValue(invitations),
+  } as unknown as GdprExportRepository
 }
 
 describe('GdprService', () => {
   describe('exportUserData', () => {
     it('should include exportedAt as an ISO 8601 timestamp', async () => {
       // Arrange
-      const db = createMockDb()
-      const service = new GdprService(db as never)
+      const exportRepo = createMockExportRepo()
+      const service = new GdprService(exportRepo as never)
 
       // Act
       const result = await service.exportUserData('user-1')
@@ -144,8 +106,8 @@ describe('GdprService', () => {
 
     it('should include user profile with name, email, image, role', async () => {
       // Arrange
-      const db = createMockDb()
-      const service = new GdprService(db as never)
+      const exportRepo = createMockExportRepo()
+      const service = new GdprService(exportRepo as never)
 
       // Act
       const result = await service.exportUserData('user-1')
@@ -163,8 +125,8 @@ describe('GdprService', () => {
 
     it('should include sessions with ipAddress, userAgent, and dates', async () => {
       // Arrange
-      const db = createMockDb()
-      const service = new GdprService(db as never)
+      const exportRepo = createMockExportRepo()
+      const service = new GdprService(exportRepo as never)
 
       // Act
       const result = await service.exportUserData('user-1')
@@ -181,8 +143,8 @@ describe('GdprService', () => {
 
     it('should include accounts with providerId and scope only', async () => {
       // Arrange
-      const db = createMockDb()
-      const service = new GdprService(db as never)
+      const exportRepo = createMockExportRepo()
+      const service = new GdprService(exportRepo as never)
 
       // Act
       const result = await service.exportUserData('user-1')
@@ -199,8 +161,8 @@ describe('GdprService', () => {
 
     it('should NOT include passwords or OAuth tokens in accounts', async () => {
       // Arrange
-      const db = createMockDb()
-      const service = new GdprService(db as never)
+      const exportRepo = createMockExportRepo()
+      const service = new GdprService(exportRepo as never)
 
       // Act
       const result = await service.exportUserData('user-1')
@@ -216,8 +178,8 @@ describe('GdprService', () => {
 
     it('should NOT include session tokens in sessions', async () => {
       // Arrange
-      const db = createMockDb()
-      const service = new GdprService(db as never)
+      const exportRepo = createMockExportRepo()
+      const service = new GdprService(exportRepo as never)
 
       // Act
       const result = await service.exportUserData('user-1')
@@ -230,8 +192,8 @@ describe('GdprService', () => {
 
     it('should include consent records without ipAddress and userAgent', async () => {
       // Arrange
-      const db = createMockDb()
-      const service = new GdprService(db as never)
+      const exportRepo = createMockExportRepo()
+      const service = new GdprService(exportRepo as never)
 
       // Act
       const result = await service.exportUserData('user-1')
@@ -253,8 +215,8 @@ describe('GdprService', () => {
 
     it('should include organizations the user belongs to', async () => {
       // Arrange
-      const db = createMockDb()
-      const service = new GdprService(db as never)
+      const exportRepo = createMockExportRepo()
+      const service = new GdprService(exportRepo as never)
 
       // Act
       const result = await service.exportUserData('user-1')
@@ -271,8 +233,8 @@ describe('GdprService', () => {
 
     it('should include invitations with computed direction field', async () => {
       // Arrange
-      const db = createMockDb()
-      const service = new GdprService(db as never)
+      const exportRepo = createMockExportRepo()
+      const service = new GdprService(exportRepo as never)
 
       // Act
       const result = await service.exportUserData('user-1')
@@ -287,8 +249,8 @@ describe('GdprService', () => {
 
     it('should return empty user object when user is not found', async () => {
       // Arrange
-      const db = createMockDb({ userData: [] })
-      const service = new GdprService(db as never)
+      const exportRepo = createMockExportRepo({ userData: [] })
+      const service = new GdprService(exportRepo as never)
 
       // Act
       const result = await service.exportUserData('nonexistent')

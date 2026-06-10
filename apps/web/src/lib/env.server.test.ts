@@ -8,20 +8,17 @@ afterEach(() => {
 
 describe('envSchema', () => {
   describe('default values', () => {
-    it('should default API_URL to "http://localhost:4000" when not provided', () => {
+    it('should require API_URL (no default — throws when not provided)', () => {
       // Arrange
       const input = {}
 
-      // Act
-      const result = envSchema.parse(input)
-
-      // Assert
-      expect(result.API_URL).toBe('http://localhost:4000')
+      // Act & Assert
+      expect(() => envSchema.parse(input)).toThrow()
     })
 
     it('should default NODE_ENV to "development" when not provided', () => {
       // Arrange
-      const input = {}
+      const input = { API_URL: 'http://localhost:4000' }
 
       // Act
       const result = envSchema.parse(input)
@@ -74,7 +71,7 @@ describe('envSchema', () => {
   describe('APP_URL', () => {
     it('should accept a valid URL', () => {
       // Arrange
-      const input = { APP_URL: 'https://app.example.com' }
+      const input = { API_URL: 'http://localhost:4000', APP_URL: 'https://app.example.com' }
 
       // Act
       const result = envSchema.parse(input)
@@ -85,7 +82,7 @@ describe('envSchema', () => {
 
     it('should be undefined when not provided (optional)', () => {
       // Arrange
-      const input = {}
+      const input = { API_URL: 'http://localhost:4000' }
 
       // Act
       const result = envSchema.parse(input)
@@ -96,7 +93,7 @@ describe('envSchema', () => {
 
     it('should reject an invalid URL', () => {
       // Arrange
-      const input = { APP_URL: 'not-valid' }
+      const input = { API_URL: 'http://localhost:4000', APP_URL: 'not-valid' }
 
       // Act & Assert
       expect(() => envSchema.parse(input)).toThrow()
@@ -106,7 +103,7 @@ describe('envSchema', () => {
   describe('NODE_ENV', () => {
     it('should accept "development"', () => {
       // Arrange
-      const input = { NODE_ENV: 'development' }
+      const input = { API_URL: 'http://localhost:4000', NODE_ENV: 'development' }
 
       // Act
       const result = envSchema.parse(input)
@@ -117,7 +114,7 @@ describe('envSchema', () => {
 
     it('should accept "production"', () => {
       // Arrange
-      const input = { NODE_ENV: 'production' }
+      const input = { API_URL: 'http://localhost:4000', NODE_ENV: 'production' }
 
       // Act
       const result = envSchema.parse(input)
@@ -128,7 +125,7 @@ describe('envSchema', () => {
 
     it('should accept "test"', () => {
       // Arrange
-      const input = { NODE_ENV: 'test' }
+      const input = { API_URL: 'http://localhost:4000', NODE_ENV: 'test' }
 
       // Act
       const result = envSchema.parse(input)
@@ -139,7 +136,7 @@ describe('envSchema', () => {
 
     it('should reject an invalid NODE_ENV value', () => {
       // Arrange
-      const input = { NODE_ENV: 'staging' }
+      const input = { API_URL: 'http://localhost:4000', NODE_ENV: 'staging' }
 
       // Act & Assert
       expect(() => envSchema.parse(input)).toThrow()
@@ -149,7 +146,7 @@ describe('envSchema', () => {
   describe('VERCEL_ENV', () => {
     it('should accept "production"', () => {
       // Arrange
-      const input = { VERCEL_ENV: 'production' }
+      const input = { API_URL: 'http://localhost:4000', VERCEL_ENV: 'production' }
 
       // Act
       const result = envSchema.parse(input)
@@ -160,7 +157,7 @@ describe('envSchema', () => {
 
     it('should accept "preview"', () => {
       // Arrange
-      const input = { VERCEL_ENV: 'preview' }
+      const input = { API_URL: 'http://localhost:4000', VERCEL_ENV: 'preview' }
 
       // Act
       const result = envSchema.parse(input)
@@ -171,7 +168,7 @@ describe('envSchema', () => {
 
     it('should accept "development"', () => {
       // Arrange
-      const input = { VERCEL_ENV: 'development' }
+      const input = { API_URL: 'http://localhost:4000', VERCEL_ENV: 'development' }
 
       // Act
       const result = envSchema.parse(input)
@@ -182,7 +179,7 @@ describe('envSchema', () => {
 
     it('should be undefined when not provided (optional)', () => {
       // Arrange
-      const input = {}
+      const input = { API_URL: 'http://localhost:4000' }
 
       // Act
       const result = envSchema.parse(input)
@@ -193,7 +190,7 @@ describe('envSchema', () => {
 
     it('should reject an invalid VERCEL_ENV value', () => {
       // Arrange
-      const input = { VERCEL_ENV: 'staging' }
+      const input = { API_URL: 'http://localhost:4000', VERCEL_ENV: 'staging' }
 
       // Act & Assert
       expect(() => envSchema.parse(input)).toThrow()
@@ -210,9 +207,9 @@ describe('env.server module-level validation', () => {
     return import('./env.server')
   }
 
-  it('should succeed in development without explicit API_URL (uses default)', async () => {
-    // Arrange
-    const envVars = { NODE_ENV: 'development' }
+  it('should succeed in development with explicit API_URL', async () => {
+    // Arrange — API_URL is now required; no default exists
+    const envVars = { NODE_ENV: 'development', API_URL: 'http://localhost:4000' }
 
     // Act
     const mod = await importEnvServer(envVars)
@@ -238,23 +235,19 @@ describe('env.server module-level validation', () => {
   })
 
   it('should throw when API_URL is not set in production', async () => {
-    // Arrange
+    // Arrange — schema validation fails first (API_URL required)
     const envVars = { NODE_ENV: 'production' }
 
     // Act & Assert
-    await expect(importEnvServer(envVars)).rejects.toThrow(
-      'API_URL must be explicitly set in non-development environments'
-    )
+    await expect(importEnvServer(envVars)).rejects.toThrow('Server env validation failed')
   })
 
   it('should throw when API_URL is not set in test environment', async () => {
-    // Arrange
+    // Arrange — schema validation fails first (API_URL required)
     const envVars = { NODE_ENV: 'test' }
 
     // Act & Assert
-    await expect(importEnvServer(envVars)).rejects.toThrow(
-      'API_URL must be explicitly set in non-development environments'
-    )
+    await expect(importEnvServer(envVars)).rejects.toThrow('Server env validation failed')
   })
 
   it('should throw on schema validation failure with invalid API_URL', async () => {

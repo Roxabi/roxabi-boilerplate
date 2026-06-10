@@ -131,7 +131,7 @@ function setupFetch(
     if (typeof url === 'string' && url.includes('/api/admin/members')) {
       return Promise.resolve({
         ok: true,
-        json: () => Promise.resolve(membersResponse),
+        text: () => Promise.resolve(JSON.stringify(membersResponse)),
       })
     }
     if (
@@ -141,22 +141,22 @@ function setupFetch(
     ) {
       return Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({ data: rolesResponse }),
+        text: () => Promise.resolve(JSON.stringify({ data: rolesResponse })),
       })
     }
     if (typeof url === 'string' && url.includes('/api/roles')) {
       return Promise.resolve({
         ok: true,
-        json: () => Promise.resolve(rolesResponse),
+        text: () => Promise.resolve(JSON.stringify(rolesResponse)),
       })
     }
     if (typeof url === 'string' && url.includes('/api/admin/invitations')) {
       return Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({ data: [] }),
+        text: () => Promise.resolve(JSON.stringify({ data: [] })),
       })
     }
-    return Promise.resolve({ ok: false, json: () => Promise.resolve(null) })
+    return Promise.resolve({ ok: false, text: () => Promise.resolve('null') })
   })
   globalThis.fetch = mockFetch
   return mockFetch
@@ -167,13 +167,14 @@ function setupFetchError(errorMessage = 'Server error') {
     if (typeof url === 'string' && url.includes('/api/admin/invitations')) {
       return Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({ data: [] }),
+        text: () => Promise.resolve(JSON.stringify({ data: [] })),
       })
     }
     if (typeof url === 'string' && url.includes('/api/admin/members')) {
       return Promise.resolve({
         ok: false,
-        json: () => Promise.resolve({ message: errorMessage }),
+        status: 500,
+        text: () => Promise.resolve(JSON.stringify({ message: errorMessage })),
       })
     }
     if (
@@ -183,16 +184,16 @@ function setupFetchError(errorMessage = 'Server error') {
     ) {
       return Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({ data: createRolesResponse() }),
+        text: () => Promise.resolve(JSON.stringify({ data: createRolesResponse() })),
       })
     }
     if (typeof url === 'string' && url.includes('/api/roles')) {
       return Promise.resolve({
         ok: true,
-        json: () => Promise.resolve(createRolesResponse()),
+        text: () => Promise.resolve(JSON.stringify(createRolesResponse())),
       })
     }
-    return Promise.resolve({ ok: false, json: () => Promise.resolve(null) })
+    return Promise.resolve({ ok: false, status: 500, text: () => Promise.resolve('null') })
   })
   globalThis.fetch = mockFetch
   return mockFetch
@@ -222,8 +223,15 @@ function setupFetchWithMutations({
 
   const mockFetch = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
     const method = init?.method ?? 'GET'
-    const respond = (ok: boolean, body: unknown) =>
-      Promise.resolve({ ok, json: () => Promise.resolve(body) })
+    const respond = (ok: boolean, body: unknown) => {
+      const serialised = JSON.stringify(body)
+      return Promise.resolve({
+        ok,
+        status: ok ? 200 : 400,
+        text: () => Promise.resolve(serialised),
+        json: () => Promise.resolve(JSON.parse(serialised)),
+      })
+    }
 
     if (url.includes('/api/admin/members/invite') && method === 'POST')
       return respond(inviteResult.ok, inviteResult.body)
@@ -262,7 +270,8 @@ describe('AdminMembersPage', () => {
     // Provide a safe default fetch that handles relative URLs in jsdom
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: false,
-      json: () => Promise.resolve(null),
+      status: 500,
+      text: () => Promise.resolve('null'),
     })
   })
 
@@ -599,28 +608,32 @@ describe('AdminMembersPage', () => {
         if (url.includes('search=')) {
           return Promise.resolve({
             ok: true,
-            json: () =>
+            text: () =>
               Promise.resolve(
-                createMembersResponse([], { page: 1, limit: 20, total: 0, totalPages: 0 })
+                JSON.stringify(
+                  createMembersResponse([], { page: 1, limit: 20, total: 0, totalPages: 0 })
+                )
               ),
           })
         }
         return Promise.resolve({
           ok: true,
-          json: () =>
+          text: () =>
             Promise.resolve(
-              createMembersResponse([
-                createMember({
-                  id: 'm-alice',
-                  role: 'member',
-                  user: {
-                    id: 'u-1',
-                    name: 'Alice Smith',
-                    email: 'alice@acme.com',
-                    image: null,
-                  },
-                }),
-              ])
+              JSON.stringify(
+                createMembersResponse([
+                  createMember({
+                    id: 'm-alice',
+                    role: 'member',
+                    user: {
+                      id: 'u-1',
+                      name: 'Alice Smith',
+                      email: 'alice@acme.com',
+                      image: null,
+                    },
+                  }),
+                ])
+              )
             ),
         })
       }
@@ -631,22 +644,22 @@ describe('AdminMembersPage', () => {
       ) {
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({ data: createRolesResponse() }),
+          text: () => Promise.resolve(JSON.stringify({ data: createRolesResponse() })),
         })
       }
       if (typeof url === 'string' && url.includes('/api/roles')) {
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve(createRolesResponse()),
+          text: () => Promise.resolve(JSON.stringify(createRolesResponse())),
         })
       }
       if (typeof url === 'string' && url.includes('/api/admin/invitations')) {
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({ data: [] }),
+          text: () => Promise.resolve(JSON.stringify({ data: [] })),
         })
       }
-      return Promise.resolve({ ok: false, json: () => Promise.resolve(null) })
+      return Promise.resolve({ ok: false, status: 500, text: () => Promise.resolve('null') })
     })
     globalThis.fetch = mockFetch
 
@@ -742,7 +755,8 @@ describe('InviteDialog', () => {
     vi.restoreAllMocks()
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: false,
-      json: () => Promise.resolve(null),
+      status: 500,
+      text: () => Promise.resolve('null'),
     })
   })
 
@@ -967,7 +981,8 @@ describe('Role display', () => {
     vi.restoreAllMocks()
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: false,
-      json: () => Promise.resolve(null),
+      status: 500,
+      text: () => Promise.resolve('null'),
     })
   })
 

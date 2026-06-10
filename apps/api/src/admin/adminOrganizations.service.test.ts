@@ -13,20 +13,19 @@ import { OrgSlugConflictException } from './exceptions/orgSlugConflict.exception
 // ---------------------------------------------------------------------------
 
 function createMockDb() {
-  return {
+  // tx is the db itself: transactional code paths reuse the configured mocks
+  const db = {
     select: vi.fn(),
     insert: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
-    transaction: vi.fn(async (fn: (tx: Record<string, unknown>) => unknown) =>
-      fn({
-        select: vi.fn(),
-        insert: vi.fn(),
-        update: vi.fn(),
-        delete: vi.fn(),
-      })
-    ),
+    execute: vi.fn(),
+    transaction: vi.fn(),
   }
+  db.transaction.mockImplementation(async (fn: (tx: Record<string, unknown>) => unknown) =>
+    fn(db as unknown as Record<string, unknown>)
+  )
+  return db
 }
 
 function createMockAuditService(): AuditService {
@@ -346,11 +345,15 @@ describe('AdminOrganizationsService', () => {
         )
         .mockReturnValueOnce(createChainMock([{ id: 'org-gp', parentOrganizationId: null }]))
       db.transaction.mockImplementationOnce(async (fn: (tx: Record<string, unknown>) => unknown) =>
-        fn({ select: txSelect, insert: vi.fn(), update: vi.fn(), delete: vi.fn() })
+        fn({
+          select: txSelect,
+          insert: vi.fn(),
+          update: vi.fn(),
+          delete: vi.fn(),
+          // getSubtreeDepth (recursive CTE) -- org-move has no children
+          execute: vi.fn().mockResolvedValue([{ max_depth: null }]),
+        })
       )
-
-      // getSubtreeDepth uses db.select -- org-move has no children
-      db.select.mockReturnValueOnce(createChainMock([]))
 
       // Act & Assert -- depth(2) + 1 + subtreeDepth(0) = 3 >= 3, throws
       await expect(

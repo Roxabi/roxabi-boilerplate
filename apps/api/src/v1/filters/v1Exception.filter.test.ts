@@ -5,8 +5,9 @@ import { V1ExceptionFilter } from './v1Exception.filter.js'
 function makeHost(sendMock: ReturnType<typeof vi.fn>) {
   const statusMock = vi.fn().mockReturnValue({ send: sendMock })
   const response = { status: statusMock }
+  const request = { method: 'GET', url: '/test' }
   return {
-    switchToHttp: () => ({ getResponse: () => response }),
+    switchToHttp: () => ({ getResponse: () => response, getRequest: () => request }),
     _status: statusMock,
     _send: sendMock,
   }

@@ -1,9 +1,16 @@
 import { describe, expect, it, vi } from 'vitest'
 import { validate } from './env.validation.js'
 
+/** Minimal valid config — APP_URL and APP_NAME are now required with no defaults */
+const BASE = {
+  APP_URL: 'http://localhost:3000',
+  APP_NAME: 'Test App',
+} as const
+
 describe('env validation', () => {
   it('should pass with valid config', () => {
     const result = validate({
+      ...BASE,
       NODE_ENV: 'development',
       API_PORT: 4000,
       CORS_ORIGIN: 'http://localhost:3000',
@@ -17,19 +24,19 @@ describe('env validation', () => {
   })
 
   it('should apply defaults for missing optional values', () => {
-    const result = validate({})
+    const result = validate({ ...BASE })
 
     expect(result.NODE_ENV).toBe('development')
     expect(result.API_PORT).toBe(4000)
-    expect(result.CORS_ORIGIN).toBe('http://localhost:3000')
     expect(result.LOG_LEVEL).toBe('warn')
     expect(result.DATABASE_URL).toBeUndefined()
-    expect(result.APP_URL).toBeUndefined()
+    expect(result.APP_URL).toBe('http://localhost:3000')
   })
 
   it('should accept all valid NODE_ENV values', () => {
     for (const env of ['development', 'production', 'test']) {
       const result = validate({
+        ...BASE,
         NODE_ENV: env,
         BETTER_AUTH_SECRET: 'a-safe-secret-for-testing-purposes',
         ...(env !== 'development' && {
@@ -46,52 +53,51 @@ describe('env validation', () => {
   })
 
   it('should throw on invalid NODE_ENV', () => {
-    expect(() => validate({ NODE_ENV: 'staging' })).toThrow()
+    expect(() => validate({ ...BASE, NODE_ENV: 'staging' })).toThrow()
   })
 
   it('should throw on invalid API_PORT type', () => {
-    expect(() => validate({ API_PORT: 'abc' })).toThrow()
+    expect(() => validate({ ...BASE, API_PORT: 'abc' })).toThrow()
   })
 
   it('should accept DATABASE_URL when provided', () => {
-    const result = validate({ DATABASE_URL: 'postgres://localhost:5432/test' })
+    const result = validate({ ...BASE, DATABASE_URL: 'postgres://localhost:5432/test' })
     expect(result.DATABASE_URL).toBe('postgres://localhost:5432/test')
   })
 
   it('should accept a numeric API_PORT', () => {
-    const result = validate({ API_PORT: 8080 })
+    const result = validate({ ...BASE, API_PORT: 8080 })
     expect(result.API_PORT).toBe(8080)
   })
 
   it('should coerce a string API_PORT to number', () => {
-    const result = validate({ API_PORT: '9090' })
+    const result = validate({ ...BASE, API_PORT: '9090' })
     expect(result.API_PORT).toBe(9090)
   })
 
   describe('APP_URL validation', () => {
     it('should accept a valid APP_URL', () => {
-      const result = validate({ APP_URL: 'https://app.example.com' })
+      const result = validate({ ...BASE, APP_URL: 'https://app.example.com' })
       expect(result.APP_URL).toBe('https://app.example.com')
     })
 
     it('should throw on invalid APP_URL', () => {
-      expect(() => validate({ APP_URL: 'not-a-url' })).toThrow()
+      expect(() => validate({ ...BASE, APP_URL: 'not-a-url' })).toThrow()
     })
 
-    it('should allow APP_URL to be omitted', () => {
-      const result = validate({})
-      expect(result.APP_URL).toBeUndefined()
+    it('should throw when APP_URL is omitted', () => {
+      expect(() => validate({ APP_NAME: 'Test App' })).toThrow()
     })
   })
 
   describe('BETTER_AUTH_URL validation', () => {
-    it('should default to http://localhost:3000', () => {
-      const result = validate({})
+    it('should default to APP_URL when BETTER_AUTH_URL is not set', () => {
+      const result = validate({ ...BASE })
       expect(result.BETTER_AUTH_URL).toBe('http://localhost:3000')
     })
 
     it('should throw on invalid BETTER_AUTH_URL', () => {
-      expect(() => validate({ BETTER_AUTH_URL: 'not-a-url' })).toThrow()
+      expect(() => validate({ ...BASE, BETTER_AUTH_URL: 'not-a-url' })).toThrow()
     })
   })
 
@@ -99,6 +105,7 @@ describe('env validation', () => {
     it('should throw when using default secret in production', () => {
       expect(() =>
         validate({
+          ...BASE,
           NODE_ENV: 'production',
           BETTER_AUTH_SECRET: 'dev-secret-do-not-use-in-production',
           KV_REST_API_URL: 'https://redis.upstash.io',
@@ -110,6 +117,7 @@ describe('env validation', () => {
     it('should throw when using placeholder secret in production', () => {
       expect(() =>
         validate({
+          ...BASE,
           NODE_ENV: 'production',
           BETTER_AUTH_SECRET: 'change-me-to-a-random-32-char-string',
           KV_REST_API_URL: 'https://redis.upstash.io',
@@ -119,18 +127,19 @@ describe('env validation', () => {
     })
 
     it('should allow default secret in development', () => {
-      const result = validate({ NODE_ENV: 'development' })
+      const result = validate({ ...BASE, NODE_ENV: 'development' })
       expect(result.BETTER_AUTH_SECRET).toBe('dev-secret-do-not-use-in-production')
     })
 
     it('should throw when using default secret in test environment', () => {
-      expect(() => validate({ NODE_ENV: 'test' })).toThrow(
+      expect(() => validate({ ...BASE, NODE_ENV: 'test' })).toThrow(
         'BETTER_AUTH_SECRET must be set to a secure value in non-development environments'
       )
     })
 
     it('should allow explicit secret in test environment', () => {
       const result = validate({
+        ...BASE,
         NODE_ENV: 'test',
         BETTER_AUTH_SECRET: 'test-secret-minimum-32-characters-long',
         RESEND_API_KEY: 're_test_123',
@@ -141,6 +150,7 @@ describe('env validation', () => {
 
     it('should allow custom secret in production', () => {
       const result = validate({
+        ...BASE,
         NODE_ENV: 'production',
         BETTER_AUTH_SECRET: 'a-real-secret-that-is-safe-for-prod',
         RESEND_API_KEY: 're_test_123',
@@ -156,6 +166,7 @@ describe('env validation', () => {
     it('should accept valid VERCEL_ENV values', () => {
       for (const env of ['production', 'preview', 'development']) {
         const result = validate({
+          ...BASE,
           VERCEL_ENV: env,
           BETTER_AUTH_SECRET: 'test-secret-minimum-32-characters-long',
           RESEND_API_KEY: 're_test_123',
@@ -169,11 +180,11 @@ describe('env validation', () => {
     })
 
     it('should reject invalid VERCEL_ENV values', () => {
-      expect(() => validate({ VERCEL_ENV: 'staging' })).toThrow()
+      expect(() => validate({ ...BASE, VERCEL_ENV: 'staging' })).toThrow()
     })
 
     it('should allow VERCEL_ENV to be omitted', () => {
-      const result = validate({})
+      const result = validate({ ...BASE })
       expect(result.VERCEL_ENV).toBeUndefined()
     })
   })
@@ -182,6 +193,7 @@ describe('env validation', () => {
     it('should throw when using default secret with VERCEL_ENV set', () => {
       expect(() =>
         validate({
+          ...BASE,
           NODE_ENV: 'development',
           VERCEL_ENV: 'preview',
           BETTER_AUTH_SECRET: 'dev-secret-do-not-use-in-production',
@@ -192,6 +204,7 @@ describe('env validation', () => {
     it('should throw when NODE_ENV=production even if VERCEL_ENV=development', () => {
       expect(() =>
         validate({
+          ...BASE,
           NODE_ENV: 'production',
           VERCEL_ENV: 'development',
           BETTER_AUTH_SECRET: 'dev-secret-do-not-use-in-production',
@@ -203,6 +216,7 @@ describe('env validation', () => {
 
     it('should allow explicit secret with VERCEL_ENV set', () => {
       const result = validate({
+        ...BASE,
         NODE_ENV: 'development',
         VERCEL_ENV: 'preview',
         BETTER_AUTH_SECRET: 'test-secret-minimum-32-characters-long',
@@ -216,6 +230,7 @@ describe('env validation', () => {
     it('should throw when CRON_SECRET is missing in production', () => {
       expect(() =>
         validate({
+          ...BASE,
           NODE_ENV: 'production',
           BETTER_AUTH_SECRET: 'a-real-secret-that-is-safe-for-prod',
           RESEND_API_KEY: 're_test_123',
@@ -228,6 +243,7 @@ describe('env validation', () => {
     it('should throw when CRON_SECRET is missing in test', () => {
       expect(() =>
         validate({
+          ...BASE,
           NODE_ENV: 'test',
           BETTER_AUTH_SECRET: 'test-secret-minimum-32-characters-long',
           RESEND_API_KEY: 're_test_123',
@@ -236,12 +252,13 @@ describe('env validation', () => {
     })
 
     it('should allow missing CRON_SECRET in development', () => {
-      const result = validate({ NODE_ENV: 'development' })
+      const result = validate({ ...BASE, NODE_ENV: 'development' })
       expect(result.CRON_SECRET).toBeUndefined()
     })
 
     it('should accept CRON_SECRET when provided', () => {
       const result = validate({
+        ...BASE,
         NODE_ENV: 'test',
         BETTER_AUTH_SECRET: 'test-secret-minimum-32-characters-long',
         RESEND_API_KEY: 're_test_123',
@@ -255,6 +272,7 @@ describe('env validation', () => {
     it('should throw when KV_REST_API_URL is missing in production with rate limiting enabled', () => {
       expect(() =>
         validate({
+          ...BASE,
           NODE_ENV: 'production',
           BETTER_AUTH_SECRET: 'a-real-secret-that-is-safe-for-prod',
           RESEND_API_KEY: 're_test_123',
@@ -267,6 +285,7 @@ describe('env validation', () => {
     it('should throw when KV_REST_API_TOKEN is missing in production with rate limiting enabled', () => {
       expect(() =>
         validate({
+          ...BASE,
           NODE_ENV: 'production',
           BETTER_AUTH_SECRET: 'a-real-secret-that-is-safe-for-prod',
           RESEND_API_KEY: 're_test_123',
@@ -279,6 +298,7 @@ describe('env validation', () => {
 
     it('should allow missing Upstash vars in production when rate limiting is disabled', () => {
       const result = validate({
+        ...BASE,
         NODE_ENV: 'production',
         BETTER_AUTH_SECRET: 'a-real-secret-that-is-safe-for-prod',
         RESEND_API_KEY: 're_test_123',
@@ -292,6 +312,7 @@ describe('env validation', () => {
     it('should log security error when rate limiting is disabled in production', () => {
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
       validate({
+        ...BASE,
         NODE_ENV: 'production',
         BETTER_AUTH_SECRET: 'a-real-secret-that-is-safe-for-prod',
         RESEND_API_KEY: 're_test_123',
@@ -305,19 +326,19 @@ describe('env validation', () => {
     })
 
     it('should allow missing KV_REST_API_URL in development', () => {
-      const result = validate({ NODE_ENV: 'development' })
+      const result = validate({ ...BASE, NODE_ENV: 'development' })
       expect(result.KV_REST_API_URL).toBeUndefined()
     })
 
     it('should accept KV_REST_API_URL when provided', () => {
-      const result = validate({ KV_REST_API_URL: 'https://redis.upstash.io' })
+      const result = validate({ ...BASE, KV_REST_API_URL: 'https://redis.upstash.io' })
       expect(result.KV_REST_API_URL).toBe('https://redis.upstash.io')
     })
   })
 
   describe('rate limiting env vars', () => {
     it('should apply rate limiting defaults', () => {
-      const result = validate({})
+      const result = validate({ ...BASE })
       expect(result.RATE_LIMIT_ENABLED).toBe(true)
       expect(result.RATE_LIMIT_GLOBAL_TTL).toBe(60_000)
       expect(result.RATE_LIMIT_GLOBAL_LIMIT).toBe(60)
@@ -331,6 +352,7 @@ describe('env validation', () => {
 
     it('should accept custom rate limit values', () => {
       const result = validate({
+        ...BASE,
         RATE_LIMIT_GLOBAL_LIMIT: '120',
         RATE_LIMIT_AUTH_LIMIT: '10',
       })
@@ -343,6 +365,7 @@ describe('env validation', () => {
     it('should throw when RESEND_API_KEY is missing in test environment', () => {
       expect(() =>
         validate({
+          ...BASE,
           NODE_ENV: 'test',
           BETTER_AUTH_SECRET: 'test-secret-minimum-32-characters-long',
         })
@@ -352,6 +375,7 @@ describe('env validation', () => {
     it('should throw non-development error (not Vercel error) when both NODE_ENV=test and VERCEL_ENV=preview', () => {
       expect(() =>
         validate({
+          ...BASE,
           NODE_ENV: 'test',
           VERCEL_ENV: 'preview',
           BETTER_AUTH_SECRET: 'test-secret-minimum-32-characters-long',
@@ -362,6 +386,7 @@ describe('env validation', () => {
     it('should throw when RESEND_API_KEY is missing in production', () => {
       expect(() =>
         validate({
+          ...BASE,
           NODE_ENV: 'production',
           BETTER_AUTH_SECRET: 'a-real-secret-that-is-safe-for-prod',
           KV_REST_API_URL: 'https://redis.upstash.io',
@@ -373,6 +398,7 @@ describe('env validation', () => {
     it('should throw when RESEND_API_KEY is missing on Vercel deployments', () => {
       expect(() =>
         validate({
+          ...BASE,
           NODE_ENV: 'development',
           VERCEL_ENV: 'preview',
           BETTER_AUTH_SECRET: 'test-secret-minimum-32-characters-long',
@@ -382,6 +408,7 @@ describe('env validation', () => {
 
     it('should accept RESEND_API_KEY when provided', () => {
       const result = validate({
+        ...BASE,
         NODE_ENV: 'test',
         BETTER_AUTH_SECRET: 'test-secret-minimum-32-characters-long',
         RESEND_API_KEY: 're_test_123',
@@ -393,22 +420,22 @@ describe('env validation', () => {
 
   describe('SWAGGER_ENABLED validation', () => {
     it('should coerce string "true" to boolean true', () => {
-      const result = validate({ SWAGGER_ENABLED: 'true' })
+      const result = validate({ ...BASE, SWAGGER_ENABLED: 'true' })
       expect(result.SWAGGER_ENABLED).toBe(true)
     })
 
     it('should coerce string "false" to boolean false', () => {
-      const result = validate({ SWAGGER_ENABLED: 'false' })
+      const result = validate({ ...BASE, SWAGGER_ENABLED: 'false' })
       expect(result.SWAGGER_ENABLED).toBe(false)
     })
 
     it('should accept boolean true directly', () => {
-      const result = validate({ SWAGGER_ENABLED: true })
+      const result = validate({ ...BASE, SWAGGER_ENABLED: true })
       expect(result.SWAGGER_ENABLED).toBe(true)
     })
 
     it('should be undefined when omitted', () => {
-      const result = validate({})
+      const result = validate({ ...BASE })
       expect(result.SWAGGER_ENABLED).toBeUndefined()
     })
   })
@@ -416,7 +443,7 @@ describe('env validation', () => {
   describe('env derivation', () => {
     it('CORS_ORIGIN defaults to APP_URL when CORS_ORIGIN is not set', () => {
       // Arrange
-      const config = { APP_URL: 'https://example.com' }
+      const config = { ...BASE, APP_URL: 'https://example.com' }
 
       // Act
       const result = validate(config)
@@ -427,7 +454,7 @@ describe('env validation', () => {
 
     it('BETTER_AUTH_URL defaults to APP_URL when BETTER_AUTH_URL is not set', () => {
       // Arrange
-      const config = { APP_URL: 'https://example.com' }
+      const config = { ...BASE, APP_URL: 'https://example.com' }
 
       // Act
       const result = validate(config)
@@ -439,6 +466,7 @@ describe('env validation', () => {
     it('explicit CORS_ORIGIN overrides APP_URL derivation', () => {
       // Arrange
       const config = {
+        ...BASE,
         APP_URL: 'https://example.com',
         CORS_ORIGIN: 'https://override.example.com',
       }
@@ -453,6 +481,7 @@ describe('env validation', () => {
     it('explicit BETTER_AUTH_URL overrides APP_URL derivation', () => {
       // Arrange
       const config = {
+        ...BASE,
         APP_URL: 'https://example.com',
         BETTER_AUTH_URL: 'https://auth.example.com',
       }
@@ -464,11 +493,11 @@ describe('env validation', () => {
       expect(result.BETTER_AUTH_URL).toBe('https://auth.example.com')
     })
 
-    it('CORS_ORIGIN and BETTER_AUTH_URL default to http://localhost:3000 when APP_URL is not set', () => {
-      // Arrange — no APP_URL, no CORS_ORIGIN, no BETTER_AUTH_URL
+    it('CORS_ORIGIN and BETTER_AUTH_URL derive from APP_URL when not explicitly set', () => {
+      // Arrange — APP_URL set, no explicit CORS_ORIGIN or BETTER_AUTH_URL
 
       // Act
-      const result = validate({})
+      const result = validate({ ...BASE, APP_URL: 'http://localhost:3000' })
 
       // Assert
       expect(result.CORS_ORIGIN).toBe('http://localhost:3000')
@@ -478,12 +507,12 @@ describe('env validation', () => {
 
   describe('rate limit presets', () => {
     it('should throw on invalid RATE_LIMIT_PRESET value', () => {
-      expect(() => validate({ RATE_LIMIT_PRESET: 'aggressive' })).toThrow()
+      expect(() => validate({ ...BASE, RATE_LIMIT_PRESET: 'aggressive' })).toThrow()
     })
 
     it('applies default preset values when RATE_LIMIT_PRESET is omitted', () => {
       // Act
-      const result = validate({})
+      const result = validate({ ...BASE })
 
       // Assert
       expect(result.RATE_LIMIT_PRESET).toBe('default')
@@ -498,7 +527,7 @@ describe('env validation', () => {
 
     it('RATE_LIMIT_PRESET=default applies all default values', () => {
       // Arrange
-      const config = { RATE_LIMIT_PRESET: 'default' }
+      const config = { ...BASE, RATE_LIMIT_PRESET: 'default' }
 
       // Act
       const result = validate(config)
@@ -515,7 +544,7 @@ describe('env validation', () => {
 
     it('RATE_LIMIT_PRESET=strict applies all strict values', () => {
       // Arrange
-      const config = { RATE_LIMIT_PRESET: 'strict' }
+      const config = { ...BASE, RATE_LIMIT_PRESET: 'strict' }
 
       // Act
       const result = validate(config)
@@ -532,7 +561,7 @@ describe('env validation', () => {
 
     it('RATE_LIMIT_PRESET=relaxed applies all relaxed values', () => {
       // Arrange
-      const config = { RATE_LIMIT_PRESET: 'relaxed' }
+      const config = { ...BASE, RATE_LIMIT_PRESET: 'relaxed' }
 
       // Act
       const result = validate(config)
@@ -550,6 +579,7 @@ describe('env validation', () => {
     it('explicit RATE_LIMIT_AUTH_LIMIT overrides preset; non-overridden keys retain preset values', () => {
       // Arrange
       const config = {
+        ...BASE,
         RATE_LIMIT_PRESET: 'strict',
         RATE_LIMIT_AUTH_LIMIT: '10',
       }
@@ -567,6 +597,7 @@ describe('env validation', () => {
     it('RATE_LIMIT_ENABLED is unaffected by preset', () => {
       // Arrange
       const config = {
+        ...BASE,
         RATE_LIMIT_ENABLED: false,
         RATE_LIMIT_PRESET: 'default',
       }

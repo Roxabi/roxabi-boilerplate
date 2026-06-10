@@ -428,14 +428,15 @@ describe('AdminMembersService', () => {
       }
 
       db.select.mockReturnValueOnce(createChainMock([member])) // member + role (joined)
-      db.delete.mockReturnValueOnce(createChainMock(undefined))
+      const tx = mockTransaction(db)
+      tx.delete.mockReturnValueOnce(createChainMock(undefined))
 
       // Act
       const result = await service.removeMember('m-1', 'org-1', 'actor-1')
 
       // Assert
       expect(result).toEqual({ removed: true })
-      expect(db.delete).toHaveBeenCalled()
+      expect(tx.delete).toHaveBeenCalled()
     })
 
     it('should remove member successfully when member has no roleId', async () => {
@@ -497,9 +498,9 @@ describe('AdminMembersService', () => {
       }
       const ownerCount = { count: 1 }
 
-      db.select
-        .mockReturnValueOnce(createChainMock([member])) // member + role (joined)
-        .mockReturnValueOnce(createChainMock([ownerCount])) // only 1 owner
+      db.select.mockReturnValueOnce(createChainMock([member])) // member + role (joined)
+      const tx = mockTransaction(db)
+      tx.select.mockReturnValueOnce(createChainMock([ownerCount])) // only 1 owner
 
       // Act & Assert
       await expect(service.removeMember('m-1', 'org-1', 'actor-1')).rejects.toThrow(
@@ -517,9 +518,9 @@ describe('AdminMembersService', () => {
         roleSlug: 'owner',
       }
 
-      db.select
-        .mockReturnValueOnce(createChainMock([member]))
-        .mockReturnValueOnce(createChainMock([])) // empty count result
+      db.select.mockReturnValueOnce(createChainMock([member]))
+      const tx = mockTransaction(db)
+      tx.select.mockReturnValueOnce(createChainMock([])) // empty count result
 
       // Act & Assert
       await expect(service.removeMember('m-1', 'org-1', 'actor-1')).rejects.toThrow(

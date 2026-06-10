@@ -181,7 +181,7 @@ describe('DrizzleRbacRepository', () => {
       const repo = new DrizzleRbacRepository(createMockDb().db as never)
 
       // Act
-      const result = await repo.findRoleById('role-1', 'org-1', tx as never)
+      const result = await repo.findRoleById('role-1', tx as never)
 
       // Assert
       expect(result).toEqual(mockRole)
@@ -194,20 +194,21 @@ describe('DrizzleRbacRepository', () => {
       const repo = new DrizzleRbacRepository(createMockDb().db as never)
 
       // Act
-      const result = await repo.findRoleById('missing-role', 'org-1', tx as never)
+      const result = await repo.findRoleById('missing-role', tx as never)
 
       // Assert
       expect(result).toBeUndefined()
     })
 
-    it('should return undefined when tenantId does not match', async () => {
+    it('should return undefined when role does not exist', async () => {
       // Arrange
       const { tx, terminal } = createMockTx()
       terminal.mockResolvedValueOnce([])
       const repo = new DrizzleRbacRepository(createMockDb().db as never)
 
       // Act
-      const result = await repo.findRoleById('role-1', 'wrong-org', tx as never)
+      // tenant isolation is enforced by RLS at DB level, not by a tenantId param
+      const result = await repo.findRoleById('role-1', tx as never)
 
       // Assert
       expect(result).toBeUndefined()
@@ -222,7 +223,7 @@ describe('DrizzleRbacRepository', () => {
       const repo = new DrizzleRbacRepository(createMockDb().db as never)
 
       // Act
-      await repo.updateRole('role-1', 'org-1', { name: 'Updated Admin' }, tx as never)
+      await repo.updateRole('role-1', { name: 'Updated Admin' }, tx as never)
 
       // Assert
       expect(tx.update).toHaveBeenCalled()
@@ -230,14 +231,15 @@ describe('DrizzleRbacRepository', () => {
       expect(tx.where).toHaveBeenCalled()
     })
 
-    it('should do nothing when tenantId does not match', async () => {
+    it('should update role without explicit tenantId (RLS enforces isolation)', async () => {
       // Arrange
       const { tx } = createMockTx()
       tx.where.mockResolvedValueOnce([])
       const repo = new DrizzleRbacRepository(createMockDb().db as never)
 
       // Act
-      await repo.updateRole('role-1', 'wrong-org', { name: 'Updated Admin' }, tx as never)
+      // tenant isolation is enforced by RLS at DB level, not by a tenantId param
+      await repo.updateRole('role-1', { name: 'Updated Admin' }, tx as never)
 
       // Assert
       expect(tx.update).toHaveBeenCalled()
@@ -270,21 +272,22 @@ describe('DrizzleRbacRepository', () => {
       const repo = new DrizzleRbacRepository(createMockDb().db as never)
 
       // Act
-      await repo.deleteRole('role-1', 'org-1', tx as never)
+      await repo.deleteRole('role-1', tx as never)
 
       // Assert
       expect(tx.delete).toHaveBeenCalled()
       expect(tx.where).toHaveBeenCalled()
     })
 
-    it('should do nothing when tenantId does not match', async () => {
+    it('should delete role without explicit tenantId (RLS enforces isolation)', async () => {
       // Arrange
       const { tx } = createMockTx()
       tx.where.mockResolvedValueOnce([])
       const repo = new DrizzleRbacRepository(createMockDb().db as never)
 
       // Act
-      await repo.deleteRole('role-1', 'wrong-org', tx as never)
+      // tenant isolation is enforced by RLS at DB level, not by a tenantId param
+      await repo.deleteRole('role-1', tx as never)
 
       // Assert
       expect(tx.delete).toHaveBeenCalled()
@@ -328,7 +331,7 @@ describe('DrizzleRbacRepository', () => {
       const repo = new DrizzleRbacRepository(createMockDb().db as never)
 
       // Act
-      await repo.reassignMembersToRole('old-role', 'new-role', 'org-1', tx as never)
+      await repo.reassignMembersToRole('old-role', 'new-role', tx as never)
 
       // Assert
       expect(tx.update).toHaveBeenCalled()
@@ -336,14 +339,15 @@ describe('DrizzleRbacRepository', () => {
       expect(tx.where).toHaveBeenCalled()
     })
 
-    it('should do nothing when tenantId does not match', async () => {
+    it('should reassign members without explicit tenantId (RLS enforces isolation)', async () => {
       // Arrange
       const { tx } = createMockTx()
       tx.where.mockResolvedValueOnce([])
       const repo = new DrizzleRbacRepository(createMockDb().db as never)
 
       // Act
-      await repo.reassignMembersToRole('old-role', 'new-role', 'wrong-org', tx as never)
+      // tenant isolation is enforced by RLS at DB level, not by a tenantId param
+      await repo.reassignMembersToRole('old-role', 'new-role', tx as never)
 
       // Assert
       expect(tx.update).toHaveBeenCalled()
@@ -414,7 +418,7 @@ describe('DrizzleRbacRepository', () => {
       const repo = new DrizzleRbacRepository(createMockDb().db as never)
 
       // Act
-      const result = await repo.getRolePermissions('role-1', 'org-1', tx as never)
+      const result = await repo.getRolePermissions('role-1', tx as never)
 
       // Assert
       expect(result).toEqual(perms)
@@ -431,20 +435,21 @@ describe('DrizzleRbacRepository', () => {
       const repo = new DrizzleRbacRepository(createMockDb().db as never)
 
       // Act
-      const result = await repo.getRolePermissions('role-1', 'org-1', tx as never)
+      const result = await repo.getRolePermissions('role-1', tx as never)
 
       // Assert
       expect(result).toEqual([])
     })
 
-    it('should return empty array when tenantId does not match', async () => {
+    it('should return empty array when role does not exist (RLS enforces tenant isolation)', async () => {
       // Arrange
       const { tx } = createMockTx()
       tx.where.mockResolvedValueOnce([])
       const repo = new DrizzleRbacRepository(createMockDb().db as never)
 
       // Act
-      const result = await repo.getRolePermissions('role-1', 'wrong-org', tx as never)
+      // tenant isolation is enforced by RLS at DB level, not by a tenantId param
+      const result = await repo.getRolePermissions('role-1', tx as never)
 
       // Assert
       expect(result).toEqual([])
@@ -452,14 +457,17 @@ describe('DrizzleRbacRepository', () => {
   })
 
   describe('listRolesWithPermissions', () => {
-    it('should return empty array when tenantId does not match', async () => {
+    it('should return empty array when no roles exist (RLS enforces tenant isolation)', async () => {
       // Arrange
+      // listRolesWithPermissions does: qb.select().from(roles) → check length === 0 → early return
+      // So we mock the from() call to resolve with [] (not where())
       const { tx } = createMockTx()
-      tx.where.mockResolvedValueOnce([])
+      tx.from.mockResolvedValueOnce([])
       const repo = new DrizzleRbacRepository(createMockDb().db as never)
 
       // Act
-      const result = await repo.listRolesWithPermissions('wrong-org', tx as never)
+      // tenant isolation is enforced by RLS at DB level, not by a tenantId param
+      const result = await repo.listRolesWithPermissions(tx as never)
 
       // Assert
       expect(result).toEqual([])

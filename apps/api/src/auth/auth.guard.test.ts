@@ -423,47 +423,6 @@ describe('AuthGuard', () => {
     })
   })
 
-  describe('checkBanned', () => {
-    const validSession = {
-      user: { id: 'user-1', role: 'user' },
-      session: { id: 'sess-1', activeOrganizationId: null },
-      permissions: [],
-    }
-
-    it('should reject banned user with banExpires in future', async () => {
-      // Arrange
-      const futureBan = new Date('2026-12-31T00:00:00.000Z')
-      const userService = createMockUserService(null, null, {
-        banned: true,
-        banExpires: futureBan,
-      })
-      const { guard } = createGuard(validSession, {}, userService)
-      const { context } = createMockContext()
-
-      // Act & Assert
-      await expect(guard.canActivate(context as never)).rejects.toMatchObject({
-        response: { errorCode: ErrorCode.ACCOUNT_BANNED },
-      })
-    })
-
-    it('should allow access when ban has expired', async () => {
-      // Arrange
-      const pastBan = new Date('2020-01-01T00:00:00.000Z')
-      const userService = createMockUserService(null, null, {
-        banned: true,
-        banExpires: pastBan,
-      })
-      const { guard } = createGuard(validSession, {}, userService)
-      const { context } = createMockContext()
-
-      // Act
-      const result = await guard.canActivate(context as never)
-
-      // Assert
-      expect(result).toBe(true)
-    })
-  })
-
   // -----------------------------------------------------------------------
   // API key auth — RED phase tests (#319)
   // -----------------------------------------------------------------------

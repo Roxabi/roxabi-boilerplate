@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Capture the config passed to betterAuth so we can test databaseHooks
 const capturedConfig = vi.hoisted(() => ({
@@ -92,6 +92,7 @@ const defaultConfig = {
   secret: 'test-secret',
   baseURL: 'http://localhost:4000',
   appURL: 'http://localhost:3000',
+  appName: 'App',
 }
 
 describe('createBetterAuth databaseHooks', () => {
@@ -867,7 +868,7 @@ describe('createBetterAuth buildFrontendUrl', () => {
     // Arrange
     const mockDb = createMockDb()
     const mockQueue = createMockQueueService()
-    const configNoApp = { secret: 'test-secret', baseURL: 'http://localhost:4000' }
+    const configNoApp = { secret: 'test-secret', baseURL: 'http://localhost:4000', appName: 'App' }
     createBetterAuth(mockDb as never, mockQueue as never, configNoApp)
 
     const emailVerification = capturedConfig.config?.emailVerification as {
@@ -1041,7 +1042,7 @@ describe('buildFrontendUrl edge cases', () => {
     // Arrange
     const mockDb = createMockDb()
     const mockQueue = createMockQueueService()
-    const configNoApp = { secret: 'test-secret', baseURL: 'http://localhost:4000' }
+    const configNoApp = { secret: 'test-secret', baseURL: 'http://localhost:4000', appName: 'App' }
     createBetterAuth(mockDb as never, mockQueue as never, configNoApp)
 
     const emailAndPassword = capturedConfig.config?.emailAndPassword as {
@@ -1141,7 +1142,7 @@ describe('createBetterAuth configuration', () => {
 
   it('should set empty trustedOrigins when appURL is not provided', () => {
     // Arrange
-    const config = { secret: 'test-secret', baseURL: 'http://localhost:4000' }
+    const config = { secret: 'test-secret', baseURL: 'http://localhost:4000', appName: 'App' }
 
     // Act
     createBetterAuth(createMockDb() as never, createMockQueueService() as never, config)
@@ -1265,7 +1266,7 @@ describe('createBetterAuth onExistingUserSignUp', () => {
     // Arrange
     const mockDb = createMockDb()
     const mockQueue = createMockQueueService()
-    const configNoApp = { secret: 'test-secret', baseURL: 'http://localhost:4000' }
+    const configNoApp = { secret: 'test-secret', baseURL: 'http://localhost:4000', appName: 'App' }
     createBetterAuth(mockDb as never, mockQueue as never, configNoApp)
     const handler = getExistingUserSignUpHandler()
 
@@ -1304,20 +1305,12 @@ describe('createBetterAuth onExistingUserSignUp', () => {
 // APP_NAME env override
 // ---------------------------------------------------------------------------
 
-describe('APP_NAME env override', () => {
-  afterEach(() => {
-    vi.unstubAllEnvs()
-  })
-
+describe('APP_NAME config injection', () => {
   it('should pass the custom APP_NAME to renderVerificationEmail', async () => {
-    // Arrange — stub env before re-importing the module so APP_NAME is read fresh
-    vi.stubEnv('APP_NAME', 'Acme')
-    vi.resetModules()
-    const { createBetterAuth: createBetterAuthFresh } = await import('./auth.instance.js')
-
+    // Arrange — appName injected via config (no env read)
     const mockDb = createMockDb()
     const mockQueue = createMockQueueService()
-    createBetterAuthFresh(mockDb as never, mockQueue as never, defaultConfig)
+    createBetterAuth(mockDb as never, mockQueue as never, { ...defaultConfig, appName: 'Acme' })
 
     const emailVerification = capturedConfig.config?.emailVerification as {
       sendVerificationEmail: (params: {
@@ -1348,13 +1341,9 @@ describe('APP_NAME env override', () => {
 
   it('should pass the custom APP_NAME to renderResetEmail', async () => {
     // Arrange
-    vi.stubEnv('APP_NAME', 'Acme')
-    vi.resetModules()
-    const { createBetterAuth: createBetterAuthFresh } = await import('./auth.instance.js')
-
     const mockDb = createMockDb()
     const mockQueue = createMockQueueService()
-    createBetterAuthFresh(mockDb as never, mockQueue as never, defaultConfig)
+    createBetterAuth(mockDb as never, mockQueue as never, { ...defaultConfig, appName: 'Acme' })
 
     const emailAndPassword = capturedConfig.config?.emailAndPassword as {
       sendResetPassword: (params: {
@@ -1385,14 +1374,10 @@ describe('APP_NAME env override', () => {
 
   it('should pass the custom APP_NAME to renderMagicLinkEmail', async () => {
     // Arrange
-    vi.stubEnv('APP_NAME', 'Acme')
-    vi.resetModules()
-    const { createBetterAuth: createBetterAuthFresh } = await import('./auth.instance.js')
-
     const mockDb = createMockDb()
     const mockQueue = createMockQueueService()
     mockDb._mocks.selectWhereFn.mockResolvedValueOnce([{ locale: 'en' }])
-    createBetterAuthFresh(mockDb as never, mockQueue as never, defaultConfig)
+    createBetterAuth(mockDb as never, mockQueue as never, { ...defaultConfig, appName: 'Acme' })
 
     const handler = capturedMagicLinkConfig.config?.sendMagicLink as (params: {
       email: string
@@ -1421,13 +1406,9 @@ describe('APP_NAME env override', () => {
 
   it('should pass the custom APP_NAME to renderExistingAccountEmail', async () => {
     // Arrange
-    vi.stubEnv('APP_NAME', 'Acme')
-    vi.resetModules()
-    const { createBetterAuth: createBetterAuthFresh } = await import('./auth.instance.js')
-
     const mockDb = createMockDb()
     const mockQueue = createMockQueueService()
-    createBetterAuthFresh(mockDb as never, mockQueue as never, defaultConfig)
+    createBetterAuth(mockDb as never, mockQueue as never, { ...defaultConfig, appName: 'Acme' })
 
     const emailAndPassword = capturedConfig.config?.emailAndPassword as {
       onExistingUserSignUp: (params: { user: { email: string; locale?: string } }) => Promise<void>

@@ -15,11 +15,13 @@ function createMockRequest(
     method?: string
     headers?: Record<string, string | string[]>
     body?: unknown
+    protocol?: string
   } = {}
 ) {
   return {
     url: overrides.url ?? '/api/auth/callback',
     method: overrides.method ?? 'GET',
+    protocol: overrides.protocol ?? 'http',
     headers: {
       host: 'localhost:3000',
       ...overrides.headers,

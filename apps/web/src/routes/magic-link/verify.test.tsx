@@ -148,6 +148,8 @@ describe('MagicLinkVerifyPage', () => {
       useSearchFn.mockReturnValue({ token: 'tok_abc123', error: undefined })
       useSessionFn.mockReturnValue({ data: null, isPending: false })
       mockNavigate.mockClear()
+      const assignSpy = vi.fn()
+      vi.spyOn(window, 'location', 'get').mockReturnValue({ ...window.location, assign: assignSpy })
       const MagicLinkVerifyPage = captured.Component
 
       // Act
@@ -157,15 +159,14 @@ describe('MagicLinkVerifyPage', () => {
       expect(screen.getByTestId('loader')).toBeInTheDocument()
       expect(screen.getByText('auth_magic_link_verifying')).toBeInTheDocument()
 
-      // Assert — navigate is called with API verify endpoint and reloadDocument
+      // Assert — window.location.assign is called with API verify endpoint
       await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith(
-          expect.objectContaining({
-            to: expect.stringContaining('/api/auth/magic-link/verify'),
-            reloadDocument: true,
-          })
+        expect(assignSpy).toHaveBeenCalledWith(
+          expect.stringContaining('/api/auth/magic-link/verify')
         )
       })
+
+      vi.restoreAllMocks()
     })
 
     it('should not redirect to API when token is present but error is also set', () => {
@@ -273,7 +274,10 @@ describe('MagicLinkVerifyPage', () => {
       // Assert
       await waitFor(() => {
         expect(authClient.signOut).toHaveBeenCalled()
-        expect(mockNavigate).toHaveBeenCalledWith({ to: '/login' })
+        expect(mockNavigate).toHaveBeenCalledWith({
+          to: '/magic-link/verify',
+          reloadDocument: true,
+        })
       })
     })
 

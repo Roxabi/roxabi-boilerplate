@@ -30,6 +30,7 @@ const baseConfigValues = {
   BETTER_AUTH_SECRET: 'test-secret',
   BETTER_AUTH_URL: 'http://localhost:4000',
   APP_URL: 'http://localhost:3000',
+  APP_NAME: 'Test App',
 }
 
 function createService(config: ReturnType<typeof createMockConfig>) {

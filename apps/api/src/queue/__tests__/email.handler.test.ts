@@ -75,24 +75,33 @@ describe('EmailQueueHandler', () => {
       })
     })
 
-    it('throws when emailProvider.send() throws so pg-boss can retry', async () => {
+    it('records failure in result when emailProvider.send() throws', async () => {
       // Arrange
       const sendError = new Error('SMTP connection refused')
       mockEmailProvider.send.mockRejectedValueOnce(sendError)
       const jobs = [makeJob()]
 
-      // Act & Assert
-      await expect(handler.handle(jobs)).rejects.toThrow('SMTP connection refused')
+      // Act
+      const result = await handler.handle(jobs)
+
+      // Assert — never throws; captures error in result.failed
+      expect(result.succeeded).toEqual([])
+      expect(result.failed).toEqual([{ jobId: 'job-abc-123', error: 'SMTP connection refused' }])
     })
 
-    it('stops processing subsequent jobs after first failure', async () => {
+    it('continues processing all jobs after a failure', async () => {
       // Arrange
       mockEmailProvider.send.mockRejectedValueOnce(new Error('Send failed'))
       const jobs = [makeJob({ to: 'a@example.com' }), makeJob({ to: 'b@example.com' })]
 
-      // Act & Assert
-      await expect(handler.handle(jobs)).rejects.toThrow()
-      expect(mockEmailProvider.send).toHaveBeenCalledTimes(1)
+      // Act
+      const result = await handler.handle(jobs)
+
+      // Assert — both jobs processed, first fails, second succeeds
+      expect(mockEmailProvider.send).toHaveBeenCalledTimes(2)
+      expect(result.failed).toHaveLength(1)
+      expect(result.failed[0]).toMatchObject({ error: 'Send failed' })
+      expect(result.succeeded).toHaveLength(1)
     })
 
     it('handles empty job list without calling emailProvider', async () => {
