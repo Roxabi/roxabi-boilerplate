@@ -18,9 +18,9 @@ import { MembersTable } from '@/components/admin/MembersTable'
 import { PaginationControls } from '@/components/admin/PaginationControls'
 import { PendingInvitations } from '@/components/admin/PendingInvitations'
 import type { MembersResponse, OrgRole } from '@/components/admin/types'
+import { apiGet } from '@/lib/apiClient'
 import { appName } from '@/lib/appName'
 import { authClient, useSession } from '@/lib/authClient'
-import { parseErrorMessage } from '@/lib/errorUtils'
 import { enforceRoutePermission } from '@/lib/routePermissions'
 import { m } from '@/paraglide/messages'
 
@@ -28,7 +28,7 @@ export const Route = createFileRoute('/admin/members')({
   staticData: { permission: 'members:write' },
   beforeLoad: enforceRoutePermission,
   component: AdminMembersPage,
-  errorComponent: ({ error }) => <AdminErrorBoundary error={error as Error} />,
+  errorComponent: AdminErrorBoundary,
   head: () => ({
     meta: [{ title: `${m.org_members_title()} | ${appName}` }],
   }),
@@ -45,42 +45,23 @@ const SEARCH_DEBOUNCE_MS = 300
 // API helpers
 // ---------------------------------------------------------------------------
 
-import { ApiError } from '@/lib/apiClient'
-
 async function fetchMembers(
   page: number,
   search: string | undefined,
   signal?: AbortSignal
 ): Promise<MembersResponse> {
-  const params = new URLSearchParams({
+  const params: Record<string, string> = {
     page: String(page),
     limit: String(PAGE_LIMIT),
-  })
+  }
   if (search) {
-    params.set('search', search)
+    params.search = search
   }
-  const res = await fetch(`/api/admin/members?${params.toString()}`, {
-    credentials: 'include',
-    signal,
-  })
-  if (!res.ok) {
-    const body: unknown = await res.json().catch(() => {
-      throw new ApiError(res.status, 'Malformed JSON response')
-    })
-    throw new ApiError(res.status, parseErrorMessage(body, m.auth_toast_error()), body)
-  }
-  return (await res.json()) as MembersResponse
+  return apiGet<MembersResponse>('/api/admin/members', params, signal)
 }
 
 async function fetchRoles(signal?: AbortSignal): Promise<OrgRole[]> {
-  const res = await fetch('/api/roles', { credentials: 'include', signal })
-  if (!res.ok) {
-    const body: unknown = await res.json().catch(() => {
-      throw new ApiError(res.status, 'Malformed JSON response')
-    })
-    throw new ApiError(res.status, parseErrorMessage(body, m.auth_toast_error()), body)
-  }
-  return (await res.json()) as OrgRole[]
+  return apiGet<OrgRole[]>('/api/roles', undefined, signal)
 }
 
 // ---------------------------------------------------------------------------
@@ -328,10 +309,10 @@ function AdminMembersPage() {
         <h1 className="text-2xl font-bold">{m.org_members_title()}</h1>
         <InviteDialog
           roles={roles}
-          onSuccess={async () => {
+          onSuccess={() => {
             // TODO: migrate to adminMemberKeys factory (follow-up to #410)
-            await queryClient.invalidateQueries({ queryKey: ['admin-members'] })
-            await queryClient.invalidateQueries({ queryKey: ['admin-invitations'] })
+            queryClient.invalidateQueries({ queryKey: ['admin-members'] })
+            queryClient.invalidateQueries({ queryKey: ['admin-invitations'] })
           }}
         />
       </div>
@@ -346,9 +327,9 @@ function AdminMembersPage() {
           searchInput={search.searchInput}
           orgId={activeOrg.id}
           currentUserId={currentUserId}
-          onActionComplete={async () => {
+          onActionComplete={() => {
             // TODO: migrate to adminMemberKeys factory (follow-up to #410)
-            await queryClient.invalidateQueries({ queryKey: ['admin-members'] })
+            queryClient.invalidateQueries({ queryKey: ['admin-members'] })
           }}
           onPageChange={search.setPage}
         />

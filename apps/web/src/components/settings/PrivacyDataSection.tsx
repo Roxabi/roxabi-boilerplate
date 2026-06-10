@@ -31,7 +31,7 @@ export function PrivacyDataSection() {
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
     } catch (error) {
-      console.error('GDPR export failed:', error)
+      console.error('GDPR export failed', error)
       toast.error(m.auth_toast_error())
     } finally {
       setLoading(false)

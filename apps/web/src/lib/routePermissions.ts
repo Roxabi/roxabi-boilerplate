@@ -64,7 +64,7 @@ export const getServerEnrichedSession = createServerFn({ method: 'GET' }).handle
   async (): Promise<EnrichedSession | null> => {
     const { getRequestHeader } = await import('@tanstack/react-start/server')
     const { env } = await import('@/lib/env.server')
-    const apiUrl = env.API_URL ?? `http://localhost:${env.API_PORT}`
+    const apiUrl = env.API_URL
     try {
       const cookie = getRequestHeader('cookie')
       if (!cookie) return null

@@ -11,6 +11,7 @@ const httpsUrl = (name: string) =>
     .optional()
 
 export const clientEnvSchema = z.object({
+  VITE_APP_URL: z.string().url().optional(),
   VITE_APP_NAME: z
     .string()
     .max(64)
@@ -24,6 +25,7 @@ export const clientEnvSchema = z.object({
 export type ClientEnv = z.infer<typeof clientEnvSchema>
 
 export const clientEnv: ClientEnv = clientEnvSchema.parse({
+  VITE_APP_URL: import.meta.env.VITE_APP_URL,
   VITE_APP_NAME: import.meta.env.VITE_APP_NAME,
   VITE_GITHUB_REPO_URL: import.meta.env.VITE_GITHUB_REPO_URL,
   VITE_TALKS_URL: import.meta.env.VITE_TALKS_URL,

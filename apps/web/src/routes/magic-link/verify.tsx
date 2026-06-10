@@ -4,6 +4,7 @@ import { Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { appName } from '@/lib/appName'
 import { authClient, useSession } from '@/lib/authClient'
+import { clientEnv } from '@/lib/env.shared'
 import { m } from '@/paraglide/messages'
 import { AuthLayout } from '../../components/AuthLayout'
 
@@ -74,16 +75,14 @@ function getErrorMessage(errorCode: string): string {
 }
 
 function WarningState({ email }: { email: string }) {
-  const navigate = useNavigate()
   const [signingOut, setSigningOut] = useState(false)
 
   async function handleSignOut() {
     setSigningOut(true)
     try {
       await authClient.signOut()
-      navigate({ to: '/login' })
-    } catch (err) {
-      console.error('Sign out failed:', err)
+      navigate({ to: '/magic-link/verify', reloadDocument: true })
+    } catch {
       setSigningOut(false)
     }
   }
@@ -150,21 +149,19 @@ function GuestVerifyFlow({
   token: string | undefined
   error: string | undefined
 }) {
-  const navigate = useNavigate()
-
   // Navigate to API verify endpoint for server-side token processing.
   // Skipped when error is present (returning from API redirect) or token is missing.
   useEffect(() => {
     if (!token || error) return
     const params = new URLSearchParams({
       token,
-      errorCallbackURL: `${window.location.origin}/magic-link/verify`,
+      errorCallbackURL: `${clientEnv.VITE_APP_URL}/magic-link/verify`,
     })
     navigate({
-      to: `/api/auth/magic-link/verify?${params.toString()}`,
+      to: `/api/auth/magic-link/verify?${params.toString()}` as '/api/auth/magic-link/verify',
       reloadDocument: true,
     })
-  }, [token, error, navigate])
+  }, [token, error])
 
   // Error code from API redirect (e.g., ?error=EXPIRED_TOKEN)
   if (error) {

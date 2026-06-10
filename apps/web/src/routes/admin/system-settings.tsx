@@ -4,19 +4,16 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { SettingsIcon } from 'lucide-react'
 import { toast } from 'sonner'
-import { AdminErrorBoundary } from '@/components/admin/AdminErrorBoundary'
 import { SettingsCard } from '@/components/admin/SettingsCard'
 import { adminSettingsKeys } from '@/lib/admin/queryKeys'
-import { ApiError } from '@/lib/apiClient'
+import { ApiError, apiGet, apiPatch } from '@/lib/apiClient'
 import { appName } from '@/lib/appName'
-import { isErrorWithMessage } from '@/lib/errorUtils'
 import { enforceRoutePermission } from '@/lib/routePermissions'
 
 export const Route = createFileRoute('/admin/system-settings')({
   staticData: { permission: 'role:superadmin' },
   beforeLoad: enforceRoutePermission,
   component: SystemSettingsPage,
-  errorComponent: ({ error }) => <AdminErrorBoundary error={error as Error} />,
   head: () => ({ meta: [{ title: `System Settings | Admin | ${appName}` }] }),
 })
 
@@ -59,40 +56,23 @@ function SystemSettingsPage() {
 
   const { data, isLoading } = useQuery<SettingsByCategory>({
     queryKey: adminSettingsKeys.all,
-    queryFn: async () => {
-      const res = await fetch('/api/admin/settings', { credentials: 'include' })
-      if (!res.ok) {
-        const body: unknown = await res.json().catch(() => {
-          throw new ApiError(res.status, 'Malformed JSON response')
-        })
-        throw new ApiError(res.status, 'Failed to fetch system settings', body)
-      }
-      return res.json()
-    },
+    queryFn: async () => apiGet<SettingsByCategory>('/api/admin/settings'),
   })
 
   const grouped = data ?? {}
   const sortedCategories = Object.keys(grouped).sort()
 
   async function handleSave(updates: Array<{ key: string; value: unknown }>) {
-    const res = await fetch('/api/admin/settings', {
-      method: 'PATCH',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ updates }),
-    })
-
-    if (!res.ok) {
-      const body: unknown = await res.json().catch(() => {
-        throw new ApiError(res.status, 'Malformed JSON response')
-      })
-      const message = isErrorWithMessage(body) ? body.message : 'Failed to save settings'
+    try {
+      await apiPatch<void>('/api/admin/settings', { updates })
+      toast.success('Settings updated successfully')
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'system-settings'] })
+    } catch (error) {
+      const message = error instanceof ApiError ? String(error.message) : 'Failed to save settings'
       toast.error(message)
-      throw new ApiError(res.status, message, body)
+      console.error(error)
+      throw error
     }
-
-    toast.success('Settings updated successfully')
-    await queryClient.invalidateQueries({ queryKey: ['admin', 'system-settings'] })
   }
 
   return (

@@ -17,14 +17,13 @@ import {
 import { createFileRoute } from '@tanstack/react-router'
 import { ChevronDownIcon, ChevronRightIcon, ScrollTextIcon } from 'lucide-react'
 import { useState } from 'react'
-import { AdminErrorBoundary } from '@/components/admin/AdminErrorBoundary'
 import { DiffViewer } from '@/components/admin/DiffViewer'
 import type { FilterConfig } from '@/components/admin/FilterBar'
 import { FilterBar } from '@/components/admin/FilterBar'
 import { LoadMoreButton } from '@/components/admin/LoadMoreButton'
 import { useCursorPagination } from '@/hooks/useCursorPagination'
 import { adminAuditKeys } from '@/lib/admin/queryKeys'
-import { ApiError } from '@/lib/apiClient'
+import { apiGet } from '@/lib/apiClient'
 import { appName } from '@/lib/appName'
 import { formatTimestamp } from '@/lib/formatDate'
 import { enforceRoutePermission } from '@/lib/routePermissions'
@@ -33,7 +32,6 @@ export const Route = createFileRoute('/admin/audit-logs')({
   staticData: { permission: 'role:superadmin' },
   beforeLoad: enforceRoutePermission,
   component: AdminAuditLogsPage,
-  errorComponent: ({ error }) => <AdminErrorBoundary error={error as Error} />,
   head: () => ({ meta: [{ title: `Audit Logs | Admin | ${appName}` }] }),
 })
 
@@ -172,14 +170,7 @@ function AdminAuditLogsPage() {
     queryKey: adminAuditKeys.list(filters),
     fetchFn: async (cursor) => {
       const params = buildAuditLogParams(cursor, filters)
-      const res = await fetch(`/api/admin/audit-logs?${params}`)
-      if (!res.ok) {
-        const body: unknown = await res.json().catch(() => {
-          throw new ApiError(res.status, 'Malformed JSON response')
-        })
-        throw new ApiError(res.status, 'Failed to fetch audit logs', body)
-      }
-      return res.json()
+      return apiGet<AuditEntry[]>(`/api/admin/audit-logs?${params}`)
     },
   })
 

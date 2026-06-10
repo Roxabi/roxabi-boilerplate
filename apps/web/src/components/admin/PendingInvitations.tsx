@@ -41,18 +41,18 @@ type InvitationsResponse = {
   data: Invitation[]
 }
 
-import { ApiError } from '@/lib/apiClient'
-
 async function fetchInvitations(signal?: AbortSignal): Promise<Invitation[]> {
   const res = await fetch('/api/admin/invitations', {
     credentials: 'include',
     signal,
   })
   if (!res.ok) {
-    const body: unknown = await res.json().catch(() => {
-      throw new ApiError(res.status, 'Malformed JSON response')
-    })
-    throw new ApiError(res.status, 'Failed to fetch invitations', body)
+    const body = await res.json().catch(() => null)
+    throw new Error(
+      typeof body === 'object' && body !== null && 'message' in body
+        ? String(body.message)
+        : 'Failed to fetch invitations'
+    )
   }
   const json = (await res.json()) as InvitationsResponse
   return json.data ?? []
@@ -64,10 +64,7 @@ async function revokeInvitationApi(invitationId: string): Promise<void> {
     credentials: 'include',
   })
   if (!res.ok) {
-    const body: unknown = await res.json().catch(() => {
-      throw new ApiError(res.status, 'Malformed JSON response')
-    })
-    throw new ApiError(res.status, m.auth_toast_error(), body)
+    throw new Error(m.auth_toast_error())
   }
 }
 
@@ -199,14 +196,11 @@ export function PendingInvitations() {
 
   const revokeMutation = useMutation({
     mutationFn: (invitationId: string) => revokeInvitationApi(invitationId),
-    onSuccess: async () => {
+    onSuccess: () => {
       toast.success(m.org_toast_invitation_revoked())
-      await queryClient.invalidateQueries({ queryKey: ['admin-invitations'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-invitations'] })
     },
-    onError: (err: unknown) => {
-      console.error('Failed to revoke invitation:', err)
-      toast.error(m.auth_toast_error())
-    },
+    onError: () => toast.error(m.auth_toast_error()),
     onSettled: () => setInvitationToRevoke(null),
   })
 

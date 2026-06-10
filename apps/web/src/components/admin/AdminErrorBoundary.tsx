@@ -1,26 +1,23 @@
-import { Button, Card, CardContent } from '@repo/ui'
-import { AlertCircleIcon } from 'lucide-react'
-import { m } from '@/paraglide/messages'
+import { Button } from '@repo/ui'
+import { useRouter } from '@tanstack/react-router'
 
-type AdminErrorBoundaryProps = {
-  error: Error
-  reset?: () => void
-}
+export function AdminErrorBoundary({ error }: { error: Error }) {
+  const router = useRouter()
 
-export function AdminErrorBoundary({ error, reset }: AdminErrorBoundaryProps) {
   return (
-    <Card>
-      <CardContent className="flex flex-col items-center gap-4 py-12">
-        <AlertCircleIcon className="size-10 text-destructive" />
-        <p className="text-sm font-medium text-destructive">
-          {error instanceof Error ? error.message : m.auth_toast_error()}
-        </p>
-        {reset && (
-          <Button variant="outline" onClick={reset}>
-            {m.admin_error_retry()}
-          </Button>
-        )}
-      </CardContent>
-    </Card>
+    <div className="flex flex-col items-center gap-4 py-12 text-center">
+      <h2 className="text-lg font-semibold">Something went wrong</h2>
+      <p className="text-sm text-muted-foreground">
+        {error.message || 'An unexpected error occurred.'}
+      </p>
+      <div className="flex gap-2">
+        <Button variant="outline" size="sm" onClick={() => router.history.back()}>
+          Go back
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => router.invalidate()}>
+          Try again
+        </Button>
+      </div>
+    </div>
   )
 }
