@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common'
-import type { ConfigService } from '@nestjs/config'
+import { ConfigService } from '@nestjs/config'
 import { Resend } from 'resend'
 import { toError } from '../common/utils/toError.js'
 import type { EmailProvider } from './email.provider.js'

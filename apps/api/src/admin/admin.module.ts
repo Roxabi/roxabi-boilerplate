@@ -22,5 +22,13 @@ import { AdminUsersModule } from './adminUsers.module.js'
     AdminSettingsModule,
     AdminFeatureFlagsModule,
   ],
+  exports: [
+    AdminUsersModule,
+    AdminOrganizationsModule,
+    AdminMembersModule,
+    AdminAuditLogsModule,
+    AdminSettingsModule,
+    AdminFeatureFlagsModule,
+  ],
 })
 export class AdminModule {}

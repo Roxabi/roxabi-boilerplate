@@ -1,6 +1,6 @@
 import { type ArgumentsHost, Catch, type ExceptionFilter, HttpStatus } from '@nestjs/common'
 import type { FastifyReply, FastifyRequest } from 'fastify'
-import type { ClsService } from 'nestjs-cls'
+import { ClsService } from 'nestjs-cls'
 import { sendErrorResponse } from '../../common/filters/sendErrorResponse.js'
 import { UserNotFoundException } from '../exceptions/userNotFound.exception.js'
 

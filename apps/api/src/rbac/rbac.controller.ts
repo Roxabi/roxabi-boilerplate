@@ -4,9 +4,9 @@ import { z } from 'zod'
 import { Permissions } from '../auth/decorators/permissions.decorator.js'
 import { Session } from '../auth/decorators/session.decorator.js'
 import { ZodValidationPipe } from '../common/pipes/zodValidation.pipe.js'
-import type { PermissionService } from './permission.service.js'
-import type { RbacService } from './rbac.service.js'
-import type { RbacMemberService } from './rbacMember.service.js'
+import { PermissionService } from './permission.service.js'
+import { RbacService } from './rbac.service.js'
+import { RbacMemberService } from './rbacMember.service.js'
 
 /** Matches "resource:action" where both segments are lowercase letters with optional hyphens and underscores (e.g. "audit-log:read" or "api_keys:read"). */
 export const PERMISSION_FORMAT = /^[a-z][a-z_-]*:[a-z][a-z_-]*$/

@@ -1,12 +1,12 @@
 import { Body, Controller, Get, HttpCode, Post, Req, Res } from '@nestjs/common'
-import type { ConfigService } from '@nestjs/config'
+import { ConfigService } from '@nestjs/config'
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger'
 import type { FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import { OptionalAuth } from '../auth/decorators/optionalAuth.js'
 import { Session } from '../auth/decorators/session.decorator.js'
 import { ZodValidationPipe } from '../common/pipes/zodValidation.pipe.js'
-import type { ConsentService } from './consent.service.js'
+import { ConsentService } from './consent.service.js'
 
 const consentCategoriesSchema = z.object({
   necessary: z.literal(true),

@@ -8,7 +8,7 @@ import {
   USER_SOFT_DELETED,
   type UserSoftDeletedEvent,
 } from '../common/events/userSoftDeleted.event.js'
-import type { ApiKeyService } from './apiKey.service.js'
+import { ApiKeyService } from './apiKey.service.js'
 
 @Injectable()
 export class ApiKeyListener {

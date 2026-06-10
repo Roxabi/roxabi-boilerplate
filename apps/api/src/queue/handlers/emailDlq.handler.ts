@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common'
-import type { EventEmitter2 } from '@nestjs/event-emitter'
+import { EventEmitter2 } from '@nestjs/event-emitter'
 import type { Job } from 'pg-boss'
 import {
   EMAIL_SEND_FAILED,

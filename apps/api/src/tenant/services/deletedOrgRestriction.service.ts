@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable } from '@nestjs/common'
+import { ForbiddenException, Inject, Injectable, Optional } from '@nestjs/common'
 import type { FastifyRequest } from 'fastify'
 import { ErrorCode } from '../../common/errorCodes.js'
 
@@ -19,11 +19,24 @@ type AuthenticatedRequest = FastifyRequest & {
   } | null
 }
 
+/**
+ * Injection token for overriding the allowed-pattern list. Without an
+ * explicit token, the bare array param would emit `Array` in the DI
+ * metadata and Nest would fail to resolve it at bootstrap.
+ */
+export const DELETED_ORG_ALLOWED_PATTERNS = Symbol('DELETED_ORG_ALLOWED_PATTERNS')
+
 @Injectable()
 export class DeletedOrgRestrictionService {
+  private readonly allowedPatterns: DeletedOrgAllowedPattern[]
+
   constructor(
-    private readonly allowedPatterns: DeletedOrgAllowedPattern[] = DEFAULT_DELETED_ORG_ALLOWED_PATTERNS
-  ) {}
+    @Optional()
+    @Inject(DELETED_ORG_ALLOWED_PATTERNS)
+    allowedPatterns?: DeletedOrgAllowedPattern[]
+  ) {
+    this.allowedPatterns = allowedPatterns ?? DEFAULT_DELETED_ORG_ALLOWED_PATTERNS
+  }
 
   enforce(org: { deleteScheduledFor: Date | null }, request: AuthenticatedRequest): void {
     const method = request.method.toUpperCase()

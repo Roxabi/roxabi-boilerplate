@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common'
 import { USER_PURGE_REPO, type UserPurgeRepository } from '../user/userPurge.repository.js'
-import type { UserPurgeService } from '../user/userPurge.service.js'
+import { UserPurgeService } from '../user/userPurge.service.js'
 import {
   ORGANIZATION_PURGE_REPO,
   type OrganizationPurgeRepository,

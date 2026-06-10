@@ -1,5 +1,5 @@
 import { BadRequestException, type PipeTransform } from '@nestjs/common'
-import type { ZodType } from 'zod'
+import { ZodType } from 'zod'
 
 export class ZodValidationPipe implements PipeTransform {
   constructor(private readonly schema: ZodType) {}

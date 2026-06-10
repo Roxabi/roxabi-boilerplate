@@ -4,7 +4,7 @@ import { Permissions } from '../../auth/decorators/permissions.decorator.js'
 import { RequireApiKey } from '../../auth/decorators/requireApiKey.decorator.js'
 import { Session } from '../../auth/decorators/session.decorator.js'
 import type { AuthenticatedSession } from '../../auth/types.js'
-import type { RbacService } from '../../rbac/rbac.service.js'
+import { RbacService } from '../../rbac/rbac.service.js'
 import type { V1RoleResponse } from '../dto/v1Responses.js'
 import { V1ExceptionFilter } from '../filters/v1Exception.filter.js'
 

@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { Permissions } from '../auth/decorators/permissions.decorator.js'
 import { Session } from '../auth/decorators/session.decorator.js'
 import { ZodValidationPipe } from '../common/pipes/zodValidation.pipe.js'
-import type { OrganizationService } from './organization.service.js'
+import { OrganizationService } from './organization.service.js'
 
 const deleteOrgSchema = z.object({
   confirmName: z.string().min(1),

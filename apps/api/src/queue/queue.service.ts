@@ -1,5 +1,5 @@
 import { Injectable, Logger, type OnApplicationShutdown, type OnModuleInit } from '@nestjs/common'
-import type { ConfigService } from '@nestjs/config'
+import { ConfigService } from '@nestjs/config'
 import type { Job, QueueResult, SendOptions, WorkOptions } from 'pg-boss'
 import { PgBoss } from 'pg-boss'
 import type { QueueEnqueuer, QueueRegistration } from './queue.provider.js'

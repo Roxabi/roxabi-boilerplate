@@ -1,7 +1,7 @@
 import { type ArgumentsHost, Catch, type ExceptionFilter, Injectable, Logger } from '@nestjs/common'
 import { ThrottlerException } from '@nestjs/throttler'
 import type { FastifyReply, FastifyRequest } from 'fastify'
-import type { ClsService } from 'nestjs-cls'
+import { ClsService } from 'nestjs-cls'
 import { ErrorCode } from '../../common/errorCodes.js'
 import { buildErrorResponse } from '../../common/filters/buildErrorResponse.js'
 import { AUTH_SENSITIVE_PATHS, type ThrottlerMeta } from '../index.js'

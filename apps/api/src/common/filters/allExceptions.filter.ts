@@ -9,7 +9,7 @@ import {
   Optional,
 } from '@nestjs/common'
 import type { FastifyReply, FastifyRequest } from 'fastify'
-import type { ClsService } from 'nestjs-cls'
+import { ClsService } from 'nestjs-cls'
 import { buildErrorResponse } from './buildErrorResponse.js'
 
 function hasMessage(body: unknown): body is { message: string | string[] } {
