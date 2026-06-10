@@ -1,9 +1,11 @@
 import { magicLinkClient, organizationClient } from 'better-auth/client/plugins'
 import { createAuthClient } from 'better-auth/react'
-import { clientEnv } from '@/lib/env.shared'
 
 export const authClient = createAuthClient({
-  baseURL: typeof window !== 'undefined' ? window.location.origin : clientEnv.VITE_APP_URL,
+  // SSR must NOT use an absolute baseURL: a network self-fetch deadlocks the
+  // server during startup readiness checks (and is wasteful in general).
+  // Relative URLs are handled in-process by nitro during SSR.
+  baseURL: typeof window !== 'undefined' ? window.location.origin : undefined,
   // Better Auth admin client plugin removed in Phase 1 (#268)
   // All admin actions go through NestJS AdminModule with guards + audit logging
   plugins: [organizationClient(), magicLinkClient()],
