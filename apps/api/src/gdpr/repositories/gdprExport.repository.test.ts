@@ -163,7 +163,7 @@ describe('DrizzleGdprExportRepository', () => {
       const { db } = createMockDb()
       const txTerminal = vi.fn().mockResolvedValue([])
       // Build tx as a self-referential chainable mock
-      const tx: Record<string, ReturnType<typeof vi.fn>> = {
+      const tx = {
         select: vi.fn(),
         from: vi.fn(),
         where: vi.fn(),
@@ -245,7 +245,7 @@ describe('DrizzleGdprExportRepository', () => {
       const result = await repo.fetchAndDeduplicateInvitations('user-1', 'same@example.com')
 
       expect(result).toHaveLength(1)
-      expect(result[0].direction).toBe('sent')
+      expect(result[0]?.direction).toBe('sent')
     })
 
     it('should include both sent and non-duplicate received invitations', async () => {

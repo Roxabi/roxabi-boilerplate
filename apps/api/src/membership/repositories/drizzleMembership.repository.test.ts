@@ -73,7 +73,7 @@ describe('DrizzleMembershipRepository', () => {
 
       const result = await repo.getOwnedOrganizations('user-1')
 
-      expect(result[0].orgSlug).toBeNull()
+      expect(result[0]?.orgSlug).toBeNull()
     })
   })
 
