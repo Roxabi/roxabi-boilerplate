@@ -399,6 +399,11 @@ jobs:
       SMTP_HOST: localhost
       RATE_LIMIT_ENABLED: "false"
       QUEUE_WORKER_ENABLED: "true"
+      # Required since the phase-5 env contract (32c0c06 / cb51e41):
+      # API validates APP_URL+APP_NAME, web SSR validates API_URL+APP_URL
+      APP_URL: http://localhost:3000
+      API_URL: http://localhost:4000
+      APP_NAME: Roxabi
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -512,6 +517,11 @@ jobs:
       SMTP_HOST: localhost
       RATE_LIMIT_ENABLED: "false"
       QUEUE_WORKER_ENABLED: "true"
+      # Required since the phase-5 env contract (32c0c06 / cb51e41):
+      # API validates APP_URL+APP_NAME, web SSR validates API_URL+APP_URL
+      APP_URL: http://localhost:3000
+      API_URL: http://localhost:4000
+      APP_NAME: Roxabi
     strategy:
       fail-fast: false
       matrix:
