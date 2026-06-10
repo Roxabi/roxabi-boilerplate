@@ -1,8 +1,8 @@
 import { loadCredentials } from './credentials.js'
 
 export class CliAuthError extends Error {
-  constructor() {
-    super('Not authenticated. Run `roxabi auth login --token <token>` first.')
+  constructor(message = 'Not authenticated. Run `roxabi auth login --token <token>` first.') {
+    super(message)
     this.name = 'CliAuthError'
   }
 }
@@ -64,7 +64,12 @@ export function createClient(apiUrl?: string, token?: string): ApiClient {
     if (!path.startsWith('/')) {
       throw new ApiPathError(path)
     }
-    const url = new URL(path, baseUrl)
+    let url: URL
+    try {
+      url = new URL(path, baseUrl)
+    } catch {
+      throw new CliAuthError('stored API URL is malformed — run login again')
+    }
     if (params) {
       for (const [key, value] of Object.entries(params)) {
         url.searchParams.set(key, value)

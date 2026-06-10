@@ -282,7 +282,9 @@ async function main() {
 
   const { envSchema: apiEnvSchema } = await import('../apps/api/src/config/env.validation')
   const { envSchema: webServerEnvSchema } = await import('../apps/web/src/lib/env.server.schema')
-  const { clientEnvSchema: webClientEnvSchema } = await import('../apps/web/src/lib/env.shared')
+  const { clientEnvSchema: webClientEnvSchema } = await import(
+    '../apps/web/src/lib/env.shared.schema'
+  )
 
   const envExampleKeys = await parseEnvExample()
 

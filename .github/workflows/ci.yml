@@ -311,6 +311,9 @@ jobs:
         env:
           TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
           TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+          # Smoke-build values — real deploys get these from Vercel project env
+          APP_URL: http://localhost:3000
+          VITE_APP_URL: http://localhost:3000
           # Raise Node heap to 6 GB on the 7 GB ubuntu-latest runner.
           # Default V8 ceiling (~4 GB) is marginal given Nitro's SSR bundle size.
           # See artifacts/analyses/437-shiki4-oom-build.mdx for root cause.
