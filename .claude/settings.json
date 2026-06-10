@@ -1,14 +1,11 @@
 {
   "enabledPlugins": {
     "frontend-design@claude-plugins-official": true,
-    "ui-ux-pro-max@ui-ux-pro-max-skill": true,
-    "context7-plugin@context7-marketplace": true,
     "plugin-dev@claude-plugins-official": true,
     "security-guidance@claude-plugins-official": true,
     "claude-md-management@claude-plugins-official": true,
     "vercel@claude-plugins-official": true,
     "dev-core@roxabi-marketplace": true,
-    "web-intel@roxabi-marketplace": true,
     "1b1@roxabi-marketplace": true,
     "compress@roxabi-marketplace": true,
     "typescript-lsp@claude-plugins-official": true

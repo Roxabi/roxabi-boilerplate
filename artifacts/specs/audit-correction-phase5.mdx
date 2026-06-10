@@ -1,0 +1,105 @@
+---
+title: "Audit Correction Phase 5 — Config & Validation"
+description: "Remove hardcoded localhost fallbacks, tighten Zod schemas, replace window.location with router navigation, and externalize legal config."
+---
+
+# Phase 5 Spec: Config & Validation
+
+## Problem Statement
+
+Hardcoded `http://localhost:3000` and `http://localhost:4000` fallbacks exist in `auth.service.ts`, `authClient.ts`, `routePermissions.ts`, and `env.validation.ts`. These defaults mask missing env vars at boot time and break in non-localhost deployments. `batchUpdate` accepts `z.unknown()` for system setting values with no per-key schema validation. `orgResolutionSchema` accepts `z.string().min(1)` instead of `z.string().uuid()`. `console.error` calls leak error details in production UI. `window.location.reload()` and `window.location.href` mutations break SPA navigation.
+
+**Critical findings:**
+- `apps/web/src/lib/authClient.ts:5` — Hardcoded `http://localhost:3000` fallback for SSR (P1).
+- `apps/web/src/lib/routePermissions.ts:67` — Hardcoded `http://localhost` fallback in `getServerEnrichedSession` (P1).
+- `apps/api/src/auth/auth.service.ts:40` — Hardcoded `http://localhost:4000` fallback for `BETTER_AUTH_URL` (P1).
+- `apps/api/src/auth/auth.service.ts:41` — Hardcoded `http://localhost:3000` fallback for `APP_URL` (P1).
+- `apps/api/src/auth/auth.instance.ts:25` — Direct `process.env.APP_NAME` read; bypasses `ConfigService` (P3).
+- `apps/api/src/gdpr/gdpr.controller.ts:25` — Direct `process.env.APP_NAME` instead of injected `ConfigService` (P3).
+- `apps/api/src/admin/adminSettings.controller.ts:74-99` — `batchUpdate` accepts `z.unknown()` for setting values; no structural validation (P3).
+- `apps/api/src/user/user.controller.ts` — `orgResolutionSchema` accepts `z.string().min(1)` instead of `z.string().uuid()` (P2).
+- `apps/api/src/admin/adminOrganizations.controller.ts` — `z.preprocess` for limit params (P2).
+- `apps/api/src/admin/adminUsers.controller.ts` — `z.preprocess` for limit params (P2).
+- `apps/web/src/routes/` — `window.location.reload()` / `window.location.href` in SPA routes (P2).
+- `apps/web/src/routes/settings/` — `console.error` leaks in production UI (P2).
+- `apps/web/src/config/legal.config.ts` — hardcoded placeholder values (P2).
+
+## Solution Design
+
+1. **Remove Localhost Fallbacks** —
+   - `apps/api/src/auth/auth.service.ts`: use `config.getOrThrow('BETTER_AUTH_URL')` and `config.getOrThrow('APP_URL')`.
+   - `apps/api/src/auth/auth.controller.ts`: remove `http://localhost` fallback in `new URL(req.url, ...)`.
+   - `apps/api/src/auth/auth.instance.ts`: replace `process.env.APP_NAME` with `configService.get('APP_NAME')`.
+   - `apps/web/src/lib/authClient.ts`: read `APP_URL` from env or throw at build time.
+   - `apps/web/src/lib/routePermissions.ts`: use validated `env.API_URL` instead of `process.env.API_URL`.
+   - `apps/web/src/lib/env.server.schema.ts`: remove `http://localhost:4000` default from `API_URL` schema.
+2. **Per-Setting Validation** — In `adminSettings.controller.ts`, replace `z.unknown()` with a per-key JSON schema map (e.g., `z.string().email()` for `support_email`, `z.number().min(1)` for `max_orgs`).
+3. **UUID Schema** — In `user.controller.ts`, change `orgResolutionSchema` to `z.string().uuid()`.
+4. **Coerce Number Params** — In `adminOrganizations.controller.ts` and `adminUsers.controller.ts`, replace `z.preprocess` with `z.coerce.number().int()`.
+5. **Router Navigation** — Replace `window.location.reload()` and `window.location.href` in all SPA routes with TanStack Router `navigate()`.
+6. **Remove console.error** — Replace `console.error` in production UI with structured logging or error boundaries.
+7. **Externalize Legal Config** — Move `legal.config.ts` to env or `SystemSettings`; throw at build time if placeholder values are present.
+8. **GDPR Controller** — Use `configService.get('APP_NAME')` in `gdpr.controller.ts`.
+
+## Acceptance Criteria
+
+1. Zero `http://localhost` fallbacks remain in API or web production code.
+2. `config.getOrThrow` is used for all required env vars (`BETTER_AUTH_URL`, `APP_URL`, `API_URL`).
+3. `process.env.APP_NAME` replaced with `configService.get('APP_NAME')` everywhere.
+4. `orgResolutionSchema` rejects non-UUID strings.
+5. `batchUpdate` rejects invalid setting values per-key.
+6. `adminOrganizations.controller.ts` and `adminUsers.controller.ts` limit params use `z.coerce.number().int()`.
+7. Zero `window.location.reload()` / `window.location.href` in SPA routes (all use `navigate()`).
+8. Zero `console.error` in production UI code.
+9. `legal.config.ts` externalized or build fails on placeholder.
+10. `bun run test` passes, `bun run test:e2e` passes, `bun run env:check` passes, `bun run lint` passes.
+
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `apps/api/src/auth/auth.service.ts` | `config.getOrThrow('BETTER_AUTH_URL')`, `config.getOrThrow('APP_URL')` |
+| `apps/api/src/auth/auth.controller.ts` | Remove `http://localhost` fallback in `new URL(req.url, ...)` |
+| `apps/api/src/auth/auth.instance.ts` | Replace `process.env.APP_NAME` with `configService.get('APP_NAME')` |
+| `apps/api/src/gdpr/gdpr.controller.ts` | Replace `process.env.APP_NAME` with `configService.get('APP_NAME')` |
+| `apps/web/src/lib/authClient.ts` | Read `APP_URL` from env or throw at build time |
+| `apps/web/src/lib/routePermissions.ts` | Use validated `env.API_URL` |
+| `apps/web/src/lib/env.server.schema.ts` | Remove `http://localhost:4000` default from `API_URL` schema |
+| `apps/api/src/admin/adminSettings.controller.ts` | Add per-setting JSON schema validation (replace `z.unknown()`) |
+| `apps/api/src/user/user.controller.ts` | `z.string().uuid()` for `orgResolutionSchema` IDs |
+| `apps/api/src/admin/adminOrganizations.controller.ts` | Replace `z.preprocess` with `z.coerce.number().int()` |
+| `apps/api/src/admin/adminUsers.controller.ts` | Replace `z.preprocess` with `z.coerce.number().int()` |
+| `apps/web/src/routes/` | Replace `window.location.reload()` / `window.location.href` with `navigate()` |
+| `apps/web/src/routes/settings/` | Remove `console.error` leaks |
+| `apps/web/src/config/legal.config.ts` | Externalize to env or throw at build time if placeholder |
+
+## Tests to Add/Update
+
+| Test File | What to Add |
+|-----------|-------------|
+| `apps/api/src/auth/auth.service.test.ts` | Assert `config.getOrThrow` is called for `BETTER_AUTH_URL` and `APP_URL` |
+| `apps/web/src/lib/authClient.test.ts` | **New** — assert build-time throw if `APP_URL` is missing |
+| `apps/web/src/lib/env.server.schema.test.ts` | Assert `API_URL` rejects `http://localhost:4000` default |
+| `apps/api/src/admin/adminSettings.controller.test.ts` | Assert `batchUpdate` rejects invalid values per-key |
+| `apps/api/src/user/user.controller.test.ts` | Assert `orgResolutionSchema` rejects non-UUID strings |
+| `apps/api/src/admin/adminOrganizations.controller.test.ts` | Assert limit param coercion works |
+| `apps/api/src/admin/adminUsers.controller.test.ts` | Assert limit param coercion works |
+| `apps/web/src/routes/settings/account-delete.test.tsx` | Assert zero `console.error` in production build |
+| `apps/web/src/routes/settings/account-credentials.test.tsx` | Assert zero `console.error` in production build |
+| `apps/web/src/routes/magic-link/verify.test.tsx` | Assert `navigate()` is used instead of `window.location.href` |
+
+## Migration Steps
+
+1. No DB schema changes.
+2. Add missing env vars to `.env.example` and deployment config before deploy.
+3. Verify `bun run env:check` passes locally before commit.
+4. Deploy backend config changes first (`getOrThrow` will fail fast if env vars are missing).
+5. Deploy frontend `navigate()` changes next. Verify `navigate()` preserves query params.
+6. Update `legal.config.ts` to read from env or `SystemSettings`. Add a build-time check that fails CI if placeholder values are present.
+
+## Rollback Plan
+
+1. **`getOrThrow` boot failure** — If env vars are missing in existing deployments, temporarily switch `getOrThrow` → `get` with a safe fallback while env vars are added.
+2. **`navigate()` changes** — If `navigate()` breaks deep-link behavior, revert individual routes to `window.location` (trivial one-line change).
+3. **`legal.config.ts` build failure** — If externalization is incomplete, temporarily allow placeholder values with a warning log.
+4. **`z.coerce.number()`** — If coercion breaks param parsing for edge cases, revert to `z.preprocess` with explicit validation.

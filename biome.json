@@ -1,6 +1,8 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.4.5/schema.json",
-  "assist": { "enabled": true },
+  "assist": {
+    "enabled": true
+  },
   "linter": {
     "enabled": true,
     "rules": {
@@ -22,7 +24,9 @@
         "useImportType": "error",
         "useFilenamingConvention": {
           "level": "error",
-          "options": { "filenameCases": ["camelCase"] }
+          "options": {
+            "filenameCases": ["camelCase"]
+          }
         }
       },
       "suspicious": {
@@ -110,7 +114,10 @@
           "style": {
             "useFilenamingConvention": {
               "level": "error",
-              "options": { "filenameCases": ["PascalCase"], "strictCase": false }
+              "options": {
+                "filenameCases": ["PascalCase"],
+                "strictCase": false
+              }
             }
           }
         }
@@ -137,7 +144,9 @@
       "includes": ["**/routes/**"],
       "linter": {
         "rules": {
-          "style": { "useFilenamingConvention": "off" }
+          "style": {
+            "useFilenamingConvention": "off"
+          }
         }
       }
     },
@@ -145,7 +154,9 @@
       "includes": [".claude/**"],
       "linter": {
         "rules": {
-          "style": { "useFilenamingConvention": "off" }
+          "style": {
+            "useFilenamingConvention": "off"
+          }
         }
       }
     },
@@ -153,7 +164,9 @@
       "includes": ["apps/docs/mdx-components.tsx"],
       "linter": {
         "rules": {
-          "style": { "useFilenamingConvention": "off" }
+          "style": {
+            "useFilenamingConvention": "off"
+          }
         }
       }
     }
@@ -182,7 +195,8 @@
       "!**/reports/licenses.json",
       "!**/.vercel",
       "!**/e2e/.auth",
-      "!talks"
+      "!talks",
+      "!docs/workflows"
     ]
   }
 }
