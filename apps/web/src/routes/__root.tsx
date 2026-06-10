@@ -15,6 +15,8 @@ import { ErrorBoundary } from 'react-error-boundary'
 import { appName } from '@/lib/appName'
 import { m } from '@/paraglide/messages'
 import { getLocale } from '@/paraglide/runtime'
+import { ConsentBanner } from '../components/consent/ConsentBanner'
+import { ConsentModal } from '../components/consent/ConsentModal'
 import { Footer } from '../components/Footer'
 import { Header } from '../components/Header'
 import { TanStackQueryDevtools } from '../integrations/tanstack-query/devtools'
@@ -132,7 +134,12 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <ThemeProvider attribute="class" defaultTheme="system" disableTransitionOnChange>
-      <ConsentProvider initialConsent={serverConsent}>
+      <ConsentProvider
+        initialConsent={serverConsent}
+        banner={<ConsentBanner />}
+        // @ts-expect-error Props injected via cloneElement by ConsentProvider
+        modal={<ConsentModal />}
+      >
         <div className="flex min-h-screen flex-col">
           {!isChromeless && <Header />}
           <div className="flex-1">

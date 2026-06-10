@@ -1,0 +1,344 @@
+---
+title: Audit Correction Frame — Quality Audit Remediation
+description: Systemic framing for correcting 916 findings across 8 partitions, 9 domains. Debt score 52/100.
+---
+
+# Audit Correction Frame
+
+**Source:** `artifacts/analyses/quality-audit/` — 916 findings, 10 P0, 164 P1, 401 P2, 336 P3  
+**Debt Score:** 52 / 100  
+**Date:** 2026-06-04
+
+---
+
+## 1. Root Cause Analysis — 5 Systemic Failures
+
+### SF1: Tenant Isolation Collapse
+RLS is defined but never applied. `create_tenant_rls_policy` exists in the baseline migration yet no table has `ALTER TABLE ... ENABLE ROW LEVEL SECURITY`. The defense-in-depth strategy assumed RLS would be the sole tenant boundary, so repository methods omitted explicit `tenantId` WHERE clauses. When RLS is a no-op, cross-tenant read/write vectors open. The `TenantInterceptor` compounds this by silently falling back to raw `orgId` on DB errors instead of failing closed.
+
+### SF2: Error Swallowing & Unstructured Error Handling
+The frontend adopted a pattern of `catch {}` with `toast.error(m.auth_toast_error())` — the user sees a generic message while the original error (and its stack/cause/status code) is lost. Backend exception filters are incomplete: `SuperadminProtectionException` and `NotDeletedException` are thrown but never registered in `@Catch`, causing them to surface as HTTP 500. `V1ExceptionFilter` intercepts all exceptions for v1 routes but never logs them, creating an observability blind spot.
+
+### SF3: Architecture Boundary Violations
+`UserRepository` is a god-repository touching 5 domain schemas (`users`, `organizations`, `members`, `invitations`, `sessions`, `roles`). `GdprService` and `PurgeService` bypass the repository layer entirely, injecting `DRIZZLE` and querying 7 tables inline. `AdminModule` accumulates 7 controllers and 9 providers. A circular dependency exists between `feature-flags` and `admin` modules. UI-specific constants (`DICEBEAR_CDN_DOMAIN`, `AVATAR_STYLES`) leak into API controllers. The frontend `lib/consent/consentProvider.tsx` imports from `components/`, creating a circular dependency across the lib/components boundary.
+
+### SF4: Async Discipline & Transaction Boundary Failures
+`onOrganizationCreated` is called without `await` inside a Better Auth `afterCreateOrganization` hook — a floating promise that causes race conditions and unhandled rejections. Cache invalidation is placed inside a Drizzle transaction callback; if the transaction rolls back, the cache becomes stale. Multiple read-check-write sequences (`removeMember`, `createOrganization`, `reactivate`, `batchUpdate`) operate outside transactions, creating TOCTOU races. `queryClient.invalidateQueries` calls are fire-and-forget in callbacks. The email queue handler throws mid-batch, risking duplicate sends on retry.
+
+### SF5: Config & Validation Failures
+Hardcoded `http://localhost:3000` and `http://localhost:4000` fallbacks exist in `auth.service.ts`, `authClient.ts`, `routePermissions.ts`, and `env.validation.ts`. These defaults mask missing env vars at boot time and break in non-localhost deployments. `batchUpdate` accepts `z.unknown()` for system setting values with no per-key schema validation. `orgResolutionSchema` accepts `z.string().min(1)` instead of `z.string().uuid()`. `console.error` calls leak error details in production UI. `window.location.reload()` and `window.location.href` mutations break SPA navigation.
+
+---
+
+## 2. Correction Phases
+
+### Phase 1: Tenant Isolation (RLS activation + repository scoping)
+
+**Scope:**
+- `apps/api/drizzle/migrations/` — add RLS enable + policy migration
+- `apps/api/src/database/schema/auth.schema.ts` — add `deletedAt` to `members`, add `tenantId` to auth tables
+- `apps/api/src/api-key/repositories/drizzleApiKey.repository.ts` — scope `findCandidatesByLastFour`, `markRevoked`, `touchLastUsedAt` by `tenantId`
+- `apps/api/src/rbac/repositories/drizzleRbac.repository.ts` — add explicit `tenantId` to 6 methods
+- `apps/api/src/tenant/tenant.interceptor.ts` — fail closed instead of silent fallback
+- `apps/api/src/admin/adminUsers.lifecycle.ts` — check `banExpires` in `AuthGuard`
+- `apps/api/src/rbac/rbacMember.service.ts` — guard owner role assignment
+- Test files: `members.test.tsx`, `settings.test.tsx`, `dashboard.test.tsx`, `api-keys.test.ts` — add tenant isolation tests
+
+**Complexity:** F-lite (backend-only, ~15 files, known patterns, test gaps)
+
+**Risk level:** High — schema changes + migration. Requires staging soak.
+
+**Dependencies:** None — Phase 1 is the foundation.
+
+**Gate:**
+1. `bun run test` passes (unit + integration)
+2. `bun run test:e2e` passes
+3. Migration applies cleanly on staging DB
+4. Tenant isolation tests prove cross-tenant leakage is blocked
+5. `bun run lint` passes
+
+---
+
+### Phase 2: Error Handling (structured errors + apiClient unification)
+
+**Scope:**
+- `apps/api/src/admin/filters/` — register `SuperadminProtectionException` and `NotDeletedException`
+- `apps/api/src/api-key/filters/` — register `ApiKeyInsertFailedException`
+- `apps/api/src/v1/filters/v1Exception.filter.ts` — inject `Logger`, log 5xx errors
+- `apps/api/src/auth/auth.guard.ts` — add `logger.warn` to `touchLastUsedAt` catch
+- `apps/api/src/auth/auth.instance.ts` — capture original error in template catch blocks
+- `apps/web/src/lib/` — create shared `apiClient.ts` with uniform error handling, status code, JSON parse, `credentials: 'include'`
+- `apps/web/src/routes/admin/*.tsx` — replace all generic `throw new Error('Failed to fetch...')` with structured `ApiError`
+- `apps/web/src/routes/*.tsx` — replace bare `catch {}` with `console.error` + contextual toast
+- `apps/web/src/routes/admin/*.tsx` — add `errorComponent` to all admin routes
+- `packages/cli/src/lib/client.ts` — introduce `CliAuthError` and `ApiPathError`
+
+**Complexity:** F-lite (frontend + backend, ~40 files, pattern replacement, no new arch)
+
+**Risk level:** Medium — frontend UX changes, but behavior is additive (more errors surfaced, not fewer)
+
+**Dependencies:** Phase 1 must complete (tenant isolation tests must be in place so error-handling changes don't mask regressions)
+
+**Gate:**
+1. All `catch {}` blocks log the original error
+2. All `throw new Error('Failed to fetch...')` include HTTP status + parsed body
+3. `V1ExceptionFilter` logs all 5xx exceptions
+4. `SuperadminProtectionException` returns 403 (not 500)
+5. `NotDeletedException` returns 400 (not 500)
+6. `bun run test` passes
+7. `bun run lint` passes
+
+---
+
+### Phase 3: Architecture (bounded contexts + god-repo split)
+
+**Scope:**
+- `apps/api/src/user/user.repository.ts` — extract org/member methods into `MembershipRepository`
+- `apps/api/src/user/user.service.ts` — remove cross-domain exception imports (`OrgNotOwnerException`)
+- `apps/api/src/gdpr/gdpr.service.ts` — create dedicated repositories, inject them instead of `DRIZZLE`
+- `apps/api/src/purge/purge.service.ts` — create `OrganizationPurgeRepository`, delegate all raw queries
+- `apps/api/src/admin/admin.module.ts` — split into `AdminUsersModule`, `AdminOrganizationsModule`, `AdminMembersModule`, `AdminAuditLogsModule`
+- `apps/api/src/feature-flags/` — move `FeatureFlagCreateFailedException` out of `admin/exceptions/`
+- `apps/api/src/user/user.controller.ts` — remove `DICEBEAR_CDN_DOMAIN` / `AVATAR_STYLES` validation
+- `apps/api/src/tenant/tenant.interceptor.ts` — introduce `TenantRepository` / `OrganizationLookupRepository`, remove raw Drizzle queries
+- `apps/web/src/lib/consent/consentProvider.tsx` — break circular dependency with `ConsentBanner`/`ConsentModal`
+- `apps/web/src/lib/admin/` — create centralized API layer (`api.ts`, `mutations.ts`, `queryKeys.ts`)
+- `apps/web/src/components/admin/` — deduplicate `BanDialog`, `ImpactSummary`, `useOrgMutations`, `useUserMutations`
+
+**Complexity:** F-full (cross-domain refactor, new repositories, module split, circular dependency resolution)
+
+**Risk level:** High — introduces new repository interfaces, module boundaries, and file moves. Requires extensive regression testing.
+
+**Dependencies:** Phase 2 must complete (error handling must be stable so architecture changes don't compound debugging)
+
+**Gate:**
+1. `UserRepository` no longer imports `organizations`, `members`, `invitations`, `sessions`, `roles`
+2. `GdprService` and `PurgeService` no longer inject `DRIZZLE`
+3. `AdminModule` is a thin wrapper importing sub-modules
+4. Zero circular dependencies between `feature-flags` and `admin`
+5. `TenantInterceptor` delegates to a repository, no raw `db.select(...)`
+6. `bun run test` passes
+7. `bun run test:e2e` passes
+8. `bun run lint` passes
+9. `bun run typecheck` passes
+
+---
+
+### Phase 4: Async & Transactions (await discipline + transaction boundaries)
+
+**Scope:**
+- `apps/api/src/auth/auth.instance.ts` — `await onOrganizationCreated(...)` in `afterCreateOrganization` hook
+- `apps/api/src/user/user.service.ts` — move `invalidateSoftDeleteCache` outside transaction callback
+- `apps/api/src/admin/adminMembers.service.ts` — wrap `ensureNotLastOwner` + `delete` in `db.transaction`
+- `apps/api/src/admin/adminOrganizations.service.ts` — wrap `getDepth` + `insert` in `db.transaction`
+- `apps/api/src/admin/adminOrganizations.hierarchy.ts` — pass `tx` to `getSubtreeDepth` in `validateHierarchy`
+- `apps/api/src/admin/adminOrganizations.hierarchy.ts` — replace recursive N+1 with recursive PostgreSQL CTE
+- `apps/api/src/system-settings/systemSettings.service.ts` — wrap `batchUpdate` in `db.transaction`
+- `apps/api/src/organization/organization.service.ts` — wrap `reactivate` read-check-write in transaction
+- `apps/api/src/rbac/rbac.listener.ts` — merge `seedDefaultRoles` + owner assignment into single transaction
+- `apps/api/src/rbac/repositories/drizzleRbac.repository.ts` — hoist `allPerms` query outside loop
+- `apps/api/src/queue/handlers/email.handler.ts` — collect per-job outcomes, do not throw mid-batch
+- `apps/web/src/routes/admin/*.tsx` — `await queryClient.invalidateQueries(...)` in callbacks
+- `apps/web/src/routes/dashboard.tsx` — add cleanup ref to `useAutoSelectOrg` floating promise
+- `apps/web/src/routes/register.tsx` — `await` consent sync POST
+- `apps/api/src/feature-flags/featureFlags.service.ts` — add pending-promise cache for `isEnabled` to prevent stampede
+
+**Complexity:** F-lite (transaction wrapping, await insertion, CTE replacement — mechanical changes, known patterns)
+
+**Risk level:** Medium — transaction wrapping changes concurrency semantics. Must be validated under load.
+
+**Dependencies:** Phase 3 must complete (architecture boundaries must be stable before adding transaction logic)
+
+**Gate:**
+1. `onOrganizationCreated` is awaited (verified by `bun run typecheck` + integration test)
+2. `removeMember` last-owner check and delete execute in the same transaction
+3. `createOrganization` depth check and insert execute in the same transaction
+4. `batchUpdate` is atomic
+5. `email.handler.ts` does not throw mid-batch
+6. `bun run test` passes
+7. `bun run test:e2e` passes
+8. `bun run lint` passes
+
+---
+
+### Phase 5: Config & Validation (strict env + no localhost fallbacks)
+
+**Scope:**
+- `apps/api/src/auth/auth.service.ts` — `config.getOrThrow('BETTER_AUTH_URL')`, `config.getOrThrow('APP_URL')`
+- `apps/api/src/auth/auth.controller.ts` — remove `http://localhost` fallback in `new URL(req.url, ...)`
+- `apps/api/src/auth/auth.instance.ts` — replace `process.env.APP_NAME` with `configService.get('APP_NAME')`
+- `apps/web/src/lib/authClient.ts` — read `APP_URL` from env or throw at build time
+- `apps/web/src/lib/routePermissions.ts` — use validated `env.API_URL` instead of `process.env.API_URL`
+- `apps/web/src/lib/env.server.schema.ts` — remove `http://localhost:4000` default from `API_URL` schema
+- `apps/api/src/admin/adminSettings.controller.ts` — add per-setting JSON schema validation (replace `z.unknown()`)
+- `apps/api/src/user/user.controller.ts` — `z.string().uuid()` for `orgResolutionSchema` IDs
+- `apps/api/src/admin/adminOrganizations.controller.ts` — replace `z.preprocess` with `z.coerce.number().int()`
+- `apps/api/src/admin/adminUsers.controller.ts` — replace `z.preprocess` with `z.coerce.number().int()`
+- `apps/web/src/routes/` — replace `window.location.reload()` / `window.location.href` with TanStack Router `navigate()`
+- `apps/web/src/routes/settings/` — remove `console.error` leaks in production
+- `apps/web/src/config/legal.config.ts` — externalize to env or throw at build time if placeholder
+
+**Complexity:** S (config changes, validation tightening, ~20 files, low risk)
+
+**Risk level:** Low — no behavioral changes, only stricter validation and environment-driven values
+
+**Dependencies:** Phase 4 must complete (transaction boundaries must be stable before tightening env validation)
+
+**Gate:**
+1. No `http://localhost` fallbacks remain in API or web production code
+2. `config.getOrThrow` is used for all required env vars
+3. `orgResolutionSchema` rejects non-UUID strings
+4. `batchUpdate` rejects invalid setting values
+5. `window.location` mutations replaced with `navigate()`
+6. `bun run test` passes
+7. `bun run test:e2e` passes
+8. `bun run env:check` passes
+9. `bun run lint` passes
+
+---
+
+## 3. Risk Assessment
+
+| Phase | What Could Break | What Needs Migration | Rollback Strategy |
+|-------|------------------|----------------------|-------------------|
+| Phase 1 | RLS migration fails on existing data; `members` schema change breaks existing queries; `TenantInterceptor` fail-closed breaks legitimate parent-org lookups | DB migration + data backfill for `members.deletedAt`; verify all `members` queries include `whereActive` | DB snapshot before migration; migration is reversible via `ALTER TABLE` |
+| Phase 2 | Structured errors change frontend error parsing; new `ApiError` class may break existing `catch (e: any)` blocks | Update any frontend code that inspects `error.message` directly; verify all toasts still render correctly | Error classes are additive; old `Error` instances still work; revert individual catch changes if needed |
+| Phase 3 | God-repo split breaks DI wiring; new repository interfaces may not cover all existing call sites; module split may break `AdminModule` imports | Update all imports of `UserRepository` org methods; add `MembershipRepository` to `UserModule` providers; verify `AdminModule` sub-modules export same public interface | Add re-exports to `AdminModule` as compatibility layer; keep old `UserRepository` interface for one release with `@deprecated` |
+| Phase 4 | Transaction wrapping changes dead-lock behavior; CTE replacement may have different null/empty-set semantics; `await` insertion may delay response timing | Monitor DB lock wait times; verify CTE returns same shape as recursive loop; add timeout to `onOrganizationCreated` | Transaction wrapping is revertible per-method; CTE can be reverted to loop if performance is worse |
+| Phase 5 | `getOrThrow` causes boot failure if env vars are missing in existing deployments; `navigate()` changes may break deep-link behavior | Add missing env vars to `.env.example` and deployment config; verify `navigate()` preserves query params | `getOrThrow` → `get` fallback is a one-line revert; `window.location` revert is trivial |
+
+---
+
+## 4. Decision Points (human approval required)
+
+**Before Phase 1:**
+- Approve RLS migration strategy: enable on all tables vs. selective enablement. Does `DATABASE_APP_URL` role exist in production? (If not, RLS enablement will break the app until the role is created.)
+- Approve `members.deletedAt` migration: soft-delete existing `members` records or leave `NULL`?
+- Confirm `banExpires` semantics: auto-unban when expired, or require manual unban?
+
+**Before Phase 2:**
+- Approve frontend error structure: do we want a typed `ApiError` class or a plain `{ status, message, errorCode }` object?
+- Confirm scope of `errorComponent` for admin routes: reuse existing `ErrorBoundary` or create a dedicated `AdminErrorBoundary`?
+
+**Before Phase 3:**
+- Approve `MembershipRepository` interface: which methods move from `UserRepository`? (`verifyOrgOwnership`, `transferOrgOwnership`, `softDeleteOrg`, `clearOrgSessions`, `expireOrgInvitations` — all of them?)
+- Approve `AdminModule` split granularity: 4 sub-modules (users, orgs, members, audit) or more granular?
+- Confirm `DICEBEAR_CDN_DOMAIN` removal from API: does the frontend need to enforce avatar URL constraints instead?
+
+**Before Phase 4:**
+- Approve CTE replacement strategy for org hierarchy: do we maintain the `MAX_PARENT_WALK_ITERATIONS` safety cap inside the CTE or drop it?
+- Confirm `email.handler.ts` batch contract: do we need per-job retry (re-enqueue) or is batch-level retry sufficient?
+- Approve `featureFlags` cache stampede protection: add a `Promise` cache in `FeatureFlagService` or use a shared cache layer?
+
+**Before Phase 5:**
+- Approve missing-env boot failure: is `getOrThrow` acceptable for all required env vars, or should some have staging-safe defaults?
+- Confirm `legal.config.ts` externalization: move to `.env` or `SystemSettings`?
+- Approve `window.location` → `navigate()` migration: should `magic-link/verify.tsx` still use full reload for external link verification?
+
+---
+
+## 5. Success Criteria (per phase)
+
+### Phase 1: Tenant Isolation
+- [ ] `findCandidatesByLastFour` returns `[]` when queried with a `tenantId` that has no matching keys
+- [ ] `markRevoked` and `touchLastUsedAt` reject updates when `tenantId` does not match
+- [ ] RBAC repo methods (`findRoleById`, `updateRole`, `deleteRole`, `getRolePermissions`, `listRolesWithPermissions`, `reassignMembersToRole`) reject cross-tenant queries
+- [ ] `TenantInterceptor` throws `TenantResolutionException` on DB errors instead of returning `orgId`
+- [ ] `AuthGuard` rejects requests for users with `banExpires` in the future
+- [ ] `members` table has `deletedAt` and all queries filter by `whereActive(members)`
+- [ ] `users` and auth tables have `tenantId` or documented exception for auth-level tables
+- [ ] At least 1 integration test proves cross-tenant data leakage is blocked for each surface: API keys, RBAC, members, org settings, dashboard auto-select
+- [ ] `bun run test` passes, `bun run test:e2e` passes, `bun run lint` passes
+
+### Phase 2: Error Handling
+- [ ] `SuperadminProtectionException` → 403, `NotDeletedException` → 400, `ApiKeyInsertFailedException` → 500 with structured body
+- [ ] `V1ExceptionFilter` logs every 5xx exception with `Logger`
+- [ ] Zero bare `catch {}` blocks in `apps/web/src/routes/` and `apps/web/src/lib/` (all log or throw)
+- [ ] Zero generic `throw new Error('Failed to fetch...')` in admin routes (all use structured `ApiError`)
+- [ ] `res.json().catch(() => null)` replaced with `res.json().catch(() => { throw new Error('Malformed JSON') })` or similar
+- [ ] All admin routes define `errorComponent`
+- [ ] `bun run test` passes, `bun run lint` passes
+
+### Phase 3: Architecture
+- [ ] `UserRepository` interface defines only user-domain methods (no org/member/invitation/session)
+- [ ] `MembershipRepository` exists and is injected where org/member operations are needed
+- [ ] `GdprService` injects repositories, not `DRIZZLE`
+- [ ] `PurgeService` injects repositories, not `DRIZZLE`
+- [ ] `AdminModule` is a thin wrapper with 0 providers/controllers of its own
+- [ ] `feature-flags` module does not import from `admin/exceptions/`
+- [ ] `TenantInterceptor` delegates to `TenantRepository` or `OrganizationLookupRepository`
+- [ ] `user.controller.ts` does not import `DICEBEAR_CDN_DOMAIN` or `AVATAR_STYLES`
+- [ ] `lib/consent/consentProvider.tsx` does not import from `components/`
+- [ ] `lib/admin/api.ts` exists and centralizes all admin fetch calls
+- [ ] `BanDialog` and `ImpactSummary` are single components, not duplicated
+- [ ] `bun run test` passes, `bun run test:e2e` passes, `bun run lint` passes, `bun run typecheck` passes
+
+### Phase 4: Async & Transactions
+- [ ] `afterCreateOrganization` hook `await`s `onOrganizationCreated`
+- [ ] `invalidateSoftDeleteCache` runs after `repo.transaction` completes
+- [ ] `removeMember` last-owner check and delete are in the same transaction
+- [ ] `createOrganization` depth check and insert are in the same transaction
+- [ ] `batchUpdate` is atomic
+- [ ] `validateHierarchy` uses `tx` for `getSubtreeDepth`
+- [ ] `getSubtreeDepth` and `getDescendantOrgIds` use recursive CTE (1 query, not N+1)
+- [ ] `email.handler.ts` does not throw mid-batch; returns per-job outcomes
+- [ ] `queryClient.invalidateQueries` calls in callbacks are awaited
+- [ ] `register.tsx` awaits consent sync POST
+- [ ] `featureFlags` cache has stampede protection
+- [ ] `bun run test` passes, `bun run test:e2e` passes, `bun run lint` passes
+
+### Phase 5: Config & Validation
+- [ ] Zero `http://localhost` fallbacks in production code paths
+- [ ] `config.getOrThrow` used for `BETTER_AUTH_URL`, `APP_URL`, `API_URL`
+- [ ] `process.env.APP_NAME` replaced with `configService.get('APP_NAME')` everywhere
+- [ ] `orgResolutionSchema` rejects non-UUID strings
+- [ ] `batchUpdate` rejects invalid setting values per-key
+- [ ] `adminOrganizations.controller.ts` and `adminUsers.controller.ts` limit params use `z.coerce.number().int()`
+- [ ] Zero `window.location.reload()` / `window.location.href` in SPA routes (all use `navigate()`)
+- [ ] Zero `console.error` in production UI code
+- [ ] `legal.config.ts` externalized or build fails on placeholder
+- [ ] `bun run test` passes, `bun run test:e2e` passes, `bun run env:check` passes, `bun run lint` passes
+
+---
+
+## 6. Cross-Phase Quick Wins (can run in parallel with any phase)
+
+These are low-effort, high-impact fixes that do not depend on phase boundaries and can be done in dedicated S-tier worktrees:
+
+| # | Fix | Files | Effort |
+|---|-----|-------|--------|
+| 1 | Fix `PERMISSION_FORMAT` regex | `rbac.controller.ts` | 5 min |
+| 2 | Await `onOrganizationCreated` | `auth.instance.ts` | 5 min |
+| 3 | Register missing exception filters | `admin/filters/`, `api-key/filters/` | 30 min |
+| 4 | Add `credentials: 'include'` to admin fetch calls | `UserActions.tsx`, `OrgActions.tsx` | 5 min |
+| 5 | Remove dead exception classes | `apiKeyExpired.exception.ts`, `apiKeyRevoked.exception.ts` | 5 min |
+| 6 | Hoist `allPerms` query outside loop | `drizzleRbac.repository.ts` | 10 min |
+| 7 | Replace `window.location` with `navigate()` | 4 routes | 30 min |
+| 8 | Remove `console.error` leaks from production UI | 3 files | 10 min |
+| 9 | Add `api_keys.last_four` database index | migration + schema | 15 min |
+| 10 | Make `fetchRoles`, `fetchInvitations`, `useOrganizations` throw on non-ok | 3 files | 15 min |
+
+---
+
+## 7. Phase Dependency Graph
+
+```
+Phase 1 (Tenant Isolation)
+  ↓
+Phase 2 (Error Handling)
+  ↓
+Phase 3 (Architecture)
+  ↓
+Phase 4 (Async & Transactions)
+  ↓
+Phase 5 (Config & Validation)
+
+Quick Wins ∥ any phase
+```
+
+**Rationale for sequential ordering:**
+- Phase 1 must come first because all later phases touch the same repository and service files; tenant isolation changes are the most critical and must be validated before anything else is layered on top.
+- Phase 2 follows because error handling is pervasive; fixing it first prevents the architecture changes in Phase 3 from being debugged against swallowed errors.
+- Phase 3 follows because splitting repositories and modules introduces new interfaces and DI wiring; doing this after error handling is stable means any test failures are due to the architecture change, not pre-existing error-surface gaps.
+- Phase 4 follows because transaction boundaries depend on the repository structure established in Phase 3.
+- Phase 5 comes last because it is the lowest risk and the most mechanical; by this point the codebase is structurally sound and only needs config tightening.

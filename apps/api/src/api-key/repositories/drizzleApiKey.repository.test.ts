@@ -206,7 +206,23 @@ describe('DrizzleApiKeyRepository', () => {
       const now = new Date()
 
       // Act
-      await repo.markRevoked('key-1', now)
+      await repo.markRevoked('key-1', 'org-1', now)
+
+      // Assert
+      expect(db.update).toHaveBeenCalled()
+      expect(db.set).toHaveBeenCalled()
+      expect(db.where).toHaveBeenCalled()
+    })
+
+    it('should do nothing when tenantId does not match', async () => {
+      // Arrange
+      const { db } = createMockDb()
+      db.where.mockResolvedValueOnce([])
+      const repo = new DrizzleApiKeyRepository(db as never)
+      const now = new Date()
+
+      // Act
+      await repo.markRevoked('key-1', 'wrong-org', now)
 
       // Assert
       expect(db.update).toHaveBeenCalled()
@@ -236,7 +252,7 @@ describe('DrizzleApiKeyRepository', () => {
       const repo = new DrizzleApiKeyRepository(db as never)
 
       // Act
-      const result = await repo.findCandidatesByLastFour('abcd')
+      const result = await repo.findCandidatesByLastFour('abcd', null)
 
       // Assert
       expect(result).toEqual(candidates)
@@ -254,10 +270,25 @@ describe('DrizzleApiKeyRepository', () => {
       const repo = new DrizzleApiKeyRepository(db as never)
 
       // Act
-      const result = await repo.findCandidatesByLastFour('zzzz')
+      const result = await repo.findCandidatesByLastFour('zzzz', null)
 
       // Assert
       expect(result).toEqual([])
+    })
+
+    it('should return empty array when tenantId does not match', async () => {
+      // Arrange
+      const { db, terminal } = createMockDb()
+      terminal.mockResolvedValueOnce([])
+      const repo = new DrizzleApiKeyRepository(db as never)
+
+      // Act
+      const result = await repo.findCandidatesByLastFour('abcd', 'wrong-org')
+
+      // Assert
+      expect(result).toEqual([])
+      expect(db.where).toHaveBeenCalled()
+      expect(db.innerJoin).toHaveBeenCalled()
     })
   })
 
@@ -269,7 +300,22 @@ describe('DrizzleApiKeyRepository', () => {
       const repo = new DrizzleApiKeyRepository(db as never)
 
       // Act
-      await repo.touchLastUsedAt('key-1', new Date('2025-06-01'))
+      await repo.touchLastUsedAt('key-1', 'org-1', new Date('2025-06-01'))
+
+      // Assert
+      expect(db.update).toHaveBeenCalled()
+      expect(db.set).toHaveBeenCalled()
+      expect(db.where).toHaveBeenCalled()
+    })
+
+    it('should do nothing when tenantId does not match', async () => {
+      // Arrange
+      const { db } = createMockDb()
+      db.where.mockResolvedValueOnce([])
+      const repo = new DrizzleApiKeyRepository(db as never)
+
+      // Act
+      await repo.touchLastUsedAt('key-1', 'wrong-org', new Date('2025-06-01'))
 
       // Assert
       expect(db.update).toHaveBeenCalled()

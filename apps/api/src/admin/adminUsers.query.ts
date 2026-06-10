@@ -14,6 +14,7 @@ import {
 } from 'drizzle-orm'
 import { buildCursorCondition, buildCursorResponse } from '../common/utils/cursorPagination.util.js'
 import { DRIZZLE, type DrizzleDB } from '../database/drizzle.provider.js'
+import { whereActive } from '../database/helpers/whereActive.js'
 import { auditLogs } from '../database/schema/audit.schema.js'
 import { members, organizations, users } from '../database/schema/auth.schema.js'
 import { escapeIlikePattern } from './utils/escapeIlikePattern.js'
@@ -106,7 +107,11 @@ export class AdminUsersQueryService {
             .select({ one: members.id })
             .from(members)
             .where(
-              and(eq(members.userId, users.id), eq(members.organizationId, filters.organizationId))
+              and(
+                eq(members.userId, users.id),
+                eq(members.organizationId, filters.organizationId),
+                whereActive(members)
+              )
             )
         )
       )
@@ -161,7 +166,7 @@ export class AdminUsersQueryService {
       })
       .from(members)
       .innerJoin(organizations, eq(members.organizationId, organizations.id))
-      .where(inArray(members.userId, userIds))
+      .where(and(inArray(members.userId, userIds), whereActive(members)))
 
     const map = new Map<string, { id: string; name: string; slug: string | null; role: string }[]>()
     for (const row of membershipRows) {

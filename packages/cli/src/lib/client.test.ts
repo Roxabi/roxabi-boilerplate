@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createClient } from './client.js'
+import { CliAuthError, createClient } from './client.js'
 
 vi.mock('./credentials.js', () => ({
   loadCredentials: vi.fn(() => ({
@@ -27,6 +27,18 @@ describe('createClient', () => {
     const { loadCredentials } = await import('./credentials.js')
     vi.mocked(loadCredentials).mockReturnValueOnce(null)
     expect(() => createClient()).toThrow('Not authenticated')
+  })
+})
+
+describe('createClient — malformed stored URL', () => {
+  it('throws CliAuthError with re-login message when stored apiUrl is malformed', async () => {
+    const { loadCredentials } = await import('./credentials.js')
+    vi.mocked(loadCredentials).mockReturnValueOnce({ token: 'sk_live_test', apiUrl: 'not a url' })
+    const client = createClient()
+    await expect(client.get('/api/v1/users/me')).rejects.toBeInstanceOf(CliAuthError)
+    await expect(client.get('/api/v1/users/me')).rejects.toThrow(
+      'stored API URL is malformed — run login again'
+    )
   })
 })
 

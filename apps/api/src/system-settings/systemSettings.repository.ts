@@ -8,4 +8,5 @@ export interface SystemSettingsRepository {
   findAll(tx?: DrizzleTx): Promise<SystemSetting[]>
   findByCategory(category: string, tx?: DrizzleTx): Promise<SystemSetting[]>
   updateByKey(key: string, value: unknown, tx?: DrizzleTx): Promise<SystemSetting | null>
+  transaction<T>(fn: (tx: DrizzleTx) => Promise<T>): Promise<T>
 }

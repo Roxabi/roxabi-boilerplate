@@ -1,12 +1,12 @@
 import { Body, Controller, Get, HttpCode, Post, Req, Res } from '@nestjs/common'
-import { ConfigService } from '@nestjs/config'
+import type { ConfigService } from '@nestjs/config'
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger'
 import type { FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import { OptionalAuth } from '../auth/decorators/optionalAuth.js'
 import { Session } from '../auth/decorators/session.decorator.js'
 import { ZodValidationPipe } from '../common/pipes/zodValidation.pipe.js'
-import { ConsentService } from './consent.service.js'
+import type { ConsentService } from './consent.service.js'
 
 const consentCategoriesSchema = z.object({
   necessary: z.literal(true),
@@ -59,17 +59,16 @@ export class ConsentController {
       action: body.action,
     })
 
-    // httpOnly is intentionally false — the frontend reads this cookie client-side
-    // to hydrate the consent banner without an extra API call.
-    reply.setCookie(CONSENT_COOKIE_NAME, cookiePayload, {
-      path: '/',
-      sameSite: 'lax',
-      maxAge: CONSENT_COOKIE_MAX_AGE,
-      secure: this.isProduction,
-      httpOnly: false,
-    })
-
     if (!session) {
+      // httpOnly is intentionally false — the frontend reads this cookie client-side
+      // to hydrate the consent banner without an extra API call.
+      reply.setCookie(CONSENT_COOKIE_NAME, cookiePayload, {
+        path: '/',
+        sameSite: 'lax',
+        maxAge: CONSENT_COOKIE_MAX_AGE,
+        secure: this.isProduction,
+        httpOnly: false,
+      })
       reply.status(204)
       return
     }
@@ -81,6 +80,15 @@ export class ConsentController {
       ...body,
       ipAddress,
       userAgent,
+    })
+
+    // Set cookie only after DB write succeeds to avoid DB/cookie mismatch on failure
+    reply.setCookie(CONSENT_COOKIE_NAME, cookiePayload, {
+      path: '/',
+      sameSite: 'lax',
+      maxAge: CONSENT_COOKIE_MAX_AGE,
+      secure: this.isProduction,
+      httpOnly: false,
     })
 
     return record

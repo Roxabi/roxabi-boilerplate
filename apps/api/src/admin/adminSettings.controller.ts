@@ -12,8 +12,18 @@ import { ZodValidationPipe } from '../common/pipes/zodValidation.pipe.js'
 import { SystemSettingsService } from '../system-settings/systemSettings.service.js'
 import { AdminBadRequestFilter } from './filters/adminBadRequest.filter.js'
 import { AdminConflictFilter } from './filters/adminConflict.filter.js'
+import { AdminForbiddenFilter } from './filters/adminForbidden.filter.js'
 import { AdminInternalErrorFilter } from './filters/adminInternalError.filter.js'
 import { AdminNotFoundFilter } from './filters/adminNotFound.filter.js'
+
+/** Per-key value schemas for known system settings.
+ *  Unknown keys pass through to the service layer which validates by stored type.
+ */
+const knownSettingValueSchemas: Record<string, z.ZodTypeAny> = {
+  support_email: z.string().email(),
+  max_orgs: z.number().int().min(1),
+  maintenance_mode: z.boolean(),
+}
 
 export const settingsUpdateSchema = z.object({
   updates: z
@@ -23,10 +33,17 @@ export const settingsUpdateSchema = z.object({
           key: z.string().min(1),
           value: z.unknown(),
         })
-        .refine((obj) => 'value' in obj, {
-          message: 'Value is required',
-          path: ['value'],
-        })
+        .refine(
+          (obj) => {
+            const schema = knownSettingValueSchemas[obj.key]
+            if (!schema) return true
+            return schema.safeParse(obj.value).success
+          },
+          {
+            message: 'Invalid value for this setting key',
+            path: ['value'],
+          }
+        )
     )
     .min(1),
 })
@@ -37,6 +54,7 @@ export const settingsUpdateSchema = z.object({
   AdminNotFoundFilter,
   AdminConflictFilter,
   AdminBadRequestFilter,
+  AdminForbiddenFilter,
   AdminInternalErrorFilter
 )
 @Throttle({ global: { ttl: 60_000, limit: 30 } })

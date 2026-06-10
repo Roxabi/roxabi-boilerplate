@@ -1,5 +1,19 @@
 import { loadCredentials } from './credentials.js'
 
+export class CliAuthError extends Error {
+  constructor(message = 'Not authenticated. Run `roxabi auth login --token <token>` first.') {
+    super(message)
+    this.name = 'CliAuthError'
+  }
+}
+
+export class ApiPathError extends Error {
+  constructor(path: string) {
+    super(`API path must be relative (start with /), got: ${path}`)
+    this.name = 'ApiPathError'
+  }
+}
+
 export class ApiError extends Error {
   constructor(
     public readonly statusCode: number,
@@ -38,7 +52,7 @@ export function createClient(apiUrl?: string, token?: string): ApiClient {
   const authToken = token ?? credentials?.token
 
   if (!(baseUrl && authToken)) {
-    throw new Error('Not authenticated. Run `roxabi auth login --token <token>` first.')
+    throw new CliAuthError()
   }
 
   async function request<T>(
@@ -48,9 +62,14 @@ export function createClient(apiUrl?: string, token?: string): ApiClient {
     params?: Record<string, string>
   ): Promise<T> {
     if (!path.startsWith('/')) {
-      throw new Error(`API path must be relative (start with /), got: ${path}`)
+      throw new ApiPathError(path)
     }
-    const url = new URL(path, baseUrl)
+    let url: URL
+    try {
+      url = new URL(path, baseUrl)
+    } catch {
+      throw new CliAuthError('stored API URL is malformed — run login again')
+    }
     if (params) {
       for (const [key, value] of Object.entries(params)) {
         url.searchParams.set(key, value)

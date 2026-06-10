@@ -22,6 +22,7 @@ function validateEnvPlugin(): Plugin {
         const envVars = loadEnv(config.mode, config.envDir ?? process.cwd(), 'VITE_')
         const schema = z.object({
           VITE_APP_NAME: z.string().optional(),
+          VITE_APP_URL: z.string().url().optional(),
           VITE_GITHUB_REPO_URL: z.string().url().optional(),
           VITE_TALKS_URL: z.string().url().optional(),
           VITE_DOCS_URL: z.string().url().optional(),
@@ -87,6 +88,12 @@ const config = defineConfig(async ({ mode }) => {
   const envDir = '../..'
   const env = loadEnv(mode, envDir, '')
   process.env.VITE_APP_NAME ??= env.APP_NAME ?? 'App'
+  // VITE_APP_URL is baked into client JS (auth redirects) — a silent localhost
+  // fallback in a production build would ship broken callbacks
+  if (mode === 'production' && !(process.env.VITE_APP_URL ?? env.VITE_APP_URL ?? env.APP_URL)) {
+    throw new Error('VITE_APP_URL (or APP_URL) must be set for production builds')
+  }
+  process.env.VITE_APP_URL ??= env.VITE_APP_URL ?? env.APP_URL ?? 'http://localhost:3000'
 
   return {
     envDir: '../..',

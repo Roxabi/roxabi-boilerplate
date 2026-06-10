@@ -1,0 +1,106 @@
+---
+title: "Audit Correction Phase 3 — Architecture"
+description: "Split god-repositories, enforce bounded contexts, resolve circular dependencies, and deduplicate admin components."
+---
+
+# Phase 3 Spec: Architecture
+
+## Problem Statement
+
+`UserRepository` is a god-repository touching 5 domain schemas (`users`, `organizations`, `members`, `invitations`, `sessions`, `roles`). `GdprService` and `PurgeService` bypass the repository layer entirely, injecting `DRIZZLE` and querying 7 tables inline. `AdminModule` accumulates 7 controllers and 9 providers. A circular dependency exists between `feature-flags` and `admin` modules. UI-specific constants (`DICEBEAR_CDN_DOMAIN`, `AVATAR_STYLES`) leak into API controllers. The frontend `lib/consent/consentProvider.tsx` imports from `components/`, creating a circular dependency across the lib/components boundary.
+
+**Critical findings:**
+- `apps/api/src/user/user.repository.ts:66-91` — `UserRepository` interface defines 6 org-specific methods; god-repository (P1).
+- `apps/api/src/gdpr/gdpr.service.ts:73` — `GdprService` directly injects `DRIZZLE` and queries 7 tables inline (P1).
+- `apps/api/src/purge/purge.service.ts:13` — `PurgeService` directly injects `DRIZZLE`; only user anonymization delegated to repo (P1).
+- `apps/api/src/user/user.controller.ts:123` — `DICEBEAR_CDN_DOMAIN` / `AVATAR_STYLES` leak into API controller (P2).
+- Circular dependency between `feature-flags` and `admin` modules (SF3).
+- `apps/web/src/lib/consent/consentProvider.tsx` imports from `components/`, creating circular dependency across lib/components boundary (SF3).
+
+## Solution Design
+
+1. **Extract MembershipRepository** — Move org/member/invitation/session methods from `UserRepository` into a new `MembershipRepository` (`apps/api/src/membership/membership.repository.ts`). Update all call sites to inject `MembershipRepository` where org/member ops are needed.
+2. **GdprService Refactor** — Create dedicated repositories (`gdprExport.repository.ts`, `gdprAnonymization.repository.ts`) and inject them instead of `DRIZZLE`.
+3. **PurgeService Refactor** — Create `OrganizationPurgeRepository` and delegate all raw queries to it.
+4. **AdminModule Split** — Split `AdminModule` into `AdminUsersModule`, `AdminOrganizationsModule`, `AdminMembersModule`, `AdminAuditLogsModule`. Retain `AdminModule` as a thin wrapper importing sub-modules for backward compatibility.
+5. **Feature-Flags Decoupling** — Move `FeatureFlagCreateFailedException` out of `admin/exceptions/` into `feature-flags/exceptions/` to break the circular dependency.
+6. **API Controller Cleanup** — Remove `DICEBEAR_CDN_DOMAIN` and `AVATAR_STYLES` validation from `user.controller.ts`; move avatar constraints to frontend or shared validation schema.
+7. **TenantInterceptor Refactor** — Introduce `TenantRepository` / `OrganizationLookupRepository` and remove all raw Drizzle queries from `TenantInterceptor`.
+8. **Frontend Circular Dependency** — Break `lib/consent/consentProvider.tsx` → `components/` import by creating a `ConsentProvider` that accepts `ConsentBanner` and `ConsentModal` as props or children, not imports.
+9. **Admin API Layer** — Create `apps/web/src/lib/admin/api.ts` to centralize all admin fetch calls. Create `mutations.ts` and `queryKeys.ts` for DRY query management.
+10. **Component Deduplication** — Deduplicate `BanDialog`, `ImpactSummary`, `useOrgMutations`, `useUserMutations` across `apps/web/src/components/admin/`.
+
+## Acceptance Criteria
+
+1. `UserRepository` interface defines only user-domain methods (no org/member/invitation/session).
+2. `MembershipRepository` exists and is injected where org/member operations are needed.
+3. `GdprService` injects repositories, not `DRIZZLE`.
+4. `PurgeService` injects repositories, not `DRIZZLE`.
+5. `AdminModule` is a thin wrapper with 0 providers/controllers of its own.
+6. `feature-flags` module does not import from `admin/exceptions/`.
+7. `TenantInterceptor` delegates to `TenantRepository` or `OrganizationLookupRepository`.
+8. `user.controller.ts` does not import `DICEBEAR_CDN_DOMAIN` or `AVATAR_STYLES`.
+9. `lib/consent/consentProvider.tsx` does not import from `components/`.
+10. `lib/admin/api.ts` exists and centralizes all admin fetch calls.
+11. `BanDialog` and `ImpactSummary` are single components, not duplicated.
+12. `bun run test` passes, `bun run test:e2e` passes, `bun run lint` passes, `bun run typecheck` passes.
+
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `apps/api/src/user/user.repository.ts` | Remove org/member/invitation/session methods |
+| `apps/api/src/membership/membership.repository.ts` | **New** — extracted org/member methods |
+| `apps/api/src/user/user.service.ts` | Remove cross-domain exception imports (`OrgNotOwnerException`) |
+| `apps/api/src/gdpr/gdpr.service.ts` | Inject repositories instead of `DRIZZLE` |
+| `apps/api/src/gdpr/repositories/` | **New** — `gdprExport.repository.ts`, `gdprAnonymization.repository.ts` |
+| `apps/api/src/purge/purge.service.ts` | Inject `OrganizationPurgeRepository` |
+| `apps/api/src/purge/repositories/organizationPurge.repository.ts` | **New** — delegate all raw queries |
+| `apps/api/src/admin/admin.module.ts` | Split into sub-modules; keep as thin wrapper |
+| `apps/api/src/admin/adminUsers.module.ts` | **New** |
+| `apps/api/src/admin/adminOrganizations.module.ts` | **New** |
+| `apps/api/src/admin/adminMembers.module.ts` | **New** |
+| `apps/api/src/admin/adminAuditLogs.module.ts` | **New** |
+| `apps/api/src/feature-flags/featureFlags.module.ts` | Update import of `FeatureFlagCreateFailedException` from new location |
+| `apps/api/src/feature-flags/exceptions/featureFlagCreateFailed.exception.ts` | **New** — moved from `admin/exceptions/` |
+| `apps/api/src/user/user.controller.ts` | Remove `DICEBEAR_CDN_DOMAIN` / `AVATAR_STYLES` validation |
+| `apps/api/src/tenant/tenant.interceptor.ts` | Introduce `TenantRepository` / `OrganizationLookupRepository`, remove raw Drizzle queries |
+| `apps/api/src/tenant/tenant.repository.ts` | **New** |
+| `apps/api/src/tenant/organizationLookup.repository.ts` | **New** |
+| `apps/web/src/lib/consent/consentProvider.tsx` | Break circular dependency with `ConsentBanner`/`ConsentModal` |
+| `apps/web/src/lib/admin/api.ts` | **New** — centralized admin API layer |
+| `apps/web/src/lib/admin/mutations.ts` | **New** |
+| `apps/web/src/lib/admin/queryKeys.ts` | **New** |
+| `apps/web/src/components/admin/BanDialog.tsx` | Deduplicate if duplicated across admin views |
+| `apps/web/src/components/admin/ImpactSummary.tsx` | Deduplicate if duplicated |
+| `apps/web/src/components/admin/hooks/useOrgMutations.ts` | Deduplicate |
+| `apps/web/src/components/admin/hooks/useUserMutations.ts` | Deduplicate |
+
+## Tests to Add/Update
+
+| Test File | What to Add |
+|-----------|-------------|
+| `apps/api/src/membership/membership.repository.test.ts` | **New** — cover extracted org/member/invitation/session methods |
+| `apps/api/src/gdpr/gdpr.service.test.ts` | Update mocks to use repository interfaces instead of `DRIZZLE` |
+| `apps/api/src/purge/purge.service.test.ts` | Update mocks to use `OrganizationPurgeRepository` |
+| `apps/api/src/admin/admin.module.test.ts` | Assert `AdminModule` is a thin wrapper importing 4 sub-modules |
+| `apps/api/src/tenant/tenant.interceptor.test.ts` | Assert no raw `db.select(...)` calls; mock `TenantRepository` |
+| `apps/api/src/feature-flags/featureFlags.module.test.ts` | Assert zero imports from `admin/exceptions/` |
+| `apps/web/src/lib/consent/consentProvider.test.tsx` | **New** — assert `ConsentProvider` renders without `components/` imports |
+| `apps/web/src/lib/admin/api.test.ts` | **New** — assert all admin fetch calls are centralized |
+
+## Migration Steps
+
+1. No DB schema changes.
+2. Deploy `MembershipRepository` extraction first. Add re-exports to `UserModule` as compatibility layer; keep old `UserRepository` interface for one release with `@deprecated`.
+3. Deploy `GdprService` and `PurgeService` refactors next (repository interfaces are internal, no external contract change).
+4. Deploy `AdminModule` split. Ensure `AdminModule` re-exports all public providers/controllers so existing imports do not break.
+5. Move `FeatureFlagCreateFailedException` and update all imports in a single commit.
+6. Update frontend imports for deduplicated components and `lib/admin/api.ts`.
+
+## Rollback Plan
+
+1. **God-repo split** — Add re-exports to `AdminModule` as compatibility layer; keep old `UserRepository` interface for one release with `@deprecated`. If DI wiring breaks, revert to monolithic module.
+2. **Repository interfaces** — If new repository interfaces do not cover all call sites, temporarily fall back to `DRIZZLE` injection while fixing gaps.
+3. **Circular dependency** — If moving `FeatureFlagCreateFailedException` breaks imports, create a re-export in `admin/exceptions/` with `@deprecated` for one release.
+4. **Frontend components** — If deduplication causes import errors, restore the duplicated component and add a `@deprecated` re-export.

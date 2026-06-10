@@ -29,6 +29,7 @@ import { BackLink, DetailSkeleton } from '@/components/admin/DetailShared'
 import { MemberContextMenu, MemberKebabButton } from '@/components/admin/MemberContextMenu'
 import { OrgActions } from '@/components/admin/OrgActions'
 import { adminOrgKeys } from '@/lib/admin/queryKeys'
+import { apiGet, apiPatch } from '@/lib/apiClient'
 import { appName } from '@/lib/appName'
 import { useSession } from '@/lib/authClient'
 import { formatDate } from '@/lib/formatDate'
@@ -252,18 +253,7 @@ function useOrgEditMutation(
       slug: string
       parentOrganizationId: string | null
     }) => {
-      const res = await fetch(`/api/admin/organizations/${orgId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      if (!res.ok) {
-        const body = await res.json().catch(() => null)
-        if (res.status === 409) throw new Error(body?.message ?? 'Slug already exists')
-        if (res.status === 400) throw new Error(body?.message ?? 'Invalid data')
-        throw new Error(body?.message ?? 'Failed to update organization')
-      }
-      return res.json()
+      return apiPatch<AdminOrgDetail>(`/api/admin/organizations/${orgId}`, payload)
     },
     onSuccess: () => {
       toast.success('Organization updated successfully')
@@ -311,11 +301,8 @@ function EditOrgForm({ org, onSave, onCancel }: EditOrgFormProps) {
 
   const { data: allOrgs } = useQuery<{ data: AdminOrganization[] }>({
     queryKey: adminOrgKeys.allForParent(),
-    queryFn: async () => {
-      const res = await fetch('/api/admin/organizations?view=tree')
-      if (!res.ok) throw new Error('Failed to fetch organizations')
-      return res.json()
-    },
+    queryFn: async () =>
+      apiGet<{ data: AdminOrganization[] }>('/api/admin/organizations?view=tree'),
   })
 
   const mutation = useOrgEditMutation(org.id, onSave, setError)
@@ -437,11 +424,7 @@ function AdminOrgDetailPage() {
 
   const { data, isLoading, error } = useQuery<AdminOrgDetail>({
     queryKey: adminOrgKeys.detail(orgId),
-    queryFn: async () => {
-      const res = await fetch(`/api/admin/organizations/${orgId}`)
-      if (!res.ok) throw new Error('Organization not found')
-      return res.json()
-    },
+    queryFn: async () => apiGet<AdminOrgDetail>(`/api/admin/organizations/${orgId}`),
   })
 
   function handleActionComplete() {

@@ -21,12 +21,14 @@ function createMockDb() {
     insert: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
+    execute: vi.fn(),
     transaction: vi.fn(async (fn: (tx: Record<string, unknown>) => unknown) =>
       fn({
         select: vi.fn(),
         insert: vi.fn(),
         update: vi.fn(),
         delete: vi.fn(),
+        execute: vi.fn(),
       })
     ),
   }
@@ -38,6 +40,7 @@ function createMockTx() {
     insert: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
+    execute: vi.fn(),
   }
 }
 
@@ -211,6 +214,23 @@ describe('admin-organizations.hierarchy', () => {
       // Assert
       expect(result.depth).toBe(0)
     })
+
+    it('should throw OrgCycleDetectedException when a pure A→B→A cycle is detected (visited Set, Fix #4)', async () => {
+      // Arrange -- A→B→A cycle where neither A nor B equals 'org-target'
+      // This exercises the visited Set path (not the targetOrgId === currentId path):
+      //   iter1: add 'org-A' to visited, fetch → parent 'org-B'
+      //   iter2: add 'org-B' to visited, fetch → parent 'org-A'
+      //   iter3: visited.has('org-A') = true → throw OrgCycleDetectedException
+      const tx = createMockTx()
+      tx.select
+        .mockReturnValueOnce(createChainMock([{ id: 'org-A', parentOrganizationId: 'org-B' }]))
+        .mockReturnValueOnce(createChainMock([{ id: 'org-B', parentOrganizationId: 'org-A' }]))
+
+      // Act & Assert
+      await expect(walkParentChain(tx as never, 'org-target', 'org-A')).rejects.toThrow(
+        OrgCycleDetectedException
+      )
+    })
   })
 
   // -------------------------------------------------------------------------
@@ -218,8 +238,8 @@ describe('admin-organizations.hierarchy', () => {
   // -------------------------------------------------------------------------
   describe('getSubtreeDepth', () => {
     it('should return 0 for a leaf org with no children', async () => {
-      // Arrange
-      db.select.mockReturnValueOnce(createChainMock([]))
+      // Arrange -- CTE over an empty descendant set: MAX(depth) is NULL
+      db.execute.mockResolvedValueOnce([{ max_depth: null }])
 
       // Act
       const result = await getSubtreeDepth(db as never, 'org-leaf')
@@ -229,10 +249,8 @@ describe('admin-organizations.hierarchy', () => {
     })
 
     it('should return 1 when org has direct children but no grandchildren', async () => {
-      // Arrange -- parent has one child; child has no children
-      db.select
-        .mockReturnValueOnce(createChainMock([{ id: 'org-child' }]))
-        .mockReturnValueOnce(createChainMock([]))
+      // Arrange -- direct children are seeded at depth 1 in the CTE
+      db.execute.mockResolvedValueOnce([{ max_depth: 1 }])
 
       // Act
       const result = await getSubtreeDepth(db as never, 'org-parent')
@@ -242,11 +260,8 @@ describe('admin-organizations.hierarchy', () => {
     })
 
     it('should return 2 for a parent → child → grandchild tree', async () => {
-      // Arrange -- parent has one child; child has one grandchild; grandchild is leaf
-      db.select
-        .mockReturnValueOnce(createChainMock([{ id: 'org-child' }])) // parent's children
-        .mockReturnValueOnce(createChainMock([{ id: 'org-grandchild' }])) // child's children
-        .mockReturnValueOnce(createChainMock([])) // grandchild is leaf
+      // Arrange
+      db.execute.mockResolvedValueOnce([{ max_depth: 2 }])
 
       // Act
       const result = await getSubtreeDepth(db as never, 'org-parent')
@@ -255,50 +270,28 @@ describe('admin-organizations.hierarchy', () => {
       expect(result).toBe(2)
     })
 
-    it('should return the maximum depth among multiple children branches', async () => {
-      // Arrange -- parent has two children: shallow-child (leaf) and deep-child (has grandchild)
-      db.select
-        .mockReturnValueOnce(createChainMock([{ id: 'shallow-child' }, { id: 'deep-child' }])) // parent's children
-        .mockReturnValueOnce(createChainMock([])) // shallow-child is leaf
-        .mockReturnValueOnce(createChainMock([{ id: 'grandchild' }])) // deep-child's children
-        .mockReturnValueOnce(createChainMock([])) // grandchild is leaf
+    it('should return 0 when the CTE yields no row at all', async () => {
+      // Arrange -- defensive: result[0] missing
+      db.execute.mockResolvedValueOnce([])
 
       // Act
       const result = await getSubtreeDepth(db as never, 'org-parent')
 
-      // Assert -- deepest path is parent → deep-child → grandchild = depth 2
-      expect(result).toBe(2)
+      // Assert
+      expect(result).toBe(0)
     })
 
-    it('should stop processing siblings when maxChildDepth reaches MAX_PARENT_WALK_ITERATIONS', async () => {
-      // Arrange -- a parent with two children: the first child has a subtree of depth
-      // MAX_PARENT_WALK_ITERATIONS (triggering the sibling-loop cap), the second child
-      // should be skipped due to the cap.
-      // First child of root has depth MAX_PARENT_WALK_ITERATIONS - 1 in its subtree
-      // (i.e., child → grandchild → ... → leaf at depth MAX_PARENT_WALK_ITERATIONS)
-
-      // Root's direct children: two children
-      db.select.mockReturnValueOnce(createChainMock([{ id: 'child-deep' }, { id: 'child-skip' }]))
-
-      // child-deep's subtree: MAX_PARENT_WALK_ITERATIONS levels of nesting
-      // Each level has one child except the last leaf
-      for (let i = 0; i < MAX_PARENT_WALK_ITERATIONS; i++) {
-        db.select.mockReturnValueOnce(createChainMock([{ id: `level-${i + 1}` }]))
-      }
-      // leaf at the bottom
-      db.select.mockReturnValueOnce(createChainMock([]))
+    it('should resolve the whole subtree in a single CTE round-trip', async () => {
+      // Arrange -- recursion depth is capped SQL-side (WHERE d.depth < MAX_PARENT_WALK_ITERATIONS)
+      db.execute.mockResolvedValueOnce([{ max_depth: MAX_PARENT_WALK_ITERATIONS }])
 
       // Act
       const result = await getSubtreeDepth(db as never, 'org-root')
 
-      // Assert -- child-skip was not processed because cap was hit after child-deep.
-      // child-deep subtree depth = MAX_PARENT_WALK_ITERATIONS, so maxChildDepth becomes
-      // MAX_PARENT_WALK_ITERATIONS + 1 (child-deep counted) which triggers the break.
-      // child-skip select is never called, so db.select call count = 1 (root children)
-      //   + MAX_PARENT_WALK_ITERATIONS (chain) + 1 (leaf) = MAX_PARENT_WALK_ITERATIONS + 2
-      expect(db.select).toHaveBeenCalledTimes(MAX_PARENT_WALK_ITERATIONS + 2)
-      // The returned depth accounts for the deep child only (child-skip skipped)
-      expect(result).toBe(MAX_PARENT_WALK_ITERATIONS + 1)
+      // Assert -- one execute call, no per-level select walking
+      expect(db.execute).toHaveBeenCalledTimes(1)
+      expect(db.select).not.toHaveBeenCalled()
+      expect(result).toBe(MAX_PARENT_WALK_ITERATIONS)
     })
   })
 
@@ -308,7 +301,7 @@ describe('admin-organizations.hierarchy', () => {
   describe('getDescendantOrgIds', () => {
     it('should return empty array when org has no children', async () => {
       // Arrange
-      db.select.mockReturnValueOnce(createChainMock([]))
+      db.execute.mockResolvedValueOnce([])
 
       // Act
       const result = await getDescendantOrgIds(db as never, 'org-leaf')
@@ -318,11 +311,8 @@ describe('admin-organizations.hierarchy', () => {
     })
 
     it('should return direct children ids when they have no children', async () => {
-      // Arrange -- two direct children, both leaves
-      db.select
-        .mockReturnValueOnce(createChainMock([{ id: 'child-1' }, { id: 'child-2' }]))
-        .mockReturnValueOnce(createChainMock([])) // child-1 children
-        .mockReturnValueOnce(createChainMock([])) // child-2 children
+      // Arrange
+      db.execute.mockResolvedValueOnce([{ id: 'child-1' }, { id: 'child-2' }])
 
       // Act
       const result = await getDescendantOrgIds(db as never, 'org-parent')
@@ -332,11 +322,8 @@ describe('admin-organizations.hierarchy', () => {
     })
 
     it('should return all descendants recursively (children and grandchildren)', async () => {
-      // Arrange -- parent → child → grandchild
-      db.select
-        .mockReturnValueOnce(createChainMock([{ id: 'child-1' }])) // parent's children
-        .mockReturnValueOnce(createChainMock([{ id: 'grandchild-1' }])) // child-1's children
-        .mockReturnValueOnce(createChainMock([])) // grandchild-1 is leaf
+      // Arrange -- the recursive CTE returns the flattened subtree
+      db.execute.mockResolvedValueOnce([{ id: 'child-1' }, { id: 'grandchild-1' }])
 
       // Act
       const result = await getDescendantOrgIds(db as never, 'org-parent')
@@ -345,24 +332,19 @@ describe('admin-organizations.hierarchy', () => {
       expect(result).toEqual(['child-1', 'grandchild-1'])
     })
 
-    it('should cap results at 1000 and not process additional siblings', async () => {
-      // Arrange -- first child returns 999 grandchildren, then there's a second child
-      // We can simulate this by having a first batch of 999 children (each a leaf)
-      // then a second child would push count over 1000
-
-      // Build 1000 direct children to simulate the safety cap
-      const manyChildren = Array.from({ length: 1001 }, (_, i) => ({ id: `child-${i}` }))
-      db.select.mockReturnValueOnce(createChainMock(manyChildren))
-      // Respond with empty children for each of the 1000 (cap stops at 1000 total)
-      for (let i = 0; i < 1001; i++) {
-        db.select.mockReturnValueOnce(createChainMock([]))
-      }
+    it('should fetch all descendants in a single capped CTE round-trip', async () => {
+      // Arrange -- the 1000-row safety cap lives in the SQL (LIMIT 1000); the function
+      // passes through whatever the capped query returns
+      const manyRows = Array.from({ length: 1000 }, (_, i) => ({ id: `child-${i}` }))
+      db.execute.mockResolvedValueOnce(manyRows)
 
       // Act
       const result = await getDescendantOrgIds(db as never, 'org-parent')
 
-      // Assert -- capped at 1000
-      expect(result.length).toBeLessThanOrEqual(1000)
+      // Assert
+      expect(db.execute).toHaveBeenCalledTimes(1)
+      expect(db.select).not.toHaveBeenCalled()
+      expect(result).toHaveLength(1000)
     })
   })
 
@@ -405,10 +387,15 @@ describe('admin-organizations.hierarchy', () => {
         .mockReturnValueOnce(createChainMock([{ id: 'org-mid', parentOrganizationId: 'org-root' }]))
         .mockReturnValueOnce(createChainMock([{ id: 'org-root', parentOrganizationId: null }]))
       db.transaction.mockImplementationOnce(async (fn: (tx: Record<string, unknown>) => unknown) =>
-        fn({ select: txSelect, insert: vi.fn(), update: vi.fn(), delete: vi.fn() })
+        fn({
+          select: txSelect,
+          insert: vi.fn(),
+          update: vi.fn(),
+          delete: vi.fn(),
+          // getSubtreeDepth on orgId: no children (CTE MAX is NULL)
+          execute: vi.fn().mockResolvedValue([{ max_depth: null }]),
+        })
       )
-      // getSubtreeDepth on orgId: no children
-      db.select.mockReturnValueOnce(createChainMock([]))
 
       // Act & Assert
       await expect(validateHierarchy(db as never, 'org-move', 'org-new-parent')).rejects.toThrow(
@@ -424,10 +411,15 @@ describe('admin-organizations.hierarchy', () => {
         createChainMock([{ id: 'org-new-parent', parentOrganizationId: null }])
       )
       db.transaction.mockImplementationOnce(async (fn: (tx: Record<string, unknown>) => unknown) =>
-        fn({ select: txSelect, insert: vi.fn(), update: vi.fn(), delete: vi.fn() })
+        fn({
+          select: txSelect,
+          insert: vi.fn(),
+          update: vi.fn(),
+          delete: vi.fn(),
+          // getSubtreeDepth on orgId: no children (CTE MAX is NULL)
+          execute: vi.fn().mockResolvedValue([{ max_depth: null }]),
+        })
       )
-      // getSubtreeDepth on orgId: no children
-      db.select.mockReturnValueOnce(createChainMock([]))
 
       // Act & Assert -- should resolve without throwing
       await expect(
@@ -445,10 +437,15 @@ describe('admin-organizations.hierarchy', () => {
         )
         .mockReturnValueOnce(createChainMock([{ id: 'org-root', parentOrganizationId: null }]))
       db.transaction.mockImplementationOnce(async (fn: (tx: Record<string, unknown>) => unknown) =>
-        fn({ select: txSelect, insert: vi.fn(), update: vi.fn(), delete: vi.fn() })
+        fn({
+          select: txSelect,
+          insert: vi.fn(),
+          update: vi.fn(),
+          delete: vi.fn(),
+          // getSubtreeDepth on orgId: no children (CTE MAX is NULL)
+          execute: vi.fn().mockResolvedValue([{ max_depth: null }]),
+        })
       )
-      // getSubtreeDepth on orgId: no children
-      db.select.mockReturnValueOnce(createChainMock([]))
 
       // Act & Assert
       await expect(
@@ -464,13 +461,15 @@ describe('admin-organizations.hierarchy', () => {
         createChainMock([{ id: 'org-new-parent', parentOrganizationId: null }])
       )
       db.transaction.mockImplementationOnce(async (fn: (tx: Record<string, unknown>) => unknown) =>
-        fn({ select: txSelect, insert: vi.fn(), update: vi.fn(), delete: vi.fn() })
+        fn({
+          select: txSelect,
+          insert: vi.fn(),
+          update: vi.fn(),
+          delete: vi.fn(),
+          // getSubtreeDepth: orgId → child → grandchild (CTE max_depth 2)
+          execute: vi.fn().mockResolvedValue([{ max_depth: 2 }]),
+        })
       )
-      // getSubtreeDepth: orgId → child → grandchild (depth 2)
-      db.select
-        .mockReturnValueOnce(createChainMock([{ id: 'child-1' }]))
-        .mockReturnValueOnce(createChainMock([{ id: 'grandchild-1' }]))
-        .mockReturnValueOnce(createChainMock([]))
 
       // Act & Assert
       await expect(validateHierarchy(db as never, 'org-deep', 'org-new-parent')).rejects.toThrow(

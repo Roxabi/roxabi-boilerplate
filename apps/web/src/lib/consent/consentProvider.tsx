@@ -5,9 +5,15 @@ import type {
   ConsentCookiePayload,
   ConsentState,
 } from '@repo/types'
-import { createContext, type ReactNode, useEffect, useMemo, useState } from 'react'
-import { ConsentBanner } from '@/components/consent/ConsentBanner'
-import { ConsentModal } from '@/components/consent/ConsentModal'
+import {
+  cloneElement,
+  createContext,
+  type ReactElement,
+  type ReactNode,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
 import { legalConfig } from '@/config/legal.config'
 import { useSession } from '@/lib/authClient'
 import { parseConsentCookie } from '@/lib/consent/parse'
@@ -19,9 +25,25 @@ export type ConsentContextValue = ConsentState & ConsentActions
 
 export const ConsentContext = createContext<ConsentContextValue | null>(null)
 
+export type ConsentBannerProps = {
+  onAcceptAll: () => void
+  onRejectAll: () => void
+  onOpenSettings: () => void
+  showBanner: boolean
+}
+
+export type ConsentModalProps = {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  categories: ConsentCategories
+  onSave: (categories: ConsentCategories) => void
+}
+
 type ConsentProviderProps = {
   children: ReactNode
   initialConsent: ConsentCookiePayload | null
+  banner: ReactElement<any>
+  modal: ReactElement<any>
 }
 
 function readCookieClient(): ConsentCookiePayload | null {
@@ -148,7 +170,12 @@ function createConsentActions(
   }
 }
 
-export function ConsentProvider({ children, initialConsent: serverConsent }: ConsentProviderProps) {
+export function ConsentProvider({
+  children,
+  initialConsent: serverConsent,
+  banner,
+  modal,
+}: ConsentProviderProps) {
   const resolved = getInitialConsent(serverConsent)
   const showBannerInitial = computeShowBanner(resolved)
 
@@ -187,16 +214,35 @@ export function ConsentProvider({ children, initialConsent: serverConsent }: Con
     openSettings,
   }
 
+  const bannerElement = useMemo(
+    () =>
+      // biome-ignore lint/suspicious/noExplicitAny: React.cloneElement is inherently typed loosely
+      cloneElement(banner as any, {
+        onAcceptAll: acceptAll,
+        onRejectAll: rejectAll,
+        onOpenSettings: openSettings,
+        showBanner,
+      }),
+    [banner, acceptAll, rejectAll, openSettings, showBanner]
+  )
+
+  const modalElement = useMemo(
+    () =>
+      // biome-ignore lint/suspicious/noExplicitAny: React.cloneElement is inherently typed loosely
+      cloneElement(modal as any, {
+        open: modalOpen,
+        onOpenChange: setModalOpen,
+        categories: value.categories,
+        onSave: saveCustom,
+      }),
+    [modal, modalOpen, value.categories, saveCustom]
+  )
+
   return (
     <ConsentContext.Provider value={value}>
       {children}
-      <ConsentBanner />
-      <ConsentModal
-        open={modalOpen}
-        onOpenChange={setModalOpen}
-        categories={value.categories}
-        onSave={saveCustom}
-      />
+      {bannerElement}
+      {modalElement}
     </ConsentContext.Provider>
   )
 }

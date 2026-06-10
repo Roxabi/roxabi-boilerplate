@@ -46,7 +46,14 @@ async function fetchInvitations(signal?: AbortSignal): Promise<Invitation[]> {
     credentials: 'include',
     signal,
   })
-  if (!res.ok) return []
+  if (!res.ok) {
+    const body = await res.json().catch(() => null)
+    throw new Error(
+      typeof body === 'object' && body !== null && 'message' in body
+        ? String(body.message)
+        : 'Failed to fetch invitations'
+    )
+  }
   const json = (await res.json()) as InvitationsResponse
   return json.data ?? []
 }

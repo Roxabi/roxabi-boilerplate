@@ -1,8 +1,9 @@
 import { magicLinkClient, organizationClient } from 'better-auth/client/plugins'
 import { createAuthClient } from 'better-auth/react'
+import { clientEnv } from '@/lib/env.shared'
 
 export const authClient = createAuthClient({
-  baseURL: typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000',
+  baseURL: typeof window !== 'undefined' ? window.location.origin : clientEnv.VITE_APP_URL,
   // Better Auth admin client plugin removed in Phase 1 (#268)
   // All admin actions go through NestJS AdminModule with guards + audit logging
   plugins: [organizationClient(), magicLinkClient()],

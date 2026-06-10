@@ -2,6 +2,11 @@ import { ForbiddenException } from '@nestjs/common'
 import { lastValueFrom, of } from 'rxjs'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ErrorCode } from '../common/errorCodes.js'
+import { TenantResolutionException } from './exceptions/tenantResolution.exception.js'
+import {
+  DEFAULT_DELETED_ORG_ALLOWED_PATTERNS,
+  DeletedOrgRestrictionService,
+} from './services/deletedOrgRestriction.service.js'
 import { TenantInterceptor } from './tenant.interceptor.js'
 
 function createMockCls(store: Record<string, unknown> = {}) {
@@ -50,15 +55,17 @@ function createMockReflector(skipOrg = false) {
   }
 }
 
-function createMockDb(rows: Record<string, unknown>[] = []) {
-  const limitFn = vi.fn().mockResolvedValue(rows)
-  const whereFn = vi.fn().mockReturnValue({ limit: limitFn })
-  const fromFn = vi.fn().mockReturnValue({ where: whereFn })
-  const selectFn = vi.fn().mockReturnValue({ from: fromFn })
+function createMockTenantRepo(rows: Record<string, unknown>[] = []) {
   return {
-    select: selectFn,
-    _mocks: { selectFn, fromFn, whereFn, limitFn },
+    lookupOrganization: vi.fn().mockImplementation((id: string) => {
+      const row = rows.find((r) => r.id === id)
+      return Promise.resolve(row ?? null)
+    }),
   }
+}
+
+function createDeletedOrgService() {
+  return new DeletedOrgRestrictionService(DEFAULT_DELETED_ORG_ALLOWED_PATTERNS)
 }
 
 describe('TenantInterceptor', () => {
@@ -71,7 +78,12 @@ describe('TenantInterceptor', () => {
   it('should set tenantId to null when no session exists', async () => {
     // Arrange
     const cls = createMockCls(store)
-    const interceptor = new TenantInterceptor(cls as never, createMockReflector() as never, null)
+    const interceptor = new TenantInterceptor(
+      cls as never,
+      createMockReflector() as never,
+      null as never,
+      createDeletedOrgService()
+    )
     const context = createMockContext(null)
     const next = createMockCallHandler()
 
@@ -86,7 +98,12 @@ describe('TenantInterceptor', () => {
   it('should set tenantId to null when activeOrganizationId is null', async () => {
     // Arrange
     const cls = createMockCls(store)
-    const interceptor = new TenantInterceptor(cls as never, createMockReflector() as never, null)
+    const interceptor = new TenantInterceptor(
+      cls as never,
+      createMockReflector() as never,
+      null as never,
+      createDeletedOrgService()
+    )
     const context = createMockContext({
       session: { activeOrganizationId: null },
     })
@@ -100,27 +117,39 @@ describe('TenantInterceptor', () => {
     expect(cls.set).toHaveBeenCalledWith('tenantId', null)
   })
 
-  it('should use activeOrganizationId directly when DB is null', async () => {
+  it('should throw TenantResolutionException when tenantRepo throws', async () => {
     // Arrange
     const cls = createMockCls(store)
-    const interceptor = new TenantInterceptor(cls as never, createMockReflector() as never, null)
+    const tenantRepo = {
+      lookupOrganization: vi.fn().mockRejectedValue(new Error('DB connection lost')),
+    }
+    const interceptor = new TenantInterceptor(
+      cls as never,
+      createMockReflector() as never,
+      tenantRepo as never,
+      createDeletedOrgService()
+    )
     const context = createMockContext({
       session: { activeOrganizationId: 'org-1' },
     })
     const next = createMockCallHandler()
 
-    // Act
+    // Act & Assert
     const result$ = interceptor.intercept(context as never, next as never)
-    await lastValueFrom(result$)
-
-    // Assert
-    expect(cls.set).toHaveBeenCalledWith('tenantId', 'org-1')
+    await expect(lastValueFrom(result$)).rejects.toThrow(TenantResolutionException)
   })
 
   it('should call next.handle() to continue the request pipeline', async () => {
     // Arrange
     const cls = createMockCls(store)
-    const interceptor = new TenantInterceptor(cls as never, createMockReflector() as never, null)
+    const rows = [{ id: 'org-1', name: 'Root Org' }]
+    const tenantRepo = createMockTenantRepo(rows)
+    const interceptor = new TenantInterceptor(
+      cls as never,
+      createMockReflector() as never,
+      tenantRepo as never,
+      createDeletedOrgService()
+    )
     const context = createMockContext({
       session: { activeOrganizationId: 'org-1' },
     })
@@ -138,7 +167,12 @@ describe('TenantInterceptor', () => {
     // Arrange
     const cls = createMockCls(store)
     const reflector = createMockReflector(true)
-    const interceptor = new TenantInterceptor(cls as never, reflector as never, null)
+    const interceptor = new TenantInterceptor(
+      cls as never,
+      reflector as never,
+      null as never,
+      createDeletedOrgService()
+    )
     const context = createMockContext({
       session: { activeOrganizationId: 'org-1' },
     })
@@ -158,11 +192,13 @@ describe('TenantInterceptor', () => {
     it('should use org ID as tenantId when org has no parent', async () => {
       // Arrange
       const cls = createMockCls(store)
-      const db = createMockDb([{ id: 'org-1', name: 'Root Org' }])
+      const rows = [{ id: 'org-1', name: 'Root Org' }]
+      const tenantRepo = createMockTenantRepo(rows)
       const interceptor = new TenantInterceptor(
         cls as never,
         createMockReflector() as never,
-        db as never
+        tenantRepo as never,
+        createDeletedOrgService()
       )
       const context = createMockContext({
         session: { activeOrganizationId: 'org-1' },
@@ -180,13 +216,13 @@ describe('TenantInterceptor', () => {
     it('should use org ID directly even when org has a parent (parent resolution deferred to Phase 3)', async () => {
       // Arrange — parentOrganizationId is present but resolution is disabled (TODO in interceptor)
       const cls = createMockCls(store)
-      const db = createMockDb([
-        { id: 'child-org', name: 'Child Org', parentOrganizationId: 'parent-org' },
-      ])
+      const rows = [{ id: 'child-org', name: 'Child Org', parentOrganizationId: 'parent-org' }]
+      const tenantRepo = createMockTenantRepo(rows)
       const interceptor = new TenantInterceptor(
         cls as never,
         createMockReflector() as never,
-        db as never
+        tenantRepo as never,
+        createDeletedOrgService()
       )
       const context = createMockContext({
         session: { activeOrganizationId: 'child-org' },
@@ -204,11 +240,12 @@ describe('TenantInterceptor', () => {
     it('should fall back to activeOrganizationId when org is not found in DB', async () => {
       // Arrange
       const cls = createMockCls(store)
-      const db = createMockDb([])
+      const tenantRepo = createMockTenantRepo([])
       const interceptor = new TenantInterceptor(
         cls as never,
         createMockReflector() as never,
-        db as never
+        tenantRepo as never,
+        createDeletedOrgService()
       )
       const context = createMockContext({
         session: { activeOrganizationId: 'missing-org' },
@@ -223,44 +260,38 @@ describe('TenantInterceptor', () => {
       expect(cls.set).toHaveBeenCalledWith('tenantId', 'missing-org')
     })
 
-    it('should fall back to activeOrganizationId on DB error', async () => {
+    it('should throw TenantResolutionException on DB error', async () => {
       // Arrange
       const cls = createMockCls(store)
-      const db = {
-        select: vi.fn().mockReturnValue({
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              limit: vi.fn().mockRejectedValue(new Error('DB connection lost')),
-            }),
-          }),
-        }),
+      const tenantRepo = {
+        lookupOrganization: vi.fn().mockRejectedValue(new Error('DB connection lost')),
       }
       const interceptor = new TenantInterceptor(
         cls as never,
         createMockReflector() as never,
-        db as never
+        tenantRepo as never,
+        createDeletedOrgService()
       )
       const context = createMockContext({
         session: { activeOrganizationId: 'org-1' },
       })
       const next = createMockCallHandler()
 
-      // Act
+      // Act & Assert
       const result$ = interceptor.intercept(context as never, next as never)
-      await lastValueFrom(result$)
-
-      // Assert
-      expect(cls.set).toHaveBeenCalledWith('tenantId', 'org-1')
+      await expect(lastValueFrom(result$)).rejects.toThrow(TenantResolutionException)
     })
 
     it('should cache resolved tenant ID in CLS and reuse it', async () => {
       // Arrange
       const cls = createMockCls(store)
-      const db = createMockDb([{ id: 'org-1', name: 'Root Org' }])
+      const rows = [{ id: 'org-1', name: 'Root Org' }]
+      const tenantRepo = createMockTenantRepo(rows)
       const interceptor = new TenantInterceptor(
         cls as never,
         createMockReflector() as never,
-        db as never
+        tenantRepo as never,
+        createDeletedOrgService()
       )
       const context = createMockContext({
         session: { activeOrganizationId: 'org-1' },
@@ -275,8 +306,8 @@ describe('TenantInterceptor', () => {
       const result2$ = interceptor.intercept(context as never, next as never)
       await lastValueFrom(result2$)
 
-      // Assert - DB select should have been called only once
-      expect(db.select).toHaveBeenCalledTimes(1)
+      // Assert - tenant repo lookup should have been called only once
+      expect(tenantRepo.lookupOrganization).toHaveBeenCalledTimes(1)
       // tenantId should be set twice (once per intercept call)
       const allCalls = (cls.set as ReturnType<typeof vi.fn>).mock.calls as unknown[][]
       const tenantIdCalls = allCalls.filter((call) => call[0] === 'tenantId')
@@ -288,11 +319,13 @@ describe('TenantInterceptor', () => {
     it('should treat null parentOrganizationId as root org', async () => {
       // Arrange
       const cls = createMockCls(store)
-      const db = createMockDb([{ id: 'org-1', name: 'Root Org', parentOrganizationId: null }])
+      const rows = [{ id: 'org-1', name: 'Root Org', parentOrganizationId: null }]
+      const tenantRepo = createMockTenantRepo(rows)
       const interceptor = new TenantInterceptor(
         cls as never,
         createMockReflector() as never,
-        db as never
+        tenantRepo as never,
+        createDeletedOrgService()
       )
       const context = createMockContext({
         session: { activeOrganizationId: 'org-1' },
@@ -325,11 +358,13 @@ describe('TenantInterceptor', () => {
     it('should allow active org to pass through normally', async () => {
       // Arrange
       const cls = createMockCls(store)
-      const db = createMockDb([createActiveOrgRow()])
+      const rows = [createActiveOrgRow()]
+      const tenantRepo = createMockTenantRepo(rows)
       const interceptor = new TenantInterceptor(
         cls as never,
         createMockReflector() as never,
-        db as never
+        tenantRepo as never,
+        createDeletedOrgService()
       )
       const context = createMockContextWithRoute(
         'org-1',
@@ -350,11 +385,13 @@ describe('TenantInterceptor', () => {
     it('should block soft-deleted org on regular operations', async () => {
       // Arrange
       const cls = createMockCls(store)
-      const db = createMockDb([createDeletedOrgRow()])
+      const rows = [createDeletedOrgRow()]
+      const tenantRepo = createMockTenantRepo(rows)
       const interceptor = new TenantInterceptor(
         cls as never,
         createMockReflector() as never,
-        db as never
+        tenantRepo as never,
+        createDeletedOrgService()
       )
       const context = createMockContextWithRoute(
         'org-1',
@@ -371,11 +408,13 @@ describe('TenantInterceptor', () => {
     it('should allow soft-deleted org POST to reactivate endpoint', async () => {
       // Arrange
       const cls = createMockCls(store)
-      const db = createMockDb([createDeletedOrgRow()])
+      const rows = [createDeletedOrgRow()]
+      const tenantRepo = createMockTenantRepo(rows)
       const interceptor = new TenantInterceptor(
         cls as never,
         createMockReflector() as never,
-        db as never
+        tenantRepo as never,
+        createDeletedOrgService()
       )
       const context = createMockContextWithRoute(
         'org-1',
@@ -395,11 +434,13 @@ describe('TenantInterceptor', () => {
     it('should allow soft-deleted org GET to org detail endpoint', async () => {
       // Arrange
       const cls = createMockCls(store)
-      const db = createMockDb([createDeletedOrgRow()])
+      const rows = [createDeletedOrgRow()]
+      const tenantRepo = createMockTenantRepo(rows)
       const interceptor = new TenantInterceptor(
         cls as never,
         createMockReflector() as never,
-        db as never
+        tenantRepo as never,
+        createDeletedOrgService()
       )
       const context = createMockContextWithRoute('org-1', 'GET', '/api/organizations/org-1')
       const next = createMockCallHandler()
@@ -415,11 +456,13 @@ describe('TenantInterceptor', () => {
     it('should block non-POST method to reactivate endpoint', async () => {
       // Arrange
       const cls = createMockCls(store)
-      const db = createMockDb([createDeletedOrgRow()])
+      const rows = [createDeletedOrgRow()]
+      const tenantRepo = createMockTenantRepo(rows)
       const interceptor = new TenantInterceptor(
         cls as never,
         createMockReflector() as never,
-        db as never
+        tenantRepo as never,
+        createDeletedOrgService()
       )
       const context = createMockContextWithRoute(
         'org-1',
@@ -436,11 +479,13 @@ describe('TenantInterceptor', () => {
     it('should include deleteScheduledFor and errorCode in error response', async () => {
       // Arrange
       const cls = createMockCls(store)
-      const db = createMockDb([createDeletedOrgRow()])
+      const rows = [createDeletedOrgRow()]
+      const tenantRepo = createMockTenantRepo(rows)
       const interceptor = new TenantInterceptor(
         cls as never,
         createMockReflector() as never,
-        db as never
+        tenantRepo as never,
+        createDeletedOrgService()
       )
       const context = createMockContextWithRoute(
         'org-1',

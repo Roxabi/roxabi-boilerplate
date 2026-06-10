@@ -331,15 +331,16 @@ describe('AdminSettingsController', () => {
       expect(result.success).toBe(false)
     })
 
-    it('should reject update with missing value', () => {
-      // Arrange
+    it('should accept update with missing value (z.unknown allows undefined)', () => {
+      // Arrange — value field is z.unknown() which includes undefined;
+      // the dead 'value in obj' refine was removed (Fix #6: it was redundant)
       const input = { updates: [{ key: 'app.name' }] }
 
       // Act
       const result = settingsUpdateSchema.safeParse(input)
 
       // Assert
-      expect(result.success).toBe(false)
+      expect(result.success).toBe(true)
     })
 
     it('should reject missing updates field entirely', () => {

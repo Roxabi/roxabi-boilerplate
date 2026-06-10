@@ -932,5 +932,9 @@
   "api_keys_no_permission_description": "Vous n'avez pas la permission de gérer les clés API de cette organisation.",
   "api_keys_no_org_title": "Aucune organisation sélectionnée",
   "api_keys_no_org_description": "Sélectionnez une organisation pour gérer ses clés API.",
-  "api_keys_never": "Jamais"
+  "api_keys_never": "Jamais",
+  "admin_error_boundary_title": "Une erreur est survenue",
+  "admin_error_boundary_detail": "Une erreur inattendue s'est produite.",
+  "admin_error_boundary_go_back": "Retour",
+  "admin_error_boundary_retry": "Réessayer"
 }

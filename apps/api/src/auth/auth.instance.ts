@@ -14,16 +14,18 @@ import { magicLink } from 'better-auth/plugins/magic-link'
 import { organization } from 'better-auth/plugins/organization'
 import { eq } from 'drizzle-orm'
 import { buildFrontendUrl } from '../common/url.util.js'
-import { toError } from '../common/utils/toError.js'
 import type { DrizzleDB } from '../database/drizzle.provider.js'
 import { users } from '../database/schema/auth.schema.js'
-import { QUEUE_NAMES } from '../queue/queue.constants.js'
 import type { QueueEnqueuer } from '../queue/queue.provider.js'
+import { renderEmailTemplate, sendTemplatedEmail } from './helpers/sendTemplatedEmail.js'
 
 const logger = new Logger('AuthInstance')
 
-const APP_NAME = process.env.APP_NAME ?? 'App'
 const SUPPORTED_LOCALES = ['en', 'fr']
+
+const SESSION_EXPIRES_IN = 60 * 60 * 24 * 7 // 7 days
+const SESSION_UPDATE_AGE = 60 * 60 * 24 // 24 hours
+const SESSION_COOKIE_CACHE_MAX_AGE = 5 * 60 // 5 minutes
 
 // Better Auth does not infer additionalFields on callback user parameters.
 // The locale field is declared in user.additionalFields above but the callback
@@ -35,6 +37,7 @@ export type AuthInstanceConfig = {
   secret: string
   baseURL: string
   appURL?: string
+  appName: string
   googleClientId?: string
   googleClientSecret?: string
   githubClientId?: string
@@ -72,32 +75,30 @@ function buildEmailAndPasswordConfig(queueService: QueueEnqueuer, config: AuthIn
       const loginUrl = config.appURL ? `${config.appURL}/login` : '/login'
       const locale = user.locale ?? 'en'
 
-      let emailContent: { html: string; text?: string; subject: string }
-      try {
-        const { html, text, subject } = await renderExistingAccountEmail(loginUrl, locale, {
-          appUrl: config.appURL,
-          appName: APP_NAME,
-        })
-        emailContent = { html, text, subject }
-      } catch {
-        logger.warn('Failed to render existing account email template, using plain fallback')
-        emailContent = {
+      const emailContent = await renderEmailTemplate(
+        async () =>
+          renderExistingAccountEmail(loginUrl, locale, {
+            appUrl: config.appURL,
+            appName: config.appName,
+          }),
+        {
           subject: 'Someone tried to sign up with your email',
           html: `<p>Someone tried to create an account using your email. <a href="${escapeHtml(loginUrl)}">Sign in</a> to your existing account instead.</p>`,
           text: `Someone tried to create an account using your email. Sign in instead: ${loginUrl}`,
-        }
-      }
+        },
+        logger,
+        'Failed to render existing account email template, using plain fallback'
+      )
 
-      try {
-        await queueService.enqueue(QUEUE_NAMES.EMAIL_SEND, { to: user.email, ...emailContent })
-      } catch (error) {
-        // Best-effort: unlike other handlers, must not throw — would break enumeration protection
-        const cause = toError(error)
-        logger.error(
-          `Failed to enqueue existing account notification to ${user.email}`,
-          cause.stack
-        )
-      }
+      // Best-effort: unlike other handlers, must not throw — would break enumeration protection
+      await sendTemplatedEmail(
+        queueService,
+        user.email,
+        emailContent,
+        logger,
+        `Failed to enqueue existing account notification to ${user.email}`,
+        false
+      )
     },
     async sendResetPassword({
       user,
@@ -107,31 +108,30 @@ function buildEmailAndPasswordConfig(queueService: QueueEnqueuer, config: AuthIn
       url: string
     }) {
       const emailUrl = buildFrontendUrl(url, config.appURL, '/reset-password/confirm')
+      const locale = (user as UserWithLocale).locale ?? 'en'
 
-      let emailContent: { html: string; text?: string; subject: string }
-      try {
-        const locale = (user as UserWithLocale).locale ?? 'en'
-        const { html, text, subject } = await renderResetEmail(emailUrl, locale, {
-          appUrl: config.appURL,
-          appName: APP_NAME,
-        })
-        emailContent = { html, text, subject }
-      } catch {
-        logger.warn('Failed to render reset password email template, using plain fallback')
-        emailContent = {
+      const emailContent = await renderEmailTemplate(
+        async () =>
+          renderResetEmail(emailUrl, locale, {
+            appUrl: config.appURL,
+            appName: config.appName,
+          }),
+        {
           subject: 'Reset your password',
           html: `<p>Click <a href="${escapeHtml(emailUrl)}">here</a> to reset your password.</p>`,
           text: `Reset your password: ${emailUrl}`,
-        }
-      }
+        },
+        logger,
+        'Failed to render reset password email template, using plain fallback'
+      )
 
-      try {
-        await queueService.enqueue(QUEUE_NAMES.EMAIL_SEND, { to: user.email, ...emailContent })
-      } catch (error) {
-        const cause = toError(error)
-        logger.error(`Failed to enqueue reset password email to ${user.email}`, cause.stack)
-        throw new APIError('INTERNAL_SERVER_ERROR', { message: 'EMAIL_SEND_FAILED' })
-      }
+      await sendTemplatedEmail(
+        queueService,
+        user.email,
+        emailContent,
+        logger,
+        `Failed to enqueue reset password email to ${user.email}`
+      )
     },
   }
 }
@@ -151,31 +151,30 @@ function buildEmailVerificationConfig(queueService: QueueEnqueuer, config: AuthI
       url: string
     }) {
       const emailUrl = buildFrontendUrl(url, config.appURL, '/verify-email')
+      const locale = (user as UserWithLocale).locale ?? 'en'
 
-      let emailContent: { html: string; text?: string; subject: string }
-      try {
-        const locale = (user as UserWithLocale).locale ?? 'en'
-        const { html, text, subject } = await renderVerificationEmail(emailUrl, locale, {
-          appUrl: config.appURL,
-          appName: APP_NAME,
-        })
-        emailContent = { html, text, subject }
-      } catch {
-        logger.warn('Failed to render verification email template, using plain fallback')
-        emailContent = {
+      const emailContent = await renderEmailTemplate(
+        async () =>
+          renderVerificationEmail(emailUrl, locale, {
+            appUrl: config.appURL,
+            appName: config.appName,
+          }),
+        {
           subject: 'Verify your email',
           html: `<p>Click <a href="${escapeHtml(emailUrl)}">here</a> to verify your email.</p>`,
           text: `Verify your email: ${emailUrl}`,
-        }
-      }
+        },
+        logger,
+        'Failed to render verification email template, using plain fallback'
+      )
 
-      try {
-        await queueService.enqueue(QUEUE_NAMES.EMAIL_SEND, { to: user.email, ...emailContent })
-      } catch (error) {
-        const cause = toError(error)
-        logger.error(`Failed to enqueue verification email to ${user.email}`, cause.stack)
-        throw new APIError('INTERNAL_SERVER_ERROR', { message: 'EMAIL_SEND_FAILED' })
-      }
+      await sendTemplatedEmail(
+        queueService,
+        user.email,
+        emailContent,
+        logger,
+        `Failed to enqueue verification email to ${user.email}`
+      )
     },
   }
 }
@@ -198,30 +197,30 @@ function buildMagicLinkPlugin(
         throw new APIError('BAD_REQUEST', { message: 'USER_NOT_FOUND' })
       }
 
-      let emailContent: { html: string; text?: string; subject: string }
-      try {
-        const locale = userData.locale ?? 'en'
-        const { html, text, subject } = await renderMagicLinkEmail(emailUrl, locale, {
-          appUrl: config.appURL,
-          appName: APP_NAME,
-        })
-        emailContent = { html, text, subject }
-      } catch {
-        logger.warn('Failed to render magic link email template, using plain fallback')
-        emailContent = {
-          subject: `Sign in to ${escapeHtml(APP_NAME)}`,
-          html: `<p>Click <a href="${escapeHtml(emailUrl)}">here</a> to sign in.</p>`,
-          text: `Sign in to ${escapeHtml(APP_NAME)}: ${emailUrl}`,
-        }
-      }
+      const locale = userData.locale ?? 'en'
 
-      try {
-        await queueService.enqueue(QUEUE_NAMES.EMAIL_SEND, { to: email, ...emailContent })
-      } catch (error) {
-        const cause = toError(error)
-        logger.error(`Failed to enqueue magic link email to ${email}`, cause.stack)
-        throw new APIError('INTERNAL_SERVER_ERROR', { message: 'EMAIL_SEND_FAILED' })
-      }
+      const emailContent = await renderEmailTemplate(
+        async () =>
+          renderMagicLinkEmail(emailUrl, locale, {
+            appUrl: config.appURL,
+            appName: config.appName,
+          }),
+        {
+          subject: `Sign in to ${escapeHtml(config.appName)}`,
+          html: `<p>Click <a href="${escapeHtml(emailUrl)}">here</a> to sign in.</p>`,
+          text: `Sign in to ${escapeHtml(config.appName)}: ${emailUrl}`,
+        },
+        logger,
+        'Failed to render magic link email template, using plain fallback'
+      )
+
+      await sendTemplatedEmail(
+        queueService,
+        email,
+        emailContent,
+        logger,
+        `Failed to enqueue magic link email to ${email}`
+      )
     },
   })
 }
@@ -239,7 +238,7 @@ function buildOrganizationPlugin(onOrganizationCreated?: OrganizationCreatedCall
     organizationHooks: onOrganizationCreated
       ? {
           afterCreateOrganization: async ({ organization: org, member }) => {
-            onOrganizationCreated({
+            await onOrganizationCreated({
               organizationId: org.id,
               creatorUserId: member.userId,
             })
@@ -301,9 +300,9 @@ export function createBetterAuth(
     emailVerification: buildEmailVerificationConfig(queueService, config),
     socialProviders: buildSocialProviders(config),
     session: {
-      expiresIn: 60 * 60 * 24 * 7,
-      updateAge: 60 * 60 * 24,
-      cookieCache: { enabled: true, maxAge: 5 * 60 },
+      expiresIn: SESSION_EXPIRES_IN,
+      updateAge: SESSION_UPDATE_AGE,
+      cookieCache: { enabled: true, maxAge: SESSION_COOKIE_CACHE_MAX_AGE },
     },
     plugins: [
       buildOrganizationPlugin(onOrganizationCreated),

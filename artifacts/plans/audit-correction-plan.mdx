@@ -1,0 +1,130 @@
+---
+title: "Audit Correction — Implementation Plan"
+description: "Consolidated execution plan for all 5 audit-correction phases."
+---
+
+# Audit Correction Implementation Plan
+
+## 1. Worktree Setup
+
+| Field | Value |
+|-------|-------|
+| Branch | `feat/audit-correction` |
+| Worktree | `../roxabi-audit-correction` (`.claude/worktrees/audit-correction`) |
+| DB branch | `audit-correction` (per-worktree) |
+| Tier | F-full (multi-domain, DB schema changes, reversibility concerns) |
+
+**Pre-flight**
+```bash
+cp .env.example .env
+bun install
+bun run db:up
+bun run db:branch:create --force audit-correction
+```
+
+## 2. Task List
+
+### Phase 1: Tenant Isolation
+
+| Task | ID | Owner | Deliverables |
+|------|----|-------|-------------|
+| Add tenantId to auth schema tables | T1.1 | backend-dev | `auth.schema.ts`: add `deletedAt` to `members`, add `tenantId` to `users` and auth tables |
+| Create RLS migration | T1.2 | backend-dev | Migration: `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` for all tenant-scoped tables; apply `create_tenant_rls_policy` where missing |
+| Fix findCandidatesByLastFour | T1.3 | backend-dev | `drizzleApiKey.repository.ts`: scope `findCandidatesByLastFour` by `tenantId`; returns `[]` when tenant has no matching keys |
+| Fix RBAC repo methods | T1.4 | backend-dev | `drizzleRbac.repository.ts`: add `tenantId` to `findRoleById`, `updateRole`, `deleteRole`, `getRolePermissions`, `listRolesWithPermissions`, `reassignMembersToRole` |
+| Fix API key mutations | T1.5 | backend-dev | `drizzleApiKey.repository.ts`: scope `markRevoked` and `touchLastUsedAt` by `tenantId`; reject updates when tenant does not match |
+| Fix TenantInterceptor fail-closed | T1.6 | backend-dev | `tenant.interceptor.ts`: throw `TenantResolutionException` on any DB error in `resolveParentOrg`; add `banExpires` check in `AuthGuard`; guard `owner` role promotion in `rbacMember.service.ts`; add `whereActive(members)` to all members queries |
+
+**Phase 1 tests:** `drizzleApiKey.repository.test.ts`, `drizzleRbac.repository.test.ts`, `rbacMember.service.test.ts`, `auth.guard.test.ts`, `members.test.tsx`, `settings.test.tsx`, `dashboard.test.tsx`, `api-keys.test.ts`
+
+### Phase 2: Error Handling
+
+| Task | ID | Owner | Deliverables |
+|------|----|-------|-------------|
+| Create apiClient with ApiError | T2.1 | frontend-dev | **New** `apps/web/src/lib/apiClient.ts`: uniform error handling, `ApiError` class, `credentials: 'include'`, malformed-JSON guard |
+| Fix backend catch blocks | T2.2 | backend-dev | `v1Exception.filter.ts`: inject `Logger`, log every 5xx; `database.module.ts`: inspect and log non-missing-table errors; `auth.guard.ts`: add `logger.warn` to `touchLastUsedAt` catch |
+| Fix frontend silent failures | T2.3 | frontend-dev | All `apps/web/src/routes/*.tsx` + `apps/web/src/lib/*.ts`: replace bare `catch {}` with `console.error(error)` + contextual `toast.error(...)`; replace generic `throw new Error('Failed to fetch...')` with structured `ApiError` |
+| Add exception filters | T2.4 | backend-dev | `admin/filters/`: register `SuperadminProtectionException` (403) and `NotDeletedException` (400); `api-key/filters/`: register `ApiKeyInsertFailedException` (500); add `errorComponent` to all admin routes |
+
+**Phase 2 tests:** `adminBadRequest.filter.test.ts`, `adminForbidden.filter.test.ts` (new), `apiKeyException.filter.test.ts`, `v1Exception.filter.test.ts`, `apiClient.test.ts` (new), `auth.integration.spec.ts` (replace tautology)
+
+### Phase 3: Architecture
+
+| Task | ID | Owner | Deliverables |
+|------|----|-------|-------------|
+| Extract OrgRepository | T3.1 | backend-dev | **New** `membership.repository.ts` (extract org/member/invitation/session from `UserRepository`); **New** `gdprExport.repository.ts` + `gdprAnonymization.repository.ts`; **New** `organizationPurge.repository.ts`; update all call sites |
+| Move TenantInterceptor queries to TenantRepository | T3.2 | backend-dev | **New** `tenant.repository.ts` + `organizationLookup.repository.ts`; `tenant.interceptor.ts` delegates all raw Drizzle queries to repositories |
+| Extract email helper | T3.3 | backend-dev | **New** `sendTemplatedEmail` helper; deduplicate 4 email render blocks from `auth.instance.ts` |
+| Add repository boundary lint | T3.4 | devops | Split `AdminModule` into `AdminUsersModule`, `AdminOrganizationsModule`, `AdminMembersModule`, `AdminAuditLogsModule` (thin wrapper retained); move `FeatureFlagCreateFailedException` to `feature-flags/exceptions/`; remove `DICEBEAR_CDN_DOMAIN` / `AVATAR_STYLES` from `user.controller.ts`; break `lib/consent/consentProvider.tsx` circular dep; **New** `lib/admin/api.ts` + `mutations.ts` + `queryKeys.ts`; deduplicate `BanDialog`, `ImpactSummary`, `useOrgMutations`, `useUserMutations` |
+
+**Phase 3 tests:** `membership.repository.test.ts` (new), `gdpr.service.test.ts`, `purge.service.test.ts`, `admin.module.test.ts`, `tenant.interceptor.test.ts`, `featureFlags.module.test.ts`, `consentProvider.test.tsx` (new), `lib/admin/api.test.ts` (new)
+
+### Phase 4: Async & Transactions
+
+| Task | ID | Owner | Deliverables |
+|------|----|-------|-------------|
+| Fix floating promise in auth.instance.ts | T4.1 | backend-dev | `auth.instance.ts`: `await onOrganizationCreated(...)` in `afterCreateOrganization` hook |
+| Move cache invalidation outside transactions | T4.2 | backend-dev | `user.service.ts`: move `invalidateSoftDeleteCache` outside `db.transaction` callback; `consent.controller.ts`: move `reply.setCookie()` after `await saveConsent()` succeeds |
+| Batch N+1 queries | T4.3 | backend-dev | `adminOrganizations.hierarchy.ts`: replace `getSubtreeDepth` and `getDescendantOrgIds` recursive loops with single recursive PostgreSQL CTE; `featureFlags.service.ts`: add pending-promise cache for `isEnabled` stampede protection; `drizzleRbac.repository.ts`: hoist `allPerms` outside `seedDefaultRoles` loop |
+| Merge seed + owner assignment into single transaction | T4.4 | backend-dev | `rbac.listener.ts`: merge `seedDefaultRoles` + owner assignment into single transaction; `adminMembers.service.ts`: wrap `ensureNotLastOwner` + `delete` in `db.transaction`; `adminOrganizations.service.ts`: wrap `getDepth` + `insert` in `db.transaction`; `systemSettings.service.ts`: wrap `batchUpdate` in `db.transaction`; `organization.service.ts`: wrap `reactivate` read-check-write in transaction; `email.handler.ts`: collect per-job outcomes, do not throw mid-batch |
+
+**Phase 4 tests:** `auth.instance.test.ts`, `adminMembers.service.test.ts`, `adminOrganizations.service.test.ts`, `adminOrganizations.hierarchy.test.ts`, `systemSettings.service.test.ts`, `email.handler.test.ts`, `featureFlags.service.test.ts`, `consent.controller.test.ts`
+
+### Phase 5: Config & Validation
+
+| Task | ID | Owner | Deliverables |
+|------|----|-------|-------------|
+| Replace get with getOrThrow | T5.1 | backend-dev | `auth.service.ts`: `config.getOrThrow('BETTER_AUTH_URL')` / `config.getOrThrow('APP_URL')`; `auth.instance.ts`: `configService.get('APP_NAME')` (replace `process.env`); `gdpr.controller.ts`: `configService.get('APP_NAME')` |
+| Add Zod env validation | T5.2 | backend-dev | `adminSettings.controller.ts`: replace `z.unknown()` with per-key JSON schema map; `user.controller.ts`: `orgResolutionSchema` → `z.string().uuid()`; `adminOrganizations.controller.ts` / `adminUsers.controller.ts`: replace `z.preprocess` with `z.coerce.number().int()`; `env.server.schema.ts`: remove `http://localhost:4000` default from `API_URL` |
+| Remove dead code | T5.3 | frontend-dev | All `apps/web/src/routes/`: replace `window.location.reload()` / `window.location.href` with TanStack Router `navigate()`; `routes/settings/`: remove `console.error` leaks; `legal.config.ts`: externalize to env or throw at build time if placeholder values present |
+| Add DB index | T5.4 | backend-dev | Migration: add indexes on `members.tenantId`, `users.tenantId`, `members.deletedAt` (follow-up to Phase 1 schema changes) |
+
+**Phase 5 tests:** `auth.service.test.ts`, `authClient.test.ts` (new), `env.server.schema.test.ts`, `adminSettings.controller.test.ts`, `user.controller.test.ts`, `adminOrganizations.controller.test.ts`, `adminUsers.controller.test.ts`, `account-delete.test.tsx`, `account-credentials.test.tsx`, `magic-link/verify.test.tsx`
+
+## 3. Agent Assignment
+
+| Agent | Phases | Tasks |
+|-------|--------|-------|
+| **backend-dev** | 1, 2, 3, 4, 5 | T1.1-T1.6, T2.2, T2.4, T3.1-T3.3, T4.1-T4.4, T5.1, T5.2, T5.4 |
+| **frontend-dev** | 2, 3, 5 | T2.1, T2.3, T3.4 (frontend portion), T5.3 |
+| **devops** | 3 | T3.4 (lint rule / module split coordination) |
+| **tester** | All | Write/update tests for every phase; verify gates |
+| **security-auditor** | 1 | Review T1.1-T1.6 for RLS correctness, cross-tenant leakage vectors |
+| **architect** | 3 | Review T3.1-T3.4 for bounded-context correctness, repository interface design |
+
+## 4. Execution Order
+
+**Primary (sequential):**
+```
+Phase 1  →  Phase 2  →  Phase 3  →  Phase 4  →  Phase 5
+(T1.1-6)    (T2.1-4)    (T3.1-4)    (T4.1-4)    (T5.1-4)
+```
+
+**Alternative (parallel after Phase 1):**
+```
+Phase 1 (T1.1-6)  →  ┌─────────────────────────────┐
+                      │ Phase 2, 3, 4, 5 in parallel │
+                      └─────────────────────────────┘
+```
+
+**Rationale:**
+- Phase 1 changes DB schema (`members.deletedAt`, `users.tenantId`, RLS enable). All subsequent phases reference these schema changes (e.g., `whereActive(members)`, `tenantId` filters). Schema must be stable before downstream work begins.
+- Phases 2–5 are code-only (no schema changes) and touch largely independent file groups. After Phase 1 completes, they can run in parallel.
+- **Recommended:** Phase 1 alone, then Phase 2–5 in parallel, with a reconcile step before final verification.
+
+## 5. Verification Gates
+
+| Gate | When | Command | Criteria |
+|------|------|---------|----------|
+| Phase 1 lint | After T1.6 | `bun run lint` | Zero errors |
+| Phase 1 typecheck | After T1.6 | `bun run typecheck` | Zero errors |
+| Phase 1 tests | After T1.6 | `bun run test` | All pass |
+| Phase 1 e2e | After T1.6 | `bun run test:e2e` | All pass |
+| Phase 2–5 lint | After each phase | `bun run lint` | Zero errors |
+| Phase 2–5 typecheck | After each phase | `bun run typecheck` | Zero errors |
+| Phase 2–5 tests | After each phase | `bun run test` | All pass |
+| Full CI | After all phases | `bun run lint && bun run typecheck && bun run test && bun run test:e2e` | All pass |
+| Env check | After T5.3 | `bun run env:check` | Passes |
+| DB migration check | After T1.2 | `bun run db:generate` | Migration generated, idempotent, includes RLS enable + column additions |
+
+**Exit criteria:** All gates pass. PR merged via merge-commit (no squash). Tag not required (no release).

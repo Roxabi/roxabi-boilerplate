@@ -1,0 +1,98 @@
+---
+title: "Audit Correction Phase 2 — Error Handling"
+description: "Register missing exception filters, unify frontend apiClient, and eliminate swallowed errors."
+---
+
+# Phase 2 Spec: Error Handling
+
+## Problem Statement
+
+The frontend adopted a pattern of `catch {}` with `toast.error(m.generic_message())` — the user sees a generic message while the original error (and its stack/cause/status code) is lost. Backend exception filters are incomplete: `SuperadminProtectionException` and `NotDeletedException` are thrown but never registered in `@Catch`, causing them to surface as HTTP 500. `V1ExceptionFilter` intercepts all exceptions for v1 routes but never logs them, creating an observability blind spot.
+
+**Critical findings:**
+- `apps/api/src/admin/exceptions/superadminProtection.exception.ts:3` — Exception not registered in any `@Catch` filter; falls through as HTTP 500 instead of 403 (P0).
+- `apps/api/src/admin/exceptions/notDeleted.exception.ts:3` — Exception not registered in any `@Catch` filter; falls through as HTTP 500 instead of 400 (P0).
+- `apps/api/src/rbac/rbac.controller.ts:12` — `PERMISSION_FORMAT` regex rejects underscores, breaking valid default permissions (`api_keys:read`) (P0).
+- `apps/api/src/auth/__tests__/auth.integration.spec.ts:47` — Critical tautology test: `expect(true).toBe(true)` always passes (P0).
+- `apps/api/src/api-key/apiKey.service.ts:67` — `ApiKeyInsertFailedException` thrown but not caught by `ApiKeyExceptionFilter` (P1).
+- `apps/api/src/auth/auth.instance.ts:66-100,102-137,146-181,189-225` — Email render block duplicated 4 times (P1).
+- `apps/api/src/v1/filters/v1Exception.filter.ts:28-58` — Catches all exceptions but never logs them; 500s go unlogged (P2).
+- `apps/api/src/database/database.module.ts:106` — Bare `catch` in `checkPendingMigrations` swallows non-missing-table errors (P2).
+- `apps/web/src/components/settings/PrivacyDataSection.tsx:33` — GDPR export error silently swallowed (P1).
+- `apps/web/src/lib/useOrganizations.ts:26` — `fetchOrganizations` returns `[]` on non-ok; masks API failures (P1).
+- `apps/web/src/routes/admin/members.tsx:69-72` — `fetchRoles` returns `[]` on non-ok; invite dialog shows empty select (P1).
+- `apps/web/src/components/admin/PendingInvitations.tsx:44-52` — `fetchInvitations` returns `[]` on non-ok; error UI never triggered (P1).
+
+## Solution Design
+
+1. **Register Missing Exception Filters** —
+   - Add `SuperadminProtectionException` to `AdminForbiddenFilter` (or extend `AdminBadRequestFilter` to return 403).
+   - Add `NotDeletedException` to `AdminBadRequestFilter` (return 400).
+   - Add `ApiKeyInsertFailedException` to `ApiKeyExceptionFilter` (return 500 with structured body).
+2. **V1ExceptionFilter Logging** — Inject NestJS `Logger` into `V1ExceptionFilter` and log every 5xx exception with method, path, status, and message.
+3. **Frontend apiClient** — Create `apps/web/src/lib/apiClient.ts` with uniform error handling: status code extraction, JSON parse with malformed-JSON guard, `credentials: 'include'`, and structured `ApiError` class.
+4. **Replace Generic Throws** — In all `apps/web/src/routes/admin/*.tsx` files, replace `throw new Error('Failed to fetch...')` with `ApiError` containing `status`, `message`, and `body`.
+5. **Replace Bare Catches** — In all `apps/web/src/routes/*.tsx` and `apps/web/src/lib/*.ts`, replace bare `catch {}` with `console.error(error)` + contextual `toast.error(...)`.
+6. **Admin Error Boundaries** — Add `errorComponent` to all admin routes to surface structured errors in the UI.
+7. **Auth Guard Logging** — Add `logger.warn` to `touchLastUsedAt` catch in `auth.guard.ts`.
+8. **Email Helper Extraction** — Extract shared `sendTemplatedEmail` helper from the 4 duplicated blocks in `auth.instance.ts`.
+9. **CLI Error Classes** — Introduce `CliAuthError` and `ApiPathError` in `packages/cli/src/lib/client.ts`.
+
+## Acceptance Criteria
+
+1. `SuperadminProtectionException` returns HTTP 403 with structured body.
+2. `NotDeletedException` returns HTTP 400 with structured body.
+3. `ApiKeyInsertFailedException` returns HTTP 500 with structured body.
+4. `V1ExceptionFilter` logs every 5xx exception with `Logger`.
+5. Zero bare `catch {}` blocks in `apps/web/src/routes/` and `apps/web/src/lib/` (all log or throw).
+6. Zero generic `throw new Error('Failed to fetch...')` in admin routes (all use structured `ApiError`).
+7. `res.json().catch(() => null)` replaced with `res.json().catch(() => { throw new Error('Malformed JSON') })` or similar.
+8. All admin routes define `errorComponent`.
+9. `bun run test` passes, `bun run lint` passes.
+
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `apps/api/src/admin/filters/` | Register `SuperadminProtectionException` and `NotDeletedException` |
+| `apps/api/src/api-key/filters/` | Register `ApiKeyInsertFailedException` |
+| `apps/api/src/v1/filters/v1Exception.filter.ts` | Inject `Logger`, log 5xx errors |
+| `apps/api/src/auth/auth.guard.ts` | Add `logger.warn` to `touchLastUsedAt` catch |
+| `apps/api/src/auth/auth.instance.ts` | Extract shared `sendTemplatedEmail` helper |
+| `apps/api/src/database/database.module.ts` | Inspect error in `checkPendingMigrations`; log at `error` level if not "relation does not exist" |
+| `apps/web/src/lib/apiClient.ts` | **New file** — shared `apiClient` with uniform error handling |
+| `apps/web/src/routes/admin/*.tsx` | Replace generic throws with structured `ApiError` |
+| `apps/web/src/routes/*.tsx` | Replace bare `catch {}` with `console.error` + contextual toast |
+| `apps/web/src/routes/admin/*.tsx` | Add `errorComponent` to all admin routes |
+| `apps/web/src/components/settings/PrivacyDataSection.tsx` | Add `toast.error` + `console.error` in catch block |
+| `apps/web/src/lib/useOrganizations.ts` | Throw on non-ok response |
+| `apps/web/src/routes/admin/members.tsx` | `fetchRoles` throws on non-ok |
+| `apps/web/src/components/admin/PendingInvitations.tsx` | `fetchInvitations` throws on non-ok |
+| `packages/cli/src/lib/client.ts` | Introduce `CliAuthError` and `ApiPathError` |
+
+## Tests to Add/Update
+
+| Test File | What to Add |
+|-----------|-------------|
+| `apps/api/src/admin/filters/adminBadRequest.filter.test.ts` | Assert `NotDeletedException` → 400 |
+| `apps/api/src/admin/filters/adminForbidden.filter.test.ts` | **New** — assert `SuperadminProtectionException` → 403 |
+| `apps/api/src/api-key/filters/apiKeyException.filter.test.ts` | Assert `ApiKeyInsertFailedException` → 500 |
+| `apps/api/src/v1/filters/v1Exception.filter.test.ts` | Assert 5xx exceptions are logged |
+| `apps/web/src/lib/apiClient.test.ts` | **New** — assert `ApiError` captures status, body, message; assert malformed JSON throws |
+| `apps/web/src/routes/admin/members.test.tsx` | Assert `fetchRoles` error surfaces in UI |
+| `apps/web/src/components/admin/PendingInvitations.test.tsx` | Assert `fetchInvitations` error shows error UI |
+| `apps/api/src/auth/__tests__/auth.integration.spec.ts` | Replace tautology with real assertions on `_hasValidateToken` / `_hasHashPassword` |
+
+## Migration Steps
+
+1. No DB schema changes.
+2. Deploy backend filters first (no breaking change — they only improve HTTP status codes).
+3. Deploy frontend `apiClient` next (additive; old `Error` instances still work).
+4. Verify all toasts still render correctly after catch-block replacements.
+
+## Rollback Plan
+
+1. **Exception filters** are additive; old `Error` instances still work. Revert individual filter registrations if needed.
+2. **Frontend `apiClient`** — old `Error` instances still work. Revert individual catch changes if needed.
+3. **V1ExceptionFilter logging** — revert to no-op by commenting out the logger injection.
+4. If structured errors break frontend error parsing, temporarily switch `ApiError` to plain `{ status, message, errorCode }` object.

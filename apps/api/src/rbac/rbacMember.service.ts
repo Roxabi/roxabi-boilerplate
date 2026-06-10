@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common'
-import { ClsService } from 'nestjs-cls'
-import { TenantService } from '../tenant/tenant.service.js'
+import type { ClsService } from 'nestjs-cls'
+import type { TenantService } from '../tenant/tenant.service.js'
 import { MemberNotFoundException } from './exceptions/memberNotFound.exception.js'
 import { OwnershipConstraintException } from './exceptions/ownershipConstraint.exception.js'
 import { RoleNotFoundException } from './exceptions/roleNotFound.exception.js'
@@ -84,9 +84,15 @@ export class RbacMemberService {
         throw new MemberNotFoundException(memberId)
       }
 
-      // Check if removing last Owner
+      // Guard owner role assignment and removal
       if (member.roleId) {
         const currentRole = await this.repo.findRoleById(member.roleId, tx)
+
+        if (role.slug === 'owner' && currentRole?.slug !== 'owner') {
+          throw new OwnershipConstraintException(
+            'Cannot assign owner role directly — use transferOwnership'
+          )
+        }
 
         if (currentRole?.slug === 'owner' && role.slug !== 'owner') {
           // Count Owners

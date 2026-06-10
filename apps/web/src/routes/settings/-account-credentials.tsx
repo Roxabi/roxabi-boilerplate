@@ -49,7 +49,6 @@ function EmailChangeSection() {
     try {
       const { error } = await authClient.changeEmail({ newEmail })
       if (error) {
-        console.error('Email change error:', error.message)
         toast.error(m.account_email_change_error())
       } else {
         toast.success(m.account_email_change_success({ email: newEmail }))
@@ -110,7 +109,6 @@ function PasswordChangeSection() {
         newPassword,
       })
       if (error) {
-        console.error('Password change error:', error.message)
         toast.error(m.account_password_update_error())
       } else {
         toast.success(m.account_password_update_success())

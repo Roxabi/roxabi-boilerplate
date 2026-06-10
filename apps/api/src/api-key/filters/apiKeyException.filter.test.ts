@@ -1,6 +1,7 @@
 import { HttpStatus } from '@nestjs/common'
 import { describe, expect, it, vi } from 'vitest'
 import { ApiKeyExpiryInPastException } from '../exceptions/apiKeyExpiryInPast.exception.js'
+import { ApiKeyInsertFailedException } from '../exceptions/apiKeyInsertFailed.exception.js'
 import { ApiKeyNotFoundException } from '../exceptions/apiKeyNotFound.exception.js'
 import { ApiKeyScopesExceededException } from '../exceptions/apiKeyScopesExceeded.exception.js'
 import { ApiKeyExceptionFilter } from './apiKeyException.filter.js'
@@ -135,6 +136,38 @@ describe('ApiKeyExceptionFilter', () => {
       const body = getSentBody()
       expect(body.errorCode).toBe('API_KEY_EXPIRY_IN_PAST')
       expect(body.message).toBe('Expiry date must be in the future')
+    })
+  })
+
+  describe('ApiKeyInsertFailedException', () => {
+    it('should respond with 500 status code', () => {
+      // Arrange
+      const cls = createMockCls()
+      const filter = new ApiKeyExceptionFilter(cls as never)
+      const { host, statusFn } = createMockHost()
+      const exception = new ApiKeyInsertFailedException()
+
+      // Act
+      filter.catch(exception, host as never)
+
+      // Assert
+      expect(statusFn).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR)
+    })
+
+    it('should include errorCode API_KEY_INSERT_FAILED in the body', () => {
+      // Arrange
+      const cls = createMockCls()
+      const filter = new ApiKeyExceptionFilter(cls as never)
+      const { host, getSentBody } = createMockHost()
+      const exception = new ApiKeyInsertFailedException()
+
+      // Act
+      filter.catch(exception, host as never)
+
+      // Assert
+      const body = getSentBody()
+      expect(body.errorCode).toBe('API_KEY_INSERT_FAILED')
+      expect(body.message).toBe('An internal error occurred')
     })
   })
 

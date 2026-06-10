@@ -2,10 +2,13 @@ import { Injectable, Logger } from '@nestjs/common'
 import { OnEvent } from '@nestjs/event-emitter'
 import {
   ORGANIZATION_SOFT_DELETED,
-  OrganizationSoftDeletedEvent,
+  type OrganizationSoftDeletedEvent,
 } from '../common/events/organizationSoftDeleted.event.js'
-import { USER_SOFT_DELETED, UserSoftDeletedEvent } from '../common/events/userSoftDeleted.event.js'
-import { ApiKeyService } from './apiKey.service.js'
+import {
+  USER_SOFT_DELETED,
+  type UserSoftDeletedEvent,
+} from '../common/events/userSoftDeleted.event.js'
+import type { ApiKeyService } from './apiKey.service.js'
 
 @Injectable()
 export class ApiKeyListener {

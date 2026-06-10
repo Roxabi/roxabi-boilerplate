@@ -26,7 +26,7 @@ export class AuthController {
   @All('api/auth/*')
   @AllowAnonymous()
   async handleAuth(@Req() req: FastifyRequest, @Res() reply: FastifyReply) {
-    const url = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`)
+    const url = new URL(req.url, `${req.protocol}://${req.headers.host}`)
     const headers = toFetchHeaders(req)
 
     const body =

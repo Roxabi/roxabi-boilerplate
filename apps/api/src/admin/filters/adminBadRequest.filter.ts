@@ -6,6 +6,7 @@ import { SettingValidationException } from '../../system-settings/index.js'
 import { FlagKeyInvalidException } from '../exceptions/flagKeyInvalid.exception.js'
 import { LastOwnerConstraintException } from '../exceptions/lastOwnerConstraint.exception.js'
 import { LastSuperadminException } from '../exceptions/lastSuperadmin.exception.js'
+import { NotDeletedException } from '../exceptions/notDeleted.exception.js'
 import { OrgCycleDetectedException } from '../exceptions/orgCycleDetected.exception.js'
 import { OrgDepthExceededException } from '../exceptions/orgDepthExceeded.exception.js'
 import { SelfActionException } from '../exceptions/selfAction.exception.js'
@@ -24,6 +25,7 @@ type AdminBadRequestException =
   | OrgCycleDetectedException
   | SettingValidationException
   | FlagKeyInvalidException
+  | NotDeletedException
 
 @Catch(
   LastOwnerConstraintException,
@@ -35,7 +37,8 @@ type AdminBadRequestException =
   OrgDepthExceededException,
   OrgCycleDetectedException,
   SettingValidationException,
-  FlagKeyInvalidException
+  FlagKeyInvalidException,
+  NotDeletedException
 )
 export class AdminBadRequestFilter implements ExceptionFilter {
   constructor(private readonly cls: ClsService) {}

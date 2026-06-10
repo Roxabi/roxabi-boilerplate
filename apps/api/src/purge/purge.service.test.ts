@@ -1,217 +1,154 @@
 import { describe, expect, it, vi } from 'vitest'
+import type { UserPurgeRepository } from '../user/userPurge.repository.js'
+import type { UserPurgeService } from '../user/userPurge.service.js'
 import { PurgeService } from './purge.service.js'
+import type { OrganizationPurgeRepository } from './repositories/organizationPurge.repository.js'
 
-function createMockDb() {
-  const deleteFn = vi.fn().mockReturnValue({
-    where: vi.fn().mockResolvedValue([]),
-  })
-
+function createMockUserPurgeRepo(expiredUsers: { id: string; email: string }[] = []) {
   return {
-    db: {
-      select: vi.fn(),
-      update: vi.fn(),
-      delete: deleteFn,
-      transaction: vi.fn(),
-    },
-  }
+    findExpiredUsers: vi.fn().mockResolvedValue(expiredUsers),
+    anonymizeUserRecords: vi.fn().mockResolvedValue(undefined),
+    findForPurgeValidation: vi.fn().mockResolvedValue(null),
+    purgeOwnedOrganizations: vi.fn().mockResolvedValue(undefined),
+  } as unknown as UserPurgeRepository
+}
+
+function createMockOrgPurgeRepo(
+  expiredOrgs: { id: string; name: string; slug: string | null }[] = []
+) {
+  return {
+    findExpiredOrganizations: vi.fn().mockResolvedValue(expiredOrgs),
+    anonymizeOrganization: vi.fn().mockResolvedValue(undefined),
+  } as unknown as OrganizationPurgeRepository
 }
 
 function createMockUserPurgeService() {
   return {
     anonymizeUserRecords: vi.fn().mockResolvedValue(undefined),
-  }
-}
-
-function setupSelectChain(db: ReturnType<typeof createMockDb>['db'], results: unknown[][]) {
-  let callIndex = 0
-  db.select = vi.fn().mockImplementation(() => {
-    const data = results[callIndex] ?? []
-    callIndex++
-    return {
-      from: vi.fn().mockReturnValue({
-        where: vi.fn().mockReturnValue({
-          limit: vi.fn().mockResolvedValue(data),
-        }),
-      }),
-    }
-  })
+  } as unknown as UserPurgeService
 }
 
 describe('PurgeService', () => {
   describe('runPurge', () => {
     it('should anonymize users whose deleteScheduledFor has passed', async () => {
-      const { db } = createMockDb()
-      const userPurgeService = createMockUserPurgeService()
       const expiredUser = { id: 'user-1', email: 'john@example.com' }
+      const userPurgeRepo = createMockUserPurgeRepo([expiredUser])
+      const orgPurgeRepo = createMockOrgPurgeRepo([])
+      const userPurgeService = createMockUserPurgeService()
 
-      // First select: expired users; Second select: expired orgs
-      setupSelectChain(db, [[expiredUser], []])
-
-      db.transaction.mockImplementation(async (cb: (tx: unknown) => Promise<unknown>) => {
-        const tx = {}
-        return cb(tx)
-      })
-
-      const service = new PurgeService(db as never, userPurgeService as never)
+      const service = new PurgeService(userPurgeRepo, orgPurgeRepo, userPurgeService)
       const result = await service.runPurge()
 
       expect(result.usersAnonymized).toBe(1)
-      expect(db.transaction).toHaveBeenCalledTimes(1)
       expect(userPurgeService.anonymizeUserRecords).toHaveBeenCalledTimes(1)
     })
 
     it('should anonymize organizations whose deleteScheduledFor has passed', async () => {
-      const { db } = createMockDb()
-      const userPurgeService = createMockUserPurgeService()
       const expiredOrg = { id: 'org-1', name: 'Test Org', slug: 'test-org' }
+      const userPurgeRepo = createMockUserPurgeRepo([])
+      const orgPurgeRepo = createMockOrgPurgeRepo([expiredOrg])
+      const userPurgeService = createMockUserPurgeService()
 
-      // First select: no expired users; Second select: expired orgs
-      setupSelectChain(db, [[], [expiredOrg]])
-
-      db.transaction.mockImplementation(async (cb: (tx: unknown) => Promise<unknown>) => {
-        const tx = {
-          update: vi.fn().mockReturnValue({
-            set: vi.fn().mockReturnValue({
-              where: vi.fn().mockResolvedValue([]),
-            }),
-          }),
-          delete: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([]),
-          }),
-        }
-        return cb(tx)
-      })
-
-      const service = new PurgeService(db as never, userPurgeService as never)
+      const service = new PurgeService(userPurgeRepo, orgPurgeRepo, userPurgeService)
       const result = await service.runPurge()
 
       expect(result.orgsAnonymized).toBe(1)
-      expect(db.transaction).toHaveBeenCalledTimes(1)
+      expect(orgPurgeRepo.anonymizeOrganization).toHaveBeenCalledTimes(1)
     })
 
     it('should process users before organizations', async () => {
-      const { db } = createMockDb()
-      const userPurgeService = createMockUserPurgeService()
       const expiredUser = { id: 'user-1', email: 'john@example.com' }
       const expiredOrg = { id: 'org-1', name: 'Org', slug: 'org' }
+      const callOrder: string[] = []
 
-      setupSelectChain(db, [[expiredUser], [expiredOrg]])
+      const userPurgeRepo = createMockUserPurgeRepo([expiredUser])
+      const orgPurgeRepo = createMockOrgPurgeRepo([expiredOrg])
+      const userPurgeService = createMockUserPurgeService()
 
-      db.transaction.mockImplementation(async (cb: (tx: unknown) => Promise<unknown>) => {
-        const tx = {
-          update: vi.fn().mockReturnValue({
-            set: vi.fn().mockReturnValue({
-              where: vi.fn().mockResolvedValue([]),
-            }),
-          }),
-          delete: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([]),
-          }),
-        }
-        return cb(tx)
+      vi.mocked(userPurgeService.anonymizeUserRecords).mockImplementation(async () => {
+        callOrder.push('user')
+      })
+      vi.mocked(orgPurgeRepo.anonymizeOrganization).mockImplementation(async () => {
+        callOrder.push('org')
       })
 
-      const service = new PurgeService(db as never, userPurgeService as never)
+      const service = new PurgeService(userPurgeRepo, orgPurgeRepo, userPurgeService)
       const result = await service.runPurge()
 
-      // Users should be processed first (select call order: index 0 = users, index 1 = orgs)
       expect(result.usersAnonymized).toBe(1)
       expect(result.orgsAnonymized).toBe(1)
-      expect(db.select).toHaveBeenCalledTimes(2)
+      expect(callOrder).toEqual(['user', 'org'])
     })
 
-    it('should delegate user anonymization to UserService', async () => {
-      const { db } = createMockDb()
-      const userPurgeService = createMockUserPurgeService()
+    it('should delegate user anonymization to UserPurgeService', async () => {
       const expiredUser = { id: 'user-1', email: 'john@example.com' }
+      const userPurgeRepo = createMockUserPurgeRepo([expiredUser])
+      const orgPurgeRepo = createMockOrgPurgeRepo([])
+      const userPurgeService = createMockUserPurgeService()
 
-      setupSelectChain(db, [[expiredUser], []])
-
-      const capturedTx = {}
-      db.transaction.mockImplementation(async (cb: (tx: unknown) => Promise<unknown>) => {
-        return cb(capturedTx)
-      })
-
-      const service = new PurgeService(db as never, userPurgeService as never)
+      const service = new PurgeService(userPurgeRepo, orgPurgeRepo, userPurgeService)
       await service.runPurge()
 
       expect(userPurgeService.anonymizeUserRecords).toHaveBeenCalledWith(
         'user-1',
         'john@example.com',
-        expect.any(Date),
-        capturedTx
+        expect.any(Date)
       )
     })
 
-    it('should delete members, invitations, and custom roles for purged orgs', async () => {
-      const { db } = createMockDb()
-      const userPurgeService = createMockUserPurgeService()
+    it('should delegate org anonymization (members, invitations, roles) to OrgPurgeRepository', async () => {
       const expiredOrg = { id: 'org-1', name: 'Org', slug: 'org' }
+      const userPurgeRepo = createMockUserPurgeRepo([])
+      const orgPurgeRepo = createMockOrgPurgeRepo([expiredOrg])
+      const userPurgeService = createMockUserPurgeService()
 
-      setupSelectChain(db, [[], [expiredOrg]])
-
-      const deleteWhereCalls: unknown[] = []
-      db.transaction.mockImplementation(async (cb: (tx: unknown) => Promise<unknown>) => {
-        const tx = {
-          update: vi.fn().mockReturnValue({
-            set: vi.fn().mockReturnValue({
-              where: vi.fn().mockResolvedValue([]),
-            }),
-          }),
-          delete: vi.fn().mockReturnValue({
-            where: vi.fn().mockImplementation((...args: unknown[]) => {
-              deleteWhereCalls.push(args)
-              return Promise.resolve([])
-            }),
-          }),
-        }
-        return cb(tx)
-      })
-
-      const service = new PurgeService(db as never, userPurgeService as never)
+      const service = new PurgeService(userPurgeRepo, orgPurgeRepo, userPurgeService)
       await service.runPurge()
 
-      // Should have delete calls for: members, invitations, roles
-      expect(deleteWhereCalls.length).toBe(3)
+      // anonymizeOrganization encapsulates member/invitation/role deletion
+      expect(orgPurgeRepo.anonymizeOrganization).toHaveBeenCalledWith(
+        'org-1',
+        expect.stringMatching(/^deleted-/),
+        expect.any(Date)
+      )
     })
 
     it('should be idempotent (re-running on anonymized records is a no-op)', async () => {
-      const { db } = createMockDb()
-      const userPurgeService = createMockUserPurgeService()
-      // Already-anonymized user (email ends with @anonymized.local)
       const anonymizedUser = { id: 'user-1', email: 'deleted-abc@anonymized.local' }
-      // Already-anonymized org (slug starts with 'deleted-')
       const anonymizedOrg = { id: 'org-1', name: 'Deleted Organization', slug: 'deleted-xyz' }
 
-      setupSelectChain(db, [[anonymizedUser], [anonymizedOrg]])
+      const userPurgeRepo = createMockUserPurgeRepo([anonymizedUser])
+      const orgPurgeRepo = createMockOrgPurgeRepo([anonymizedOrg])
+      const userPurgeService = createMockUserPurgeService()
 
-      const service = new PurgeService(db as never, userPurgeService as never)
+      const service = new PurgeService(userPurgeRepo, orgPurgeRepo, userPurgeService)
       const result = await service.runPurge()
 
       expect(result.usersAnonymized).toBe(0)
       expect(result.orgsAnonymized).toBe(0)
-      expect(db.transaction).not.toHaveBeenCalled()
+      expect(userPurgeService.anonymizeUserRecords).not.toHaveBeenCalled()
+      expect(orgPurgeRepo.anonymizeOrganization).not.toHaveBeenCalled()
     })
 
     it('should process up to 100 records per invocation', async () => {
-      const { db } = createMockDb()
+      const userPurgeRepo = createMockUserPurgeRepo([])
+      const orgPurgeRepo = createMockOrgPurgeRepo([])
       const userPurgeService = createMockUserPurgeService()
-      // The select query uses .limit(100)
-      setupSelectChain(db, [[], []])
 
-      const service = new PurgeService(db as never, userPurgeService as never)
+      const service = new PurgeService(userPurgeRepo, orgPurgeRepo, userPurgeService)
       await service.runPurge()
 
-      // Verify select was called (the .limit(100) is baked into the implementation)
-      expect(db.select).toHaveBeenCalledTimes(2)
+      // The .limit(100) is baked into the repository implementations
+      expect(userPurgeRepo.findExpiredUsers).toHaveBeenCalledTimes(1)
+      expect(orgPurgeRepo.findExpiredOrganizations).toHaveBeenCalledTimes(1)
     })
 
     it('should return zero counts when no records are expired', async () => {
-      const { db } = createMockDb()
+      const userPurgeRepo = createMockUserPurgeRepo([])
+      const orgPurgeRepo = createMockOrgPurgeRepo([])
       const userPurgeService = createMockUserPurgeService()
-      setupSelectChain(db, [[], []])
 
-      const service = new PurgeService(db as never, userPurgeService as never)
+      const service = new PurgeService(userPurgeRepo, orgPurgeRepo, userPurgeService)
       const result = await service.runPurge()
 
       expect(result).toEqual({ usersAnonymized: 0, orgsAnonymized: 0 })

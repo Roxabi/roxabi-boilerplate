@@ -23,3 +23,10 @@ export const legalConfig = {
   },
   consentPolicyVersion: '2026-02-v1',
 } as const
+
+if (import.meta.env.PROD && legalConfig.companyName === 'ACME Corp SAS') {
+  throw new Error(
+    'legal.config.ts contains placeholder values. ' +
+      "Replace with your company's actual legal information before building."
+  )
+}

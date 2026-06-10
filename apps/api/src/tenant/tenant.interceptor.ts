@@ -6,17 +6,15 @@ import {
   Injectable,
   Logger,
   type NestInterceptor,
-  Optional,
 } from '@nestjs/common'
 import { Reflector } from '@nestjs/core'
-import { eq } from 'drizzle-orm'
 import type { FastifyRequest } from 'fastify'
 import { ClsService } from 'nestjs-cls'
 import { from, type Observable, switchMap } from 'rxjs'
 import { SKIP_ORG_KEY } from '../common/decorators/skipOrg.decorator.js'
-import { ErrorCode } from '../common/errorCodes.js'
-import { DRIZZLE, type DrizzleDB } from '../database/drizzle.provider.js'
-import * as schema from '../database/schema/index.js'
+import { TenantResolutionException } from './exceptions/tenantResolution.exception.js'
+import { DeletedOrgRestrictionService } from './services/deletedOrgRestriction.service.js'
+import { TENANT_REPO, type TenantRepository } from './tenant.repository.js'
 
 type AuthenticatedRequest = FastifyRequest & {
   session?: {
@@ -31,12 +29,6 @@ type AuthenticatedRequest = FastifyRequest & {
  */
 const CLS_RESOLVED_TENANT_KEY = 'resolvedTenantMap'
 
-// Org-scoped routes that are allowed when org is soft-deleted
-const ORG_DELETED_ALLOWED_PATTERNS = [
-  { method: 'POST', pattern: /^\/api\/organizations\/[^/]+\/reactivate$/ },
-  { method: 'GET', pattern: /^\/api\/organizations\/[^/]+$/ },
-]
-
 @Injectable()
 export class TenantInterceptor implements NestInterceptor {
   private readonly logger = new Logger(TenantInterceptor.name)
@@ -44,7 +36,8 @@ export class TenantInterceptor implements NestInterceptor {
   constructor(
     private readonly cls: ClsService,
     private readonly reflector: Reflector,
-    @Optional() @Inject(DRIZZLE) private readonly db: DrizzleDB | null // RLS-BYPASS: tenant resolution — org lookup before RLS context
+    @Inject(TENANT_REPO) private readonly tenantRepo: TenantRepository,
+    private readonly deletedOrgRestrictionService: DeletedOrgRestrictionService
   ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
@@ -71,12 +64,6 @@ export class TenantInterceptor implements NestInterceptor {
       return next.handle()
     }
 
-    // If no DB is available, fall back to using activeOrganizationId directly
-    if (!this.db) {
-      this.cls.set('tenantId', activeOrganizationId)
-      return next.handle()
-    }
-
     // Resolve child org -> parent org asynchronously
     return from(this.resolveParentOrg(activeOrganizationId, request)).pipe(
       switchMap((tenantId) => {
@@ -94,12 +81,8 @@ export class TenantInterceptor implements NestInterceptor {
    * non-allowed operations if so.
    */
   private async resolveParentOrg(orgId: string, request: AuthenticatedRequest): Promise<string> {
-    if (!this.db) {
-      return orgId
-    }
-
     try {
-      const org = await this.lookupOrganization(orgId)
+      const org = await this.tenantRepo.lookupOrganization(orgId)
 
       if (!org) {
         this.logger.warn(`Organization ${orgId} not found during tenant resolution`)
@@ -107,7 +90,7 @@ export class TenantInterceptor implements NestInterceptor {
       }
 
       if (org.deletedAt) {
-        this.enforceDeletedOrgRestriction(org, request)
+        this.deletedOrgRestrictionService.enforce(org, request)
       }
 
       // TODO(Phase 3, #389): Parent tenant resolution is formally deferred.
@@ -120,47 +103,8 @@ export class TenantInterceptor implements NestInterceptor {
         throw error
       }
       this.logger.error(`Failed to resolve parent org for ${orgId}`, error)
-      return orgId
-    }
-  }
-
-  private async lookupOrganization(orgId: string) {
-    // biome-ignore lint/style/noNonNullAssertion: caller guards against null db before invoking
-    const orgs = await this.db!.select({
-      id: schema.organizations.id,
-      name: schema.organizations.name,
-      slug: schema.organizations.slug,
-      logo: schema.organizations.logo,
-      metadata: schema.organizations.metadata,
-      deletedAt: schema.organizations.deletedAt,
-      deleteScheduledFor: schema.organizations.deleteScheduledFor,
-      createdAt: schema.organizations.createdAt,
-      updatedAt: schema.organizations.updatedAt,
-    })
-      .from(schema.organizations)
-      .where(eq(schema.organizations.id, orgId))
-      .limit(1)
-
-    return orgs[0] ?? null
-  }
-
-  private enforceDeletedOrgRestriction(
-    org: { deleteScheduledFor: Date | null },
-    request: AuthenticatedRequest
-  ) {
-    const method = request.method.toUpperCase()
-    const path = request.url?.split('?')[0]
-
-    const isAllowed = ORG_DELETED_ALLOWED_PATTERNS.some(
-      (route) => route.method === method && path && route.pattern.test(path)
-    )
-
-    if (!isAllowed) {
-      throw new ForbiddenException({
-        message: 'Organization is scheduled for deletion',
-        errorCode: ErrorCode.ORG_SCHEDULED_FOR_DELETION,
-        deleteScheduledFor: org.deleteScheduledFor?.toISOString(),
-      })
+      // Fail closed (phase-1 spec): never proceed with an unverified tenant context
+      throw new TenantResolutionException(`Failed to resolve tenant context for ${orgId}`)
     }
   }
 

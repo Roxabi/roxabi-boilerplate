@@ -13,7 +13,10 @@ import {
 } from '@nestjs/common'
 import { ApiOperation, ApiResponse, ApiSecurity, ApiTags } from '@nestjs/swagger'
 import { z } from 'zod'
-import { AdminInvitationsService, INVITATION_TTL_MS } from '../../admin/adminInvitations.service.js'
+import {
+  type AdminInvitationsService,
+  INVITATION_TTL_MS,
+} from '../../admin/adminInvitations.service.js'
 import { Permissions } from '../../auth/decorators/permissions.decorator.js'
 import { RequireApiKey } from '../../auth/decorators/requireApiKey.decorator.js'
 import { Session } from '../../auth/decorators/session.decorator.js'

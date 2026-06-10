@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common'
 import { ClsService } from 'nestjs-cls'
+import { type DrizzleTx } from '../database/drizzle.provider.js'
 import { TenantService } from '../tenant/tenant.service.js'
 import { DefaultRoleException } from './exceptions/defaultRole.exception.js'
 import { RoleInsertFailedException } from './exceptions/roleInsertFailed.exception.js'
@@ -183,19 +184,21 @@ export class RbacService {
   /**
    * Seed default roles for a newly created organization.
    * Called on org creation event.
+   * When tx is provided, runs inside the existing transaction; otherwise opens a new one.
    */
-  async seedDefaultRoles(organizationId: string) {
-    await this.tenantService.queryAs(organizationId, async (tx) => {
-      await this.repo.seedDefaultRoles(
-        organizationId,
-        DEFAULT_ROLES.map((def) => ({
-          name: def.name,
-          slug: def.slug,
-          description: def.description,
-          permissions: def.permissions,
-        })),
-        tx
-      )
-    })
+  async seedDefaultRoles(organizationId: string, tx?: DrizzleTx) {
+    const defs = DEFAULT_ROLES.map((def) => ({
+      name: def.name,
+      slug: def.slug,
+      description: def.description,
+      permissions: def.permissions,
+    }))
+    if (tx) {
+      await this.repo.seedDefaultRoles(organizationId, defs, tx)
+    } else {
+      await this.tenantService.queryAs(organizationId, async (innerTx) => {
+        await this.repo.seedDefaultRoles(organizationId, defs, innerTx)
+      })
+    }
   }
 }

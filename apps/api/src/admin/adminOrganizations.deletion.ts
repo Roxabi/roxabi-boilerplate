@@ -1,9 +1,10 @@
 import { Inject, Injectable, Logger } from '@nestjs/common'
 import { and, count, eq, inArray, isNull } from 'drizzle-orm'
-import { ClsService } from 'nestjs-cls'
-import { AuditService } from '../audit/audit.service.js'
+import type { ClsService } from 'nestjs-cls'
+import type { AuditService } from '../audit/audit.service.js'
 import { DELETION_GRACE_PERIOD_MS } from '../common/constants.js'
 import { DRIZZLE, type DrizzleDB } from '../database/drizzle.provider.js'
+import { whereActive } from '../database/helpers/whereActive.js'
 import { members, organizations, users } from '../database/schema/auth.schema.js'
 import { getDescendantOrgIds } from './adminOrganizations.hierarchy.js'
 import { findOrgSnapshotOrThrow } from './adminOrganizations.shared.js'
@@ -52,7 +53,7 @@ export class AdminOrganizationsDeletionService {
     const [memberCountResult] = await this.db
       .select({ count: count() })
       .from(members)
-      .where(eq(members.organizationId, orgId))
+      .where(and(eq(members.organizationId, orgId), whereActive(members)))
 
     // Active members: not deleted and not banned
     const [activeMembersResult] = await this.db
@@ -60,7 +61,12 @@ export class AdminOrganizationsDeletionService {
       .from(members)
       .innerJoin(users, eq(members.userId, users.id))
       .where(
-        and(eq(members.organizationId, orgId), isNull(users.deletedAt), eq(users.banned, false))
+        and(
+          eq(members.organizationId, orgId),
+          isNull(users.deletedAt),
+          eq(users.banned, false),
+          whereActive(members)
+        )
       )
 
     // Child org count (direct children only)
@@ -78,7 +84,7 @@ export class AdminOrganizationsDeletionService {
       const [childMemberCountResult] = await this.db
         .select({ count: count() })
         .from(members)
-        .where(inArray(members.organizationId, descendantIds))
+        .where(and(inArray(members.organizationId, descendantIds), whereActive(members)))
       childMemberCount = childMemberCountResult?.count ?? 0
     }
 

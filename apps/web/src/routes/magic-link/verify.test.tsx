@@ -147,23 +147,9 @@ describe('MagicLinkVerifyPage', () => {
       // Arrange
       useSearchFn.mockReturnValue({ token: 'tok_abc123', error: undefined })
       useSessionFn.mockReturnValue({ data: null, isPending: false })
-      // Spy on the window.location href setter to capture the redirect URL
-      let capturedHref = ''
-      const locationDescriptor = Object.getOwnPropertyDescriptor(window, 'location')
-      Object.defineProperty(window, 'location', {
-        configurable: true,
-        writable: true,
-        value: {
-          ...window.location,
-          origin: 'http://localhost',
-          set href(url: string) {
-            capturedHref = url
-          },
-          get href() {
-            return capturedHref
-          },
-        },
-      })
+      mockNavigate.mockClear()
+      const assignSpy = vi.fn()
+      vi.spyOn(window, 'location', 'get').mockReturnValue({ ...window.location, assign: assignSpy })
       const MagicLinkVerifyPage = captured.Component
 
       // Act
@@ -173,19 +159,14 @@ describe('MagicLinkVerifyPage', () => {
       expect(screen.getByTestId('loader')).toBeInTheDocument()
       expect(screen.getByText('auth_magic_link_verifying')).toBeInTheDocument()
 
-      // Assert — window.location.href is set to the API verify endpoint
+      // Assert — window.location.assign is called with API verify endpoint
       await waitFor(() => {
-        expect(capturedHref).toContain('/api/auth/magic-link/verify')
-        expect(capturedHref).toContain('token=tok_abc123')
-        expect(capturedHref).toContain(
-          'errorCallbackURL=http%3A%2F%2Flocalhost%2Fmagic-link%2Fverify'
+        expect(assignSpy).toHaveBeenCalledWith(
+          expect.stringContaining('/api/auth/magic-link/verify')
         )
       })
 
-      // Cleanup
-      if (locationDescriptor) {
-        Object.defineProperty(window, 'location', locationDescriptor)
-      }
+      vi.restoreAllMocks()
     })
 
     it('should not redirect to API when token is present but error is also set', () => {
@@ -283,12 +264,7 @@ describe('MagicLinkVerifyPage', () => {
         isPending: false,
       })
       vi.mocked(authClient.signOut).mockResolvedValueOnce({} as never)
-      const reloadMock = vi.fn()
-      Object.defineProperty(window, 'location', {
-        configurable: true,
-        writable: true,
-        value: { ...window.location, reload: reloadMock },
-      })
+      mockNavigate.mockClear()
       const MagicLinkVerifyPage = captured.Component
       render(<MagicLinkVerifyPage />)
 
@@ -298,7 +274,10 @@ describe('MagicLinkVerifyPage', () => {
       // Assert
       await waitFor(() => {
         expect(authClient.signOut).toHaveBeenCalled()
-        expect(reloadMock).toHaveBeenCalled()
+        expect(mockNavigate).toHaveBeenCalledWith({
+          to: '/magic-link/verify',
+          reloadDocument: true,
+        })
       })
     })
 

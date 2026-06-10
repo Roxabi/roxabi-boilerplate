@@ -6,8 +6,8 @@ import { SettingsIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { SettingsCard } from '@/components/admin/SettingsCard'
 import { adminSettingsKeys } from '@/lib/admin/queryKeys'
+import { ApiError, apiGet, apiPatch } from '@/lib/apiClient'
 import { appName } from '@/lib/appName'
-import { isErrorWithMessage } from '@/lib/errorUtils'
 import { enforceRoutePermission } from '@/lib/routePermissions'
 
 export const Route = createFileRoute('/admin/system-settings')({
@@ -56,33 +56,23 @@ function SystemSettingsPage() {
 
   const { data, isLoading } = useQuery<SettingsByCategory>({
     queryKey: adminSettingsKeys.all,
-    queryFn: async () => {
-      const res = await fetch('/api/admin/settings', { credentials: 'include' })
-      if (!res.ok) throw new Error('Failed to fetch system settings')
-      return res.json()
-    },
+    queryFn: async () => apiGet<SettingsByCategory>('/api/admin/settings'),
   })
 
   const grouped = data ?? {}
   const sortedCategories = Object.keys(grouped).sort()
 
   async function handleSave(updates: Array<{ key: string; value: unknown }>) {
-    const res = await fetch('/api/admin/settings', {
-      method: 'PATCH',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ updates }),
-    })
-
-    if (!res.ok) {
-      const body: unknown = await res.json().catch(() => null)
-      const message = isErrorWithMessage(body) ? body.message : 'Failed to save settings'
+    try {
+      await apiPatch<void>('/api/admin/settings', { updates })
+      toast.success('Settings updated successfully')
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'system-settings'] })
+    } catch (error) {
+      const message = error instanceof ApiError ? String(error.message) : 'Failed to save settings'
       toast.error(message)
-      throw new Error(message)
+      console.error(error)
+      throw error
     }
-
-    toast.success('Settings updated successfully')
-    await queryClient.invalidateQueries({ queryKey: ['admin', 'system-settings'] })
   }
 
   return (

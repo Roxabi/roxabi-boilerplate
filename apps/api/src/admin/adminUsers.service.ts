@@ -1,9 +1,10 @@
 import { Inject, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common'
 import type { AuditAction } from '@repo/types'
 import { and, desc, eq, or } from 'drizzle-orm'
-import { ClsService } from 'nestjs-cls'
-import { AuditService } from '../audit/audit.service.js'
+import type { ClsService } from 'nestjs-cls'
+import type { AuditService } from '../audit/audit.service.js'
 import { DRIZZLE, type DrizzleDB, type DrizzleTx } from '../database/drizzle.provider.js'
+import { whereActive } from '../database/helpers/whereActive.js'
 import { PG_UNIQUE_VIOLATION } from '../database/pgErrorCodes.js'
 import { auditLogs } from '../database/schema/audit.schema.js'
 import { members, organizations, sessions, users } from '../database/schema/auth.schema.js'
@@ -103,7 +104,7 @@ export class AdminUsersService {
       })
       .from(members)
       .innerJoin(organizations, eq(members.organizationId, organizations.id))
-      .where(eq(members.userId, userId))
+      .where(and(eq(members.userId, userId), whereActive(members)))
   }
 
   private async fetchUserAuditEntries(userId: string) {

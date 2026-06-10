@@ -15,12 +15,14 @@ function createMockDb() {
     insert: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
+    execute: vi.fn(),
     transaction: vi.fn(async (fn: (tx: Record<string, unknown>) => unknown) =>
       fn({
         select: vi.fn(),
         insert: vi.fn(),
         update: vi.fn(),
         delete: vi.fn(),
+        execute: vi.fn(),
       })
     ),
   }
@@ -86,12 +88,9 @@ describe('AdminOrganizationsDeletionService', () => {
         .mockReturnValueOnce(createChainMock([{ count: 10 }])) // member count
         .mockReturnValueOnce(createChainMock([{ count: 7 }])) // active members
         .mockReturnValueOnce(createChainMock([{ count: 3 }])) // child org count (direct)
-        // getDescendantOrgIds: 3 direct children, each with no grandchildren
-        .mockReturnValueOnce(createChainMock([{ id: 'c1' }, { id: 'c2' }, { id: 'c3' }]))
-        .mockReturnValueOnce(createChainMock([])) // c1 children
-        .mockReturnValueOnce(createChainMock([])) // c2 children
-        .mockReturnValueOnce(createChainMock([])) // c3 children
         .mockReturnValueOnce(createChainMock([{ count: 25 }])) // child member count
+      // getDescendantOrgIds (recursive CTE): 3 direct children
+      db.execute.mockResolvedValueOnce([{ id: 'c1' }, { id: 'c2' }, { id: 'c3' }])
 
       // Act
       const result = await service.getDeletionImpact('org-1')
@@ -121,7 +120,8 @@ describe('AdminOrganizationsDeletionService', () => {
         .mockReturnValueOnce(createChainMock([{ count: 0 }])) // member count
         .mockReturnValueOnce(createChainMock([{ count: 0 }])) // active members
         .mockReturnValueOnce(createChainMock([{ count: 0 }])) // child org count
-        .mockReturnValueOnce(createChainMock([])) // getDescendantOrgIds: no children
+      // getDescendantOrgIds (recursive CTE): no children
+      db.execute.mockResolvedValueOnce([])
 
       // Act
       const result = await service.getDeletionImpact('org-1')

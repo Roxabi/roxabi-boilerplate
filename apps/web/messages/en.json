@@ -932,5 +932,9 @@
   "api_keys_no_permission_description": "You do not have permission to manage API keys in this organization.",
   "api_keys_no_org_title": "No Organization Selected",
   "api_keys_no_org_description": "Select an organization to manage its API keys.",
-  "api_keys_never": "Never"
+  "api_keys_never": "Never",
+  "admin_error_boundary_title": "Something went wrong",
+  "admin_error_boundary_detail": "An unexpected error occurred.",
+  "admin_error_boundary_go_back": "Go back",
+  "admin_error_boundary_retry": "Try again"
 }

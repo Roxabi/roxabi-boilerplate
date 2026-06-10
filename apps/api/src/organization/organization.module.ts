@@ -23,6 +23,6 @@ import { DrizzleOrgRepository } from './repositories/drizzleOrg.repository.js'
     { provide: APP_FILTER, useClass: OrgNameConfirmationMismatchFilter },
     { provide: APP_FILTER, useClass: OrgNotDeletedFilter },
   ],
-  exports: [OrganizationService],
+  exports: [OrganizationService, ORG_REPO],
 })
 export class OrganizationModule {}

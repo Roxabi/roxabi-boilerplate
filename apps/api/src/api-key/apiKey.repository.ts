@@ -63,11 +63,15 @@ export interface ApiKeyRepository {
 
   findForRevoke(id: string, tenantId: string, tx?: DrizzleTx): Promise<ApiKeyRevokeRow | undefined>
 
-  markRevoked(id: string, now: Date, tx?: DrizzleTx): Promise<void>
+  markRevoked(id: string, tenantId: string, now: Date, tx?: DrizzleTx): Promise<void>
 
-  findCandidatesByLastFour(lastFour: string, tx?: DrizzleTx): Promise<ApiKeyValidationRow[]>
+  findCandidatesByLastFour(
+    lastFour: string,
+    tenantId: string | null,
+    tx?: DrizzleTx
+  ): Promise<ApiKeyValidationRow[]>
 
-  touchLastUsedAt(id: string, now: Date, tx?: DrizzleTx): Promise<void>
+  touchLastUsedAt(id: string, tenantId: string, now: Date, tx?: DrizzleTx): Promise<void>
 
   revokeAllForUser(userId: string, now: Date, tx?: DrizzleTx): Promise<void>
 

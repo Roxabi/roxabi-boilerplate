@@ -1,5 +1,5 @@
-import { eq } from 'drizzle-orm'
-import type { DrizzleDB } from '../database/drizzle.provider.js'
+import { eq, sql } from 'drizzle-orm'
+import type { DrizzleDB, DrizzleTx } from '../database/drizzle.provider.js'
 import { organizations } from '../database/schema/auth.schema.js'
 import { OrgCycleDetectedException } from './exceptions/orgCycleDetected.exception.js'
 import { OrgDepthExceededException } from './exceptions/orgDepthExceeded.exception.js'
@@ -10,7 +10,7 @@ export const MAX_PARENT_WALK_ITERATIONS = 10
  * Get the depth of an org by walking up the parent chain.
  * Depth = number of ancestors (edges to root).
  */
-export async function getDepth(db: DrizzleDB, orgId: string): Promise<number> {
+export async function getDepth(db: DrizzleDB | DrizzleTx, orgId: string): Promise<number> {
   let depth = 0
   let iterations = 0
   let currentId: string | null = orgId
@@ -43,7 +43,7 @@ export async function validateHierarchy(
 
   await db.transaction(async (tx) => {
     const { depth } = await walkParentChain(tx, orgId, newParentId)
-    const subtreeDepth = await getSubtreeDepth(db, orgId)
+    const subtreeDepth = await getSubtreeDepth(tx, orgId)
 
     if (depth + 1 + subtreeDepth >= 3) {
       throw new OrgDepthExceededException()
@@ -55,16 +55,22 @@ export async function validateHierarchy(
  * Walk up from startId, counting depth and detecting cycles against targetOrgId.
  */
 export async function walkParentChain(
-  tx: Parameters<Parameters<DrizzleDB['transaction']>[0]>[0],
+  tx: DrizzleTx,
   targetOrgId: string,
   startId: string
 ): Promise<{ depth: number }> {
   let depth = 0
   let iterations = 0
   let currentId: string | null = startId
+  const visited = new Set<string>()
 
   while (currentId) {
     if (iterations++ >= MAX_PARENT_WALK_ITERATIONS) break
+    if (visited.has(currentId)) {
+      throw new OrgCycleDetectedException()
+    }
+    visited.add(currentId)
+
     const [org] = await tx
       .select({
         id: organizations.id,
@@ -87,43 +93,53 @@ export async function walkParentChain(
 }
 
 /**
- * Get the depth of the deepest descendant below orgId.
+ * Get the depth of the deepest descendant below orgId using a recursive CTE.
  * Returns 0 if orgId has no children.
  */
-export async function getSubtreeDepth(db: DrizzleDB, orgId: string): Promise<number> {
-  const children = await db
-    .select({ id: organizations.id })
-    .from(organizations)
-    .where(eq(organizations.parentOrganizationId, orgId))
+export async function getSubtreeDepth(db: DrizzleDB | DrizzleTx, orgId: string): Promise<number> {
+  const result = (await db.execute(sql`
+    WITH RECURSIVE descendants AS (
+      SELECT id, parent_organization_id, 1 AS depth
+      FROM organizations
+      WHERE parent_organization_id = ${orgId}
 
-  if (children.length === 0) return 0
+      UNION ALL
 
-  let maxChildDepth = 0
-  for (const child of children) {
-    const childDepth = await getSubtreeDepth(db, child.id)
-    if (childDepth + 1 > maxChildDepth) {
-      maxChildDepth = childDepth + 1
-    }
-    if (maxChildDepth >= MAX_PARENT_WALK_ITERATIONS) break
-  }
-  return maxChildDepth
+      SELECT o.id, o.parent_organization_id, d.depth + 1
+      FROM organizations o
+      INNER JOIN descendants d ON o.parent_organization_id = d.id
+      WHERE d.depth < ${MAX_PARENT_WALK_ITERATIONS}
+    )
+    SELECT MAX(depth) AS max_depth FROM descendants
+  `)) as Array<{ max_depth: number | null }>
+
+  return result[0]?.max_depth ?? 0
 }
 
 /**
- * Collect all descendant org IDs recursively (for deletion impact).
+ * Collect all descendant org IDs recursively using a recursive CTE.
  */
-export async function getDescendantOrgIds(db: DrizzleDB, orgId: string): Promise<string[]> {
-  const children = await db
-    .select({ id: organizations.id })
-    .from(organizations)
-    .where(eq(organizations.parentOrganizationId, orgId))
+export async function getDescendantOrgIds(
+  db: DrizzleDB | DrizzleTx,
+  orgId: string
+): Promise<string[]> {
+  const result = await db.execute(sql`
+    WITH RECURSIVE descendants AS (
+      SELECT id, parent_organization_id, 1 AS depth
+      FROM organizations
+      WHERE parent_organization_id = ${orgId}
 
-  const ids: string[] = []
-  for (const child of children) {
-    ids.push(child.id)
-    const grandchildren = await getDescendantOrgIds(db, child.id)
-    ids.push(...grandchildren)
-    if (ids.length >= 1000) break // safety cap
-  }
-  return ids
+      UNION ALL
+
+      SELECT o.id, o.parent_organization_id, d.depth + 1
+      FROM organizations o
+      INNER JOIN descendants d ON o.parent_organization_id = d.id
+      WHERE d.depth < ${MAX_PARENT_WALK_ITERATIONS}
+    )
+    SELECT id FROM descendants
+    LIMIT 1000
+  `)
+
+  const rows = result as unknown as Array<{ id: string }>
+  return rows.map((r) => r.id)
 }

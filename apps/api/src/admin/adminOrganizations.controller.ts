@@ -27,6 +27,7 @@ import { AdminOrganizationsQueryService } from './adminOrganizations.query.js'
 import { AdminOrganizationsService } from './adminOrganizations.service.js'
 import { AdminBadRequestFilter } from './filters/adminBadRequest.filter.js'
 import { AdminConflictFilter } from './filters/adminConflict.filter.js'
+import { AdminForbiddenFilter } from './filters/adminForbidden.filter.js'
 import { AdminInternalErrorFilter } from './filters/adminInternalError.filter.js'
 import { AdminNotFoundFilter } from './filters/adminNotFound.filter.js'
 
@@ -62,11 +63,7 @@ type UpdateOrgDto = z.infer<typeof updateOrgSchema>
 
 const listOrgsQuerySchema = z.object({
   cursor: z.string().min(1).optional(),
-  limit: z.preprocess((val) => {
-    if (val === undefined || val === null || val === '') return 20
-    const n = Number(val)
-    return Number.isNaN(n) ? 20 : Math.min(Math.max(Math.floor(n), 1), 100)
-  }, z.number().int()),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
   status: z.enum(['active', 'archived']).optional(),
   search: z.string().max(200).optional(),
   view: z.enum(['list', 'tree']).optional(),
@@ -78,6 +75,7 @@ const listOrgsQuerySchema = z.object({
   AdminNotFoundFilter,
   AdminConflictFilter,
   AdminBadRequestFilter,
+  AdminForbiddenFilter,
   AdminInternalErrorFilter
 )
 @Throttle({ global: { ttl: 60_000, limit: 30 } })

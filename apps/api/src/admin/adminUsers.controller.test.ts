@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common'
 import { Reflector } from '@nestjs/core'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AdminUsersController, banUserSchema, updateUserSchema } from './adminUsers.controller.js'
@@ -114,39 +115,15 @@ describe('AdminUsersController', () => {
       )
     })
 
-    it('should clamp limit to range [1, 100]', async () => {
-      // Arrange
-      vi.mocked(mockAdminUsersQueryService.listUsers).mockResolvedValue({
-        data: [],
-        cursor: { next: null, hasMore: false },
-      })
-
-      // Act — limit exceeds max
-      await controller.listUsers(undefined, '500')
-
-      // Assert
-      expect(mockAdminUsersQueryService.listUsers).toHaveBeenCalledWith(
-        expect.anything(),
-        undefined,
-        100
-      )
+    it('should reject limit outside range [1, 100]', async () => {
+      // Act & Assert — limit exceeds max
+      await expect(controller.listUsers(undefined, '500')).rejects.toThrow(BadRequestException)
     })
 
-    it('should default limit to 20 when invalid value is provided', async () => {
-      // Arrange
-      vi.mocked(mockAdminUsersQueryService.listUsers).mockResolvedValue({
-        data: [],
-        cursor: { next: null, hasMore: false },
-      })
-
-      // Act
-      await controller.listUsers(undefined, 'not-a-number')
-
-      // Assert
-      expect(mockAdminUsersQueryService.listUsers).toHaveBeenCalledWith(
-        expect.anything(),
-        undefined,
-        20
+    it('should reject invalid limit value', async () => {
+      // Act & Assert
+      await expect(controller.listUsers(undefined, 'not-a-number')).rejects.toThrow(
+        BadRequestException
       )
     })
 

@@ -48,7 +48,8 @@ function useReactivation(navigate: ReturnType<typeof useNavigate>) {
       }
       toast.success(m.account_reactivation_success())
       navigate({ to: '/dashboard' })
-    } catch {
+    } catch (err) {
+      console.error('Account reactivation failed:', err)
       toast.error(m.account_reactivation_error())
     } finally {
       setReactivating(false)
@@ -73,7 +74,8 @@ function usePurge(navigate: ReturnType<typeof useNavigate>, email: string) {
       }
       await authClient.signOut()
       navigate({ to: '/account-deleted', search: { purged: 'true' } })
-    } catch {
+    } catch (err) {
+      console.error('Account purge failed:', err)
       toast.error(m.account_purge_error())
     } finally {
       setPurging(false)

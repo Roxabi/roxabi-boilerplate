@@ -1,0 +1,102 @@
+---
+title: "Audit Correction Phase 1 — Tenant Isolation"
+description: "Activate RLS, add tenant scoping to repositories, and make TenantInterceptor fail closed."
+---
+
+# Phase 1 Spec: Tenant Isolation
+
+## Problem Statement
+
+Row-Level Security (RLS) is defined but never applied. `create_tenant_rls_policy` exists in the baseline migration (`apps/api/drizzle/migrations/0000_baseline.sql`) yet no table has `ALTER TABLE ... ENABLE ROW LEVEL SECURITY`. The defense-in-depth strategy assumed RLS would be the sole tenant boundary, so repository methods omitted explicit `tenantId` WHERE clauses. When RLS is a no-op, cross-tenant read/write vectors open.
+
+**Critical findings:**
+- `apps/api/src/api-key/repositories/drizzleApiKey.repository.ts:88-106` — `findCandidatesByLastFour` returns `keyHash`/`keySalt` across all tenants without `tenantId` filter (P0).
+- `apps/api/src/api-key/repositories/drizzleApiKey.repository.ts:83-86,108-111` — `markRevoked` / `touchLastUsedAt` update by `id` only with no `tenantId` filter (P1).
+- `apps/api/src/rbac/repositories/drizzleRbac.repository.ts:48,54,68,83,107,142` — six RBAC methods rely solely on RLS without explicit `tenantId` WHERE clauses (P1).
+- `apps/api/src/rbac/rbacMember.service.ts:69-106` — `changeMemberRole` allows promoting any member to `owner` without restriction (P1).
+- `apps/api/src/admin/adminUsers.lifecycle.ts:38-88` — `banExpires` is never checked at authentication time; banned users remain fully authenticated (P1).
+- `apps/api/src/tenant/tenant.interceptor.ts:118-124` — `resolveParentOrg` catches non-Forbidden errors and silently returns `orgId`, bypassing deleted-org check (P1).
+- `apps/api/src/database/schema/auth.schema.ts:119` — `members` table lacks `deletedAt`; soft-deleted users remain active in orgs (P2).
+- `apps/api/src/database/schema/auth.schema.ts:16` — `users` table lacks `tenantId`; RLS policy cannot be applied to auth tables (P2).
+- `apps/api/drizzle/migrations/0000_baseline.sql` — `create_tenant_rls_policy` defined but never called (P1).
+
+**Test gaps:**
+- `apps/web/src/routes/admin/members.test.tsx:259-1024` — no cross-org tenant isolation tests (P0).
+- `apps/web/src/routes/admin/settings.test.tsx:90-314` — no tenant isolation tests for org update/delete (P0).
+- `apps/web/src/routes/dashboard.test.tsx:82-237` — no tenant isolation tests for auto-org-selection (P0).
+- `apps/web/src/routes/settings/api-keys.test.ts:63-277` — no tenant isolation tests for API key list/create/revoke (P0).
+
+## Solution Design
+
+1. **RLS Activation Migration** — Add a migration that runs `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` for all tenant-scoped tables and applies `create_tenant_rls_policy` where missing.
+2. **Schema Changes** — Add `deletedAt` to `members` table; add `tenantId` to `users` and auth tables so RLS policies can be applied.
+3. **Repository Tenant Scoping** —
+   - `drizzleApiKey.repository.ts`: add `tenantId` filter to `findCandidatesByLastFour`, `markRevoked`, `touchLastUsedAt`.
+   - `drizzleRbac.repository.ts`: add `tenantId` as required parameter to `findRoleById`, `updateRole`, `deleteRole`, `getRolePermissions`, `listRolesWithPermissions`, `reassignMembersToRole`.
+4. **Owner Guard** — In `rbacMember.service.ts`, reject `changeMemberRole` to `owner` unless the current actor is the existing owner.
+5. **Ban Check** — In `adminUsers.lifecycle.ts` / `AuthGuard`, check `banExpires` against `Date.now()` and reject authentication for active bans.
+6. **Fail-Closed Interceptor** — In `tenant.interceptor.ts`, throw `TenantResolutionException` on any DB error in `resolveParentOrg` instead of returning `orgId`.
+7. **Soft-Delete Filter** — Update all `members` queries to include `whereActive(members)` (i.e., `isNull(members.deletedAt)`).
+
+## Acceptance Criteria
+
+1. `findCandidatesByLastFour` returns `[]` when queried with a `tenantId` that has no matching keys.
+2. `markRevoked` and `touchLastUsedAt` reject updates when `tenantId` does not match.
+3. RBAC repo methods (`findRoleById`, `updateRole`, `deleteRole`, `getRolePermissions`, `listRolesWithPermissions`, `reassignMembersToRole`) reject cross-tenant queries.
+4. `TenantInterceptor` throws `TenantResolutionException` on DB errors instead of returning `orgId`.
+5. `AuthGuard` rejects requests for users with `banExpires` in the future.
+6. `members` table has `deletedAt` and all queries filter by `whereActive(members)`.
+7. `users` and auth tables have `tenantId` or documented exception for auth-level tables.
+8. At least 1 integration test proves cross-tenant data leakage is blocked for each surface: API keys, RBAC, members, org settings, dashboard auto-select.
+9. `bun run test` passes, `bun run test:e2e` passes, `bun run lint` passes.
+
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `apps/api/drizzle/migrations/` | Add RLS enable + policy migration |
+| `apps/api/src/database/schema/auth.schema.ts` | Add `deletedAt` to `members`, add `tenantId` to auth tables |
+| `apps/api/src/api-key/repositories/drizzleApiKey.repository.ts` | Scope `findCandidatesByLastFour`, `markRevoked`, `touchLastUsedAt` by `tenantId` |
+| `apps/api/src/rbac/repositories/drizzleRbac.repository.ts` | Add explicit `tenantId` to 6 methods |
+| `apps/api/src/rbac/rbacMember.service.ts` | Guard owner role assignment |
+| `apps/api/src/tenant/tenant.interceptor.ts` | Fail closed instead of silent fallback |
+| `apps/api/src/admin/adminUsers.lifecycle.ts` | Check `banExpires` in `AuthGuard` |
+| `apps/api/src/auth/auth.guard.ts` | Add `banExpires` check |
+
+## Tests to Add/Update
+
+| Test File | What to Add |
+|-----------|-------------|
+| `apps/web/src/routes/admin/members.test.tsx` | Cross-org tenant isolation: user cannot fetch members of `org-2` |
+| `apps/web/src/routes/admin/settings.test.tsx` | UI blocks modifying a different org |
+| `apps/web/src/routes/dashboard.test.tsx` | Selected org matches membership list |
+| `apps/web/src/routes/settings/api-keys.test.ts` | Keys from one tenant are inaccessible to another |
+| `apps/api/src/api-key/repositories/drizzleApiKey.repository.test.ts` | `findCandidatesByLastFour` scoped by `tenantId` |
+| `apps/api/src/rbac/repositories/drizzleRbac.repository.test.ts` | Cross-tenant role queries return empty |
+| `apps/api/src/rbac/rbacMember.service.test.ts` | Non-owner cannot promote member to owner |
+| `apps/api/src/auth/auth.guard.test.ts` | Banned user (`banExpires` in future) is rejected |
+
+## Migration Steps
+
+1. Take a DB snapshot of staging and production before migration.
+2. Run `bun run db:generate` to generate the migration after schema changes.
+3. Verify the generated migration includes:
+   - `ALTER TABLE members ENABLE ROW LEVEL SECURITY`
+   - `ALTER TABLE users ENABLE ROW LEVEL SECURITY`
+   - `ALTER TABLE api_keys ENABLE ROW LEVEL SECURITY`
+   - `ALTER TABLE roles ENABLE ROW LEVEL SECURITY`
+   - `ALTER TABLE organizations ENABLE ROW LEVEL SECURITY`
+   - Application of `create_tenant_rls_policy` where missing
+   - Addition of `members.deletedAt` (nullable timestamp, default `NULL`)
+   - Addition of `users.tenantId` (nullable UUID, default `NULL`)
+4. Apply migration on staging: `bun run db:migrate`.
+5. Run tenant isolation tests against staging DB.
+6. If `members.deletedAt` is added, no data backfill is needed (existing records remain active with `NULL`).
+7. Verify `DATABASE_APP_URL` role exists and has bypass or appropriate RLS context before production deploy.
+
+## Rollback Plan
+
+1. **DB snapshot restoration** — If the migration fails or causes query regressions, restore the pre-migration snapshot.
+2. **Migration reversal** — The migration is reversible via `ALTER TABLE ... DISABLE ROW LEVEL SECURITY` and dropping the added columns if needed. Keep the migration script idempotent.
+3. **TenantInterceptor fallback** — If fail-closed breaks legitimate parent-org lookups, temporarily revert to the previous behavior while fixing the root cause.
+4. **Repository scoping** — If `tenantId` scoping causes empty results for legitimate queries, verify the `TenantInterceptor` is injecting the correct `tenantId` before rolling back.

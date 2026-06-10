@@ -16,7 +16,7 @@ import { Permissions } from '../auth/decorators/permissions.decorator.js'
 import { Session } from '../auth/decorators/session.decorator.js'
 import type { AuthenticatedSession } from '../auth/types.js'
 import { ZodValidationPipe } from '../common/pipes/zodValidation.pipe.js'
-import { ApiKeyService } from './apiKey.service.js'
+import type { ApiKeyService } from './apiKey.service.js'
 import { ApiKeyExceptionFilter } from './filters/apiKeyException.filter.js'
 
 const createApiKeySchema = z.object({
