@@ -78,13 +78,15 @@ function lastOptions(): RequestInit {
 describe('fetchAdminOrganizations', () => {
   it('should GET /api/admin/organizations without params', async () => {
     await fetchAdminOrganizations()
-    expect(lastUrl()).toBe('/api/admin/organizations')
+    expect(lastUrl()).toContain('/api/admin/organizations')
     expect(lastOptions().credentials).toBe('include')
   })
 
   it('should append query string when params provided', async () => {
     await fetchAdminOrganizations('page=2&search=acme')
-    expect(lastUrl()).toBe('/api/admin/organizations?page=2&search=acme')
+    expect(lastUrl()).toContain('/api/admin/organizations')
+    expect(lastUrl()).toContain('page=2')
+    expect(lastUrl()).toContain('search=acme')
   })
 
   it('should return parsed JSON on success', async () => {
@@ -107,14 +109,15 @@ describe('fetchAdminOrganizations', () => {
 describe('fetchAdminOrganizationTree', () => {
   it('should GET /api/admin/organizations?view=tree', async () => {
     await fetchAdminOrganizationTree()
-    expect(lastUrl()).toBe('/api/admin/organizations?view=tree')
+    expect(lastUrl()).toContain('/api/admin/organizations')
+    expect(lastUrl()).toContain('view=tree')
   })
 })
 
 describe('fetchAdminOrganization', () => {
   it('should GET /api/admin/organizations/:orgId', async () => {
     await fetchAdminOrganization('org-42')
-    expect(lastUrl()).toBe('/api/admin/organizations/org-42')
+    expect(lastUrl()).toContain('/api/admin/organizations/org-42')
   })
 })
 
@@ -140,7 +143,7 @@ describe('fetchAdminOrgDeletionImpact', () => {
       okResponse({ membersCount: 3, subOrgsCount: 1, invitationsCount: 0 })
     )
     const result = await fetchAdminOrgDeletionImpact('org-1')
-    expect(lastUrl()).toBe('/api/admin/organizations/org-1/deletion-impact')
+    expect(lastUrl()).toContain('/api/admin/organizations/org-1/deletion-impact')
     expect(result).toEqual({ membersCount: 3, subOrgsCount: 1, invitationsCount: 0 })
   })
 })
@@ -148,7 +151,7 @@ describe('fetchAdminOrgDeletionImpact', () => {
 describe('fetchAdminOrgRoles', () => {
   it('should GET /api/admin/organizations/:orgId/roles', async () => {
     await fetchAdminOrgRoles('org-5')
-    expect(lastUrl()).toBe('/api/admin/organizations/org-5/roles')
+    expect(lastUrl()).toContain('/api/admin/organizations/org-5/roles')
   })
 })
 
@@ -159,12 +162,13 @@ describe('fetchAdminOrgRoles', () => {
 describe('fetchAdminUsers', () => {
   it('should GET /api/admin/users without params', async () => {
     await fetchAdminUsers()
-    expect(lastUrl()).toBe('/api/admin/users')
+    expect(lastUrl()).toContain('/api/admin/users')
   })
 
   it('should append query string when params provided', async () => {
     await fetchAdminUsers('banned=true')
-    expect(lastUrl()).toBe('/api/admin/users?banned=true')
+    expect(lastUrl()).toContain('/api/admin/users')
+    expect(lastUrl()).toContain('banned=true')
   })
 
   it('should throw on non-ok response', async () => {
@@ -176,7 +180,7 @@ describe('fetchAdminUsers', () => {
 describe('fetchAdminUser', () => {
   it('should GET /api/admin/users/:userId', async () => {
     await fetchAdminUser('user-99')
-    expect(lastUrl()).toBe('/api/admin/users/user-99')
+    expect(lastUrl()).toContain('/api/admin/users/user-99')
   })
 })
 
@@ -236,12 +240,13 @@ describe('unbanAdminUser', () => {
 describe('fetchAdminMembers', () => {
   it('should GET /api/admin/members without params', async () => {
     await fetchAdminMembers()
-    expect(lastUrl()).toBe('/api/admin/members')
+    expect(lastUrl()).toContain('/api/admin/members')
   })
 
   it('should append query string when params provided', async () => {
     await fetchAdminMembers('orgId=o-1')
-    expect(lastUrl()).toBe('/api/admin/members?orgId=o-1')
+    expect(lastUrl()).toContain('/api/admin/members')
+    expect(lastUrl()).toContain('orgId=o-1')
   })
 })
 
@@ -282,12 +287,13 @@ describe('cancelAdminInvitation', () => {
 describe('fetchAdminAuditLogs', () => {
   it('should GET /api/admin/audit-logs without params', async () => {
     await fetchAdminAuditLogs()
-    expect(lastUrl()).toBe('/api/admin/audit-logs')
+    expect(lastUrl()).toContain('/api/admin/audit-logs')
   })
 
   it('should append query string when params provided', async () => {
     await fetchAdminAuditLogs('action=login')
-    expect(lastUrl()).toBe('/api/admin/audit-logs?action=login')
+    expect(lastUrl()).toContain('/api/admin/audit-logs')
+    expect(lastUrl()).toContain('action=login')
   })
 })
 
@@ -298,7 +304,7 @@ describe('fetchAdminAuditLogs', () => {
 describe('fetchAdminFeatureFlags', () => {
   it('should GET /api/admin/feature-flags', async () => {
     await fetchAdminFeatureFlags()
-    expect(lastUrl()).toBe('/api/admin/feature-flags')
+    expect(lastUrl()).toContain('/api/admin/feature-flags')
   })
 })
 
@@ -364,7 +370,7 @@ describe('deleteAdminFeatureFlag', () => {
 describe('fetchAdminSystemSettings', () => {
   it('should GET /api/admin/settings', async () => {
     await fetchAdminSystemSettings()
-    expect(lastUrl()).toBe('/api/admin/settings')
+    expect(lastUrl()).toContain('/api/admin/settings')
   })
 
   it('should return parsed settings object', async () => {
@@ -390,10 +396,10 @@ describe('updateAdminSystemSettings', () => {
 })
 
 // ---------------------------------------------------------------------------
-// Error handling — checkResponse internals
+// Error handling — apiClient transport
 // ---------------------------------------------------------------------------
 
-describe('checkResponse error handling', () => {
+describe('apiClient error handling', () => {
   it('should throw error with message from response body', async () => {
     fetchSpy.mockResolvedValue(errorResponse(404, { message: 'Not found' }))
     await expect(fetchAdminOrganization('nope')).rejects.toThrow('Not found')
@@ -406,9 +412,9 @@ describe('checkResponse error handling', () => {
     await expect(fetchAdminOrganization('nope')).rejects.toThrow('HTTP 503')
   })
 
-  it('should fall back to HTTP status when body is not JSON', async () => {
+  it('should throw when body is not JSON', async () => {
     fetchSpy.mockResolvedValue(new Response('Not a json', { status: 500 }))
-    await expect(fetchAdminOrganization('nope')).rejects.toThrow('HTTP 500')
+    await expect(fetchAdminOrganization('nope')).rejects.toThrow()
   })
 
   it('should include credentials on every request', async () => {

@@ -5,7 +5,7 @@ describe('clientEnvSchema', () => {
   describe('default values', () => {
     it('should leave VITE_GITHUB_REPO_URL undefined when not provided', () => {
       // Arrange
-      const input = {}
+      const input = { VITE_APP_URL: 'http://localhost:3000' }
 
       // Act
       const result = clientEnvSchema.parse(input)
@@ -18,7 +18,10 @@ describe('clientEnvSchema', () => {
   describe('VITE_GITHUB_REPO_URL', () => {
     it('should accept a valid HTTPS URL', () => {
       // Arrange
-      const input = { VITE_GITHUB_REPO_URL: 'https://github.com/example/repo' }
+      const input = {
+        VITE_GITHUB_REPO_URL: 'https://github.com/example/repo',
+        VITE_APP_URL: 'http://localhost:3000',
+      }
 
       // Act
       const result = clientEnvSchema.parse(input)
@@ -29,7 +32,10 @@ describe('clientEnvSchema', () => {
 
     it('should accept a valid HTTP URL', () => {
       // Arrange
-      const input = { VITE_GITHUB_REPO_URL: 'http://localhost:3000' }
+      const input = {
+        VITE_GITHUB_REPO_URL: 'http://localhost:3000',
+        VITE_APP_URL: 'http://localhost:3000',
+      }
 
       // Act
       const result = clientEnvSchema.parse(input)
@@ -40,7 +46,7 @@ describe('clientEnvSchema', () => {
 
     it('should reject an invalid URL string', () => {
       // Arrange
-      const input = { VITE_GITHUB_REPO_URL: 'not-a-url' }
+      const input = { VITE_GITHUB_REPO_URL: 'not-a-url', VITE_APP_URL: 'http://localhost:3000' }
 
       // Act & Assert
       expect(() => clientEnvSchema.parse(input)).toThrow()
@@ -48,7 +54,10 @@ describe('clientEnvSchema', () => {
 
     it('should reject a bare domain without protocol', () => {
       // Arrange
-      const input = { VITE_GITHUB_REPO_URL: 'github.com/example/repo' }
+      const input = {
+        VITE_GITHUB_REPO_URL: 'github.com/example/repo',
+        VITE_APP_URL: 'http://localhost:3000',
+      }
 
       // Act & Assert
       expect(() => clientEnvSchema.parse(input)).toThrow()
@@ -56,7 +65,7 @@ describe('clientEnvSchema', () => {
 
     it('should accept undefined (optional field)', () => {
       // Arrange
-      const input = { VITE_GITHUB_REPO_URL: undefined }
+      const input = { VITE_GITHUB_REPO_URL: undefined, VITE_APP_URL: 'http://localhost:3000' }
 
       // Act
       const result = clientEnvSchema.parse(input)
@@ -70,6 +79,7 @@ describe('clientEnvSchema', () => {
     it('should parse a complete valid input with all fields', () => {
       // Arrange
       const input = {
+        VITE_APP_URL: 'http://localhost:3000',
         VITE_GITHUB_REPO_URL: 'https://github.com/roxabi/boilerplate',
       }
 
@@ -78,6 +88,7 @@ describe('clientEnvSchema', () => {
 
       // Assert
       expect(result).toEqual({
+        VITE_APP_URL: 'http://localhost:3000',
         VITE_GITHUB_REPO_URL: 'https://github.com/roxabi/boilerplate',
       })
     })
@@ -85,6 +96,7 @@ describe('clientEnvSchema', () => {
     it('should strip unknown keys from input', () => {
       // Arrange
       const input = {
+        VITE_APP_URL: 'http://localhost:3000',
         UNKNOWN_KEY: 'should be stripped',
       }
 

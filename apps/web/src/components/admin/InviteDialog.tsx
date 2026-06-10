@@ -19,8 +19,8 @@ import { UserPlusIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import type { OrgRole } from '@/components/admin/types'
-import { ApiError, apiPost } from '@/lib/apiClient'
-import { parseErrorMessage } from '@/lib/errorUtils'
+import { apiPost } from '@/lib/apiClient'
+import { apiErrorToMessage } from '@/lib/errorUtils'
 import { roleLabel } from '@/lib/orgUtils'
 import { m } from '@/paraglide/messages'
 
@@ -28,8 +28,7 @@ async function inviteMember(email: string, roleId: string): Promise<void> {
   try {
     await apiPost<unknown>('/api/admin/members/invite', { email, roleId })
   } catch (err) {
-    const body = err instanceof ApiError ? err.body : null
-    throw new Error(parseErrorMessage(body, m.auth_toast_error()))
+    throw new Error(apiErrorToMessage(err, m.auth_toast_error()))
   }
 }
 

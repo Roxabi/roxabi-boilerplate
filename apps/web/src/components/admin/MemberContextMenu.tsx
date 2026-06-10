@@ -41,25 +41,9 @@ import {
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { adminOrgKeys } from '@/lib/admin/queryKeys'
-import { ApiError, apiGet, apiPatch } from '@/lib/apiClient'
+import { apiGet, apiPatch } from '@/lib/apiClient'
+import { apiErrorToMessage } from '@/lib/errorUtils'
 import type { OrgRole } from './types'
-
-/**
- * Maps an ApiError to the product copy: server-provided message wins,
- * otherwise a per-status (or generic) fallback.
- */
-function apiErrorToMessage(
-  err: unknown,
-  fallback: string,
-  byStatus?: Record<number, string>
-): string {
-  if (err instanceof ApiError) {
-    const body = err.body as { message?: unknown } | null
-    if (typeof body === 'object' && typeof body?.message === 'string') return body.message
-    return byStatus?.[err.status] ?? fallback
-  }
-  return err instanceof Error ? err.message : fallback
-}
 
 export type MemberForMenu = {
   id: string

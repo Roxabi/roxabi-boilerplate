@@ -88,7 +88,12 @@ const config = defineConfig(async ({ mode }) => {
   const envDir = '../..'
   const env = loadEnv(mode, envDir, '')
   process.env.VITE_APP_NAME ??= env.APP_NAME ?? 'App'
-  process.env.VITE_APP_URL ??= env.APP_URL ?? 'http://localhost:3000'
+  // VITE_APP_URL is baked into client JS (auth redirects) — a silent localhost
+  // fallback in a production build would ship broken callbacks
+  if (mode === 'production' && !(process.env.VITE_APP_URL ?? env.VITE_APP_URL ?? env.APP_URL)) {
+    throw new Error('VITE_APP_URL (or APP_URL) must be set for production builds')
+  }
+  process.env.VITE_APP_URL ??= env.VITE_APP_URL ?? env.APP_URL ?? 'http://localhost:3000'
 
   return {
     envDir: '../..',

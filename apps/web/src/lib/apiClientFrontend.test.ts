@@ -273,9 +273,27 @@ describe('apiDelete', () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(makeOkResponse(null))
 
     const controller = new AbortController()
-    await apiDelete('/api/items/1', controller.signal)
+    await apiDelete('/api/items/1', undefined, controller.signal)
 
     const options = fetchSpy.mock.calls[0]?.[1] as RequestInit
     expect(options.signal).toBe(controller.signal)
+  })
+
+  it('resolves without throwing on 204 No Content', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 204 }))
+
+    await expect(apiDelete('/api/items/1')).resolves.toBeUndefined()
+  })
+
+  it('sends a JSON body when provided', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(null, { status: 204 }))
+
+    await apiDelete('/api/items/1', { confirmName: 'Acme' })
+
+    const options = fetchSpy.mock.calls[0]?.[1] as RequestInit
+    expect(options.method).toBe('DELETE')
+    expect(options.body).toBe(JSON.stringify({ confirmName: 'Acme' }))
   })
 })

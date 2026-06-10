@@ -16,9 +16,10 @@ import { createFileRoute, useBlocker, useNavigate } from '@tanstack/react-router
 import { AlertTriangleIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { apiDelete, apiGet } from '@/lib/apiClient'
 import { appName } from '@/lib/appName'
 import { authClient } from '@/lib/authClient'
-import { isErrorWithMessage } from '@/lib/errorUtils'
+import { apiErrorToMessage, isErrorWithMessage } from '@/lib/errorUtils'
 import { hasPermission } from '@/lib/permissions'
 import { enforceRoutePermission, useEnrichedSession } from '@/lib/routePermissions'
 import { useOrganizations } from '@/lib/useOrganizations'
@@ -68,11 +69,7 @@ type DangerZoneCardProps = {
 
 async function fetchDeletionImpact(orgId: string): Promise<DeletionImpact | null> {
   try {
-    const res = await fetch(`/api/organizations/${orgId}/deletion-impact`, {
-      credentials: 'include',
-    })
-    if (res.ok) return (await res.json()) as DeletionImpact
-    throw new Error(`HTTP ${res.status}`)
+    return await apiGet<DeletionImpact>(`/api/organizations/${orgId}/deletion-impact`)
   } catch {
     toast.error(m.auth_toast_error())
     return null
@@ -80,19 +77,13 @@ async function fetchDeletionImpact(orgId: string): Promise<DeletionImpact | null
 }
 
 async function deleteOrganization(orgId: string, orgName: string): Promise<boolean> {
-  const res = await fetch(`/api/organizations/${orgId}`, {
-    method: 'DELETE',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ confirmName: orgName }),
-  })
-
-  if (!res.ok) {
-    const data: unknown = await res.json().catch(() => null)
-    toast.error(isErrorWithMessage(data) ? data.message : m.auth_toast_error())
+  try {
+    await apiDelete(`/api/organizations/${orgId}`, { confirmName: orgName })
+    return true
+  } catch (err) {
+    toast.error(apiErrorToMessage(err, m.auth_toast_error()))
     return false
   }
-  return true
 }
 
 function DeletionImpactSummary({ impact }: { impact: DeletionImpact }) {

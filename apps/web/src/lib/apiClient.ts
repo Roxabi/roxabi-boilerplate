@@ -16,6 +16,10 @@ export class ApiError extends Error {
 
 async function parseJson<T>(res: Response): Promise<T> {
   const text = await res.text()
+  // No-body successes (204, empty DELETE responses) have nothing to parse
+  if (!text) {
+    return undefined as unknown as T
+  }
   try {
     return JSON.parse(text) as T
   } catch {
@@ -75,6 +79,10 @@ export async function apiPatch<T>(url: string, body: unknown, signal?: AbortSign
   return apiFetch<T>(url, { method: 'PATCH', body: JSON.stringify(body), signal })
 }
 
-export async function apiDelete(url: string, signal?: AbortSignal): Promise<void> {
-  await apiFetch<void>(url, { method: 'DELETE', signal })
+export async function apiDelete(url: string, body?: unknown, signal?: AbortSignal): Promise<void> {
+  await apiFetch<void>(url, {
+    method: 'DELETE',
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+    signal,
+  })
 }

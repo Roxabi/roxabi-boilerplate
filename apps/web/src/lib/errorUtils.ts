@@ -2,6 +2,8 @@
  * Shared error handling utilities for API response parsing.
  */
 
+import { ApiError } from './apiClient'
+
 export function isErrorWithMessage(value: unknown): value is { message: string } {
   return (
     value != null &&
@@ -25,4 +27,24 @@ export function isApiError(err: unknown): err is Error & { isApiError: true } {
     'isApiError' in err &&
     (err as { isApiError: unknown }).isApiError === true
   )
+}
+
+/**
+ * Maps an ApiError to the product copy: server-provided message wins,
+ * otherwise a per-status (or generic) fallback. `ApiError.message` already
+ * holds the extracted server message when the body carried one — when it
+ * doesn't, apiClient sets a generic `HTTP <status>` / parse-failure message,
+ * which we replace with the caller's copy.
+ */
+export function apiErrorToMessage(
+  err: unknown,
+  fallback: string,
+  byStatus?: Record<number, string>
+): string {
+  if (err instanceof ApiError) {
+    const body = err.body as { message?: unknown } | null
+    if (typeof body === 'object' && typeof body?.message === 'string') return body.message
+    return byStatus?.[err.status] ?? fallback
+  }
+  return err instanceof Error ? err.message : fallback
 }

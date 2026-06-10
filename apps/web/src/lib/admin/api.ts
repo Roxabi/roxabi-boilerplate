@@ -1,69 +1,43 @@
 import type { OrgDeletionImpact } from '@repo/types'
+import { apiDelete, apiGet, apiPatch, apiPost } from '../apiClient'
 
 /**
  * Centralized admin API layer.
- * All functions include credentials for cookie-based auth.
+ * Transport delegated to apiClient (credentials, Content-Type, ApiError).
  */
 
-export type ApiError = { status: number; message: string }
-
-async function checkResponse<T>(res: Response): Promise<T> {
-  if (!res.ok) {
-    const data: unknown = await res.json().catch(() => null)
-    const message =
-      typeof data === 'object' &&
-      data !== null &&
-      'message' in data &&
-      typeof data.message === 'string'
-        ? data.message
-        : `HTTP ${res.status}`
-    throw new Error(message)
-  }
-  return res.json() as Promise<T>
-}
-
-async function fetchAdmin<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`/api/admin${path}`, {
-    credentials: 'include',
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...init?.headers,
-    },
-  })
-  return checkResponse<T>(res)
-}
+const BASE = '/api/admin'
 
 // ---------------------------------------------------------------------------
 // Organizations
 // ---------------------------------------------------------------------------
 
 export async function fetchAdminOrganizations(params?: string) {
-  return fetchAdmin<unknown>(`/organizations${params ? `?${params}` : ''}`)
+  return apiGet<unknown>(`${BASE}/organizations${params ? `?${params}` : ''}`)
 }
 
 export async function fetchAdminOrganizationTree() {
-  return fetchAdmin<unknown>('/organizations?view=tree')
+  return apiGet<unknown>(`${BASE}/organizations?view=tree`)
 }
 
 export async function fetchAdminOrganization(orgId: string) {
-  return fetchAdmin<unknown>(`/organizations/${orgId}`)
+  return apiGet<unknown>(`${BASE}/organizations/${orgId}`)
 }
 
-export async function deleteAdminOrganization(orgId: string) {
-  return fetchAdmin<unknown>(`/organizations/${orgId}`, { method: 'DELETE' })
+export async function deleteAdminOrganization(orgId: string): Promise<void> {
+  return apiDelete(`${BASE}/organizations/${orgId}`)
 }
 
 export async function restoreAdminOrganization(orgId: string) {
-  return fetchAdmin<unknown>(`/organizations/${orgId}/restore`, { method: 'POST' })
+  return apiPost<unknown>(`${BASE}/organizations/${orgId}/restore`, {})
 }
 
 export async function fetchAdminOrgDeletionImpact(orgId: string) {
-  return fetchAdmin<OrgDeletionImpact>(`/organizations/${orgId}/deletion-impact`)
+  return apiGet<OrgDeletionImpact>(`${BASE}/organizations/${orgId}/deletion-impact`)
 }
 
 export async function fetchAdminOrgRoles(orgId: string) {
-  return fetchAdmin<unknown>(`/organizations/${orgId}/roles`)
+  return apiGet<unknown>(`${BASE}/organizations/${orgId}/roles`)
 }
 
 // ---------------------------------------------------------------------------
@@ -71,30 +45,27 @@ export async function fetchAdminOrgRoles(orgId: string) {
 // ---------------------------------------------------------------------------
 
 export async function fetchAdminUsers(params?: string) {
-  return fetchAdmin<unknown>(`/users${params ? `?${params}` : ''}`)
+  return apiGet<unknown>(`${BASE}/users${params ? `?${params}` : ''}`)
 }
 
 export async function fetchAdminUser(userId: string) {
-  return fetchAdmin<unknown>(`/users/${userId}`)
+  return apiGet<unknown>(`${BASE}/users/${userId}`)
 }
 
-export async function deleteAdminUser(userId: string) {
-  return fetchAdmin<unknown>(`/users/${userId}`, { method: 'DELETE' })
+export async function deleteAdminUser(userId: string): Promise<void> {
+  return apiDelete(`${BASE}/users/${userId}`)
 }
 
 export async function restoreAdminUser(userId: string) {
-  return fetchAdmin<unknown>(`/users/${userId}/restore`, { method: 'POST' })
+  return apiPost<unknown>(`${BASE}/users/${userId}/restore`, {})
 }
 
 export async function banAdminUser(userId: string, reason: string, expires?: string) {
-  return fetchAdmin<unknown>(`/users/${userId}/ban`, {
-    method: 'POST',
-    body: JSON.stringify({ reason, expires }),
-  })
+  return apiPost<unknown>(`${BASE}/users/${userId}/ban`, { reason, expires })
 }
 
 export async function unbanAdminUser(userId: string) {
-  return fetchAdmin<unknown>(`/users/${userId}/unban`, { method: 'POST' })
+  return apiPost<unknown>(`${BASE}/users/${userId}/unban`, {})
 }
 
 // ---------------------------------------------------------------------------
@@ -102,25 +73,19 @@ export async function unbanAdminUser(userId: string) {
 // ---------------------------------------------------------------------------
 
 export async function fetchAdminMembers(params?: string) {
-  return fetchAdmin<unknown>(`/members${params ? `?${params}` : ''}`)
+  return apiGet<unknown>(`${BASE}/members${params ? `?${params}` : ''}`)
 }
 
 export async function inviteAdminMember(orgId: string, email: string, role: string) {
-  return fetchAdmin<unknown>('/members/invite', {
-    method: 'POST',
-    body: JSON.stringify({ organizationId: orgId, email, role }),
-  })
+  return apiPost<unknown>(`${BASE}/members/invite`, { organizationId: orgId, email, role })
 }
 
 export async function updateAdminMemberRole(orgId: string, memberId: string, role: string) {
-  return fetchAdmin<unknown>(`/organizations/${orgId}/members/${memberId}/role`, {
-    method: 'PATCH',
-    body: JSON.stringify({ role }),
-  })
+  return apiPatch<unknown>(`${BASE}/organizations/${orgId}/members/${memberId}/role`, { role })
 }
 
-export async function cancelAdminInvitation(invitationId: string) {
-  return fetchAdmin<unknown>(`/invitations/${invitationId}`, { method: 'DELETE' })
+export async function cancelAdminInvitation(invitationId: string): Promise<void> {
+  return apiDelete(`${BASE}/invitations/${invitationId}`)
 }
 
 // ---------------------------------------------------------------------------
@@ -128,7 +93,7 @@ export async function cancelAdminInvitation(invitationId: string) {
 // ---------------------------------------------------------------------------
 
 export async function fetchAdminAuditLogs(params?: string) {
-  return fetchAdmin<unknown>(`/audit-logs${params ? `?${params}` : ''}`)
+  return apiGet<unknown>(`${BASE}/audit-logs${params ? `?${params}` : ''}`)
 }
 
 // ---------------------------------------------------------------------------
@@ -136,7 +101,7 @@ export async function fetchAdminAuditLogs(params?: string) {
 // ---------------------------------------------------------------------------
 
 export async function fetchAdminFeatureFlags() {
-  return fetchAdmin<unknown>('/feature-flags')
+  return apiGet<unknown>(`${BASE}/feature-flags`)
 }
 
 export async function createAdminFeatureFlag(data: {
@@ -144,24 +109,18 @@ export async function createAdminFeatureFlag(data: {
   key: string
   description?: string
 }) {
-  return fetchAdmin<unknown>('/feature-flags', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  })
+  return apiPost<unknown>(`${BASE}/feature-flags`, data)
 }
 
 export async function updateAdminFeatureFlag(
   id: string,
   data: { name?: string; description?: string; enabled?: boolean }
 ) {
-  return fetchAdmin<unknown>(`/feature-flags/${id}`, {
-    method: 'PATCH',
-    body: JSON.stringify(data),
-  })
+  return apiPatch<unknown>(`${BASE}/feature-flags/${id}`, data)
 }
 
-export async function deleteAdminFeatureFlag(id: string) {
-  return fetchAdmin<unknown>(`/feature-flags/${id}`, { method: 'DELETE' })
+export async function deleteAdminFeatureFlag(id: string): Promise<void> {
+  return apiDelete(`${BASE}/feature-flags/${id}`)
 }
 
 // ---------------------------------------------------------------------------
@@ -169,12 +128,9 @@ export async function deleteAdminFeatureFlag(id: string) {
 // ---------------------------------------------------------------------------
 
 export async function fetchAdminSystemSettings() {
-  return fetchAdmin<unknown>('/settings')
+  return apiGet<unknown>(`${BASE}/settings`)
 }
 
 export async function updateAdminSystemSettings(data: unknown) {
-  return fetchAdmin<unknown>('/settings', {
-    method: 'PATCH',
-    body: JSON.stringify(data),
-  })
+  return apiPatch<unknown>(`${BASE}/settings`, data)
 }
