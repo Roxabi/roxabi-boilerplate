@@ -41,7 +41,25 @@ import {
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { adminOrgKeys } from '@/lib/admin/queryKeys'
+import { ApiError, apiGet, apiPatch } from '@/lib/apiClient'
 import type { OrgRole } from './types'
+
+/**
+ * Maps an ApiError to the product copy: server-provided message wins,
+ * otherwise a per-status (or generic) fallback.
+ */
+function apiErrorToMessage(
+  err: unknown,
+  fallback: string,
+  byStatus?: Record<number, string>
+): string {
+  if (err instanceof ApiError) {
+    const body = err.body as { message?: unknown } | null
+    if (typeof body === 'object' && typeof body?.message === 'string') return body.message
+    return byStatus?.[err.status] ?? fallback
+  }
+  return err instanceof Error ? err.message : fallback
+}
 
 export type MemberForMenu = {
   id: string
@@ -83,9 +101,11 @@ function useOrgRoles(orgId: string) {
   return useQuery<{ data: OrgRole[] }>({
     queryKey: adminOrgKeys.roles(orgId),
     queryFn: async () => {
-      const res = await fetch(`/api/admin/organizations/${orgId}/roles`, { credentials: 'include' })
-      if (!res.ok) throw new Error('Failed to load roles')
-      return res.json()
+      try {
+        return await apiGet<{ data: OrgRole[] }>(`/api/admin/organizations/${orgId}/roles`)
+      } catch (err) {
+        throw new Error(apiErrorToMessage(err, 'Failed to load roles'))
+      }
     },
   })
 }
@@ -93,22 +113,20 @@ function useOrgRoles(orgId: string) {
 function useChangeRoleMutation(orgId: string, memberId: string, onActionComplete: () => void) {
   return useMutation({
     mutationFn: async (roleId: string) => {
-      const res = await fetch(`/api/admin/organizations/${orgId}/members/${memberId}/role`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ roleId }),
-      })
-      if (!res.ok) {
-        const body = await res.json().catch(() => null)
-        if (res.status === 400) {
-          throw new Error(
-            body?.message ?? 'Cannot change role: this is the last owner of the organization'
-          )
-        }
-        throw new Error(body?.message ?? 'Failed to change role')
+      try {
+        return await apiPatch<unknown>(
+          `/api/admin/organizations/${orgId}/members/${memberId}/role`,
+          {
+            roleId,
+          }
+        )
+      } catch (err) {
+        throw new Error(
+          apiErrorToMessage(err, 'Failed to change role', {
+            400: 'Cannot change role: this is the last owner of the organization',
+          })
+        )
       }
-      return res.json()
     },
     onSuccess: () => {
       toast.success('Role updated successfully')
@@ -127,23 +145,16 @@ function useEditProfileMutation(
 ) {
   return useMutation({
     mutationFn: async (payload: { name: string; email: string }) => {
-      const res = await fetch(`/api/admin/users/${userId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(payload),
-      })
-      if (!res.ok) {
-        const body = await res.json().catch(() => null)
-        if (res.status === 409) {
-          throw new Error(body?.message ?? 'A user with this email already exists')
-        }
-        if (res.status === 404) {
-          throw new Error(body?.message ?? 'User not found')
-        }
-        throw new Error(body?.message ?? 'Failed to update profile')
+      try {
+        return await apiPatch<unknown>(`/api/admin/users/${userId}`, payload)
+      } catch (err) {
+        throw new Error(
+          apiErrorToMessage(err, 'Failed to update profile', {
+            409: 'A user with this email already exists',
+            404: 'User not found',
+          })
+        )
       }
-      return res.json()
     },
     onSuccess: () => {
       toast.success('Profile updated successfully')

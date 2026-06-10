@@ -9,9 +9,4 @@ if (!parsed.success) {
   )
 }
 
-// Require explicit API_URL in non-development environments
-if (parsed.data.NODE_ENV !== 'development' && !process.env.API_URL) {
-  throw new Error('API_URL must be explicitly set in non-development environments')
-}
-
 export const env: ServerEnv = parsed.data
