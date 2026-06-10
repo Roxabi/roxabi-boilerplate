@@ -25,7 +25,7 @@ const knownSettingValueSchemas: Record<string, z.ZodTypeAny> = {
   maintenance_mode: z.boolean(),
 }
 
-const settingsUpdateSchema = z.object({
+export const settingsUpdateSchema = z.object({
   updates: z
     .array(
       z

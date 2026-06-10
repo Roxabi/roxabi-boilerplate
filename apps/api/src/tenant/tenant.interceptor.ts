@@ -14,6 +14,7 @@ import { ClsService } from 'nestjs-cls'
 import { from, type Observable, switchMap } from 'rxjs'
 import { SKIP_ORG_KEY } from '../common/decorators/skipOrg.decorator.js'
 import { DRIZZLE, type DrizzleDB } from '../database/drizzle.provider.js'
+import { TenantResolutionException } from './exceptions/tenantResolution.exception.js'
 import { DeletedOrgRestrictionService } from './services/deletedOrgRestriction.service.js'
 import { TENANT_REPO, type TenantRepository } from './tenant.repository.js'
 
@@ -115,7 +116,8 @@ export class TenantInterceptor implements NestInterceptor {
         throw error
       }
       this.logger.error(`Failed to resolve parent org for ${orgId}`, error)
-      return orgId
+      // Fail closed (phase-1 spec): never proceed with an unverified tenant context
+      throw new TenantResolutionException(`Failed to resolve tenant context for ${orgId}`)
     }
   }
 

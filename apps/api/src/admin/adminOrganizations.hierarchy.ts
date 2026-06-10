@@ -93,7 +93,7 @@ export async function walkParentChain(
 export async function getSubtreeDepth(db: DrizzleDB | DrizzleTx, orgId: string): Promise<number> {
   const result = (await db.execute(sql`
     WITH RECURSIVE descendants AS (
-      SELECT id, parent_organization_id, 0 AS depth
+      SELECT id, parent_organization_id, 1 AS depth
       FROM organizations
       WHERE parent_organization_id = ${orgId}
 
@@ -102,7 +102,7 @@ export async function getSubtreeDepth(db: DrizzleDB | DrizzleTx, orgId: string):
       SELECT o.id, o.parent_organization_id, d.depth + 1
       FROM organizations o
       INNER JOIN descendants d ON o.parent_organization_id = d.id
-      WHERE d.depth < ${MAX_PARENT_WALK_ITERATIONS - 1}
+      WHERE d.depth < ${MAX_PARENT_WALK_ITERATIONS}
     )
     SELECT MAX(depth) AS max_depth FROM descendants
   `)) as Array<{ max_depth: number | null }>
@@ -133,6 +133,6 @@ export async function getDescendantOrgIds(
     LIMIT 1000
   `)
 
-  const rows = result.rows as Array<{ id: string }>
+  const rows = result as unknown as Array<{ id: string }>
   return rows.map((r) => r.id)
 }

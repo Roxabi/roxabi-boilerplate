@@ -26,6 +26,11 @@ export class DrizzleTenantRepository implements TenantRepository {
       .where(eq(schema.organizations.id, orgId))
       .limit(1)
 
-    return org ?? null
+    if (!org) return null
+
+    return {
+      ...org,
+      metadata: org.metadata != null ? (JSON.parse(org.metadata) as Record<string, unknown>) : null,
+    }
   }
 }

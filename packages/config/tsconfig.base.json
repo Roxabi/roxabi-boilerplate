@@ -19,8 +19,7 @@
     "sourceMap": true,
     "composite": true,
     "incremental": true,
-    "jsx": "react-jsx",
-    "ignoreDeprecations": "6.0"
+    "jsx": "react-jsx"
   },
   "exclude": ["node_modules", "dist", "build", ".next", ".turbo"]
 }

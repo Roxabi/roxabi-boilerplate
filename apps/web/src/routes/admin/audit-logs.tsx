@@ -1,4 +1,4 @@
-import type { AuditLogEntry } from '@repo/types'
+import type { AuditLogEntry, CursorPaginatedResponse } from '@repo/types'
 import {
   Badge,
   Card,
@@ -170,7 +170,7 @@ function AdminAuditLogsPage() {
     queryKey: adminAuditKeys.list(filters),
     fetchFn: async (cursor) => {
       const params = buildAuditLogParams(cursor, filters)
-      return apiGet<AuditEntry[]>(`/api/admin/audit-logs?${params}`)
+      return apiGet<CursorPaginatedResponse<AuditEntry>>(`/api/admin/audit-logs?${params}`)
     },
   })
 

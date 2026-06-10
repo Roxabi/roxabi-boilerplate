@@ -12,7 +12,7 @@ import {
   Input,
   Label,
 } from '@repo/ui'
-import { createFileRoute, useBlocker } from '@tanstack/react-router'
+import { createFileRoute, useBlocker, useNavigate } from '@tanstack/react-router'
 import { AlertTriangleIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
@@ -378,6 +378,7 @@ type ReactivationBannerProps = {
 
 function ReactivationBanner({ orgId, deleteScheduledFor, canReactivate }: ReactivationBannerProps) {
   const [reactivating, setReactivating] = useState(false)
+  const navigate = useNavigate()
 
   const formattedDate = new Date(deleteScheduledFor).toLocaleDateString(getLocale())
 
@@ -440,6 +441,7 @@ function AdminSettingsPage() {
   const { data: session } = useEnrichedSession()
   const { data: activeOrg } = authClient.useActiveOrganization()
   const { data: orgs } = useOrganizations(session?.user?.id)
+  const navigate = useNavigate()
 
   const canDeleteOrg = hasPermission(session, 'organizations:delete')
   const canEditOrg = hasPermission(session, 'organizations:write')

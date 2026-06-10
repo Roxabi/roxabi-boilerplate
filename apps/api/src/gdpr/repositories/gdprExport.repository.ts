@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { DRIZZLE, type DrizzleDB, type DrizzleTx } from '../../database/drizzle.provider.js'
 import { whereActive } from '../../database/helpers/whereActive.js'
 import {
@@ -11,14 +11,49 @@ import {
   users,
 } from '../../database/schema/auth.schema.js'
 import { consentRecords } from '../../database/schema/consent.schema.js'
-import type {
-  GdprAccountData,
-  GdprConsentData,
-  GdprInvitationData,
-  GdprOrganizationData,
-  GdprSessionData,
-  GdprUserData,
-} from '../../gdpr/gdpr.service.js'
+
+interface GdprUserData {
+  name: string
+  email: string
+  image: string | null
+  role: string | null
+  emailVerified: boolean
+  createdAt: Date | null
+}
+
+interface GdprSessionData {
+  ipAddress: string | null
+  userAgent: string | null
+  createdAt: Date | null
+  expiresAt: Date
+}
+
+interface GdprAccountData {
+  providerId: string
+  scope: string | null
+  createdAt: Date | null
+}
+
+interface GdprOrganizationData {
+  name: string
+  role: string
+  joinedAt: Date | null
+}
+
+interface GdprInvitationData {
+  email: string
+  organizationName: string
+  role: string
+  status: string
+  direction: 'sent' | 'received'
+}
+
+interface GdprConsentData {
+  categories: unknown
+  action: string
+  consentedAt: Date | null
+  policyVersion: string
+}
 
 const EXPORT_QUERY_LIMIT = 10_000
 

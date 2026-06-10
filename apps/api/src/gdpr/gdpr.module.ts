@@ -4,8 +4,10 @@ import { GdprController } from './gdpr.controller.js'
 import { GdprService } from './gdpr.service.js'
 import {
   DrizzleGdprAnonymizationRepository,
-  DrizzleGdprExportRepository,
   GDPR_ANONYMIZATION_REPO,
+} from './repositories/gdprAnonymization.repository.js'
+import {
+  DrizzleGdprExportRepository,
   GDPR_EXPORT_REPO,
 } from './repositories/gdprExport.repository.js'
 

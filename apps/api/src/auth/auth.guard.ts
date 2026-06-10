@@ -130,7 +130,7 @@ export class AuthGuard implements CanActivate {
     // Intersect key scopes with org's current permissions to prevent stale elevated access
     const effectiveScopes = keyData.scopes.filter((s) => orgPermissions.includes(s))
     try {
-      this.apiKeyService.touchLastUsedAt(keyData.id)
+      this.apiKeyService.touchLastUsedAt(keyData.id, keyData.tenantId)
     } catch (error) {
       this.logger.warn(`[touchLastUsedAt] failed for key ${keyData.id}`, {
         error: error instanceof Error ? error.message : String(error),

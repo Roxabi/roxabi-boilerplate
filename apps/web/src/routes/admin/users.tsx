@@ -1,4 +1,4 @@
-import type { AdminUser } from '@repo/types'
+import type { AdminUser, CursorPaginatedResponse } from '@repo/types'
 import {
   Badge,
   Card,
@@ -158,7 +158,7 @@ function AdminUsersList() {
       if (filters.status) params.status = filters.status
       if (filters.organizationId) params.organizationId = filters.organizationId
       if (filters.search) params.search = filters.search
-      return apiGet<AdminUser[]>('/api/admin/users', params)
+      return apiGet<CursorPaginatedResponse<AdminUser>>('/api/admin/users', params)
     },
   })
 

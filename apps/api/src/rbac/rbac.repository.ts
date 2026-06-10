@@ -32,27 +32,21 @@ export interface RbacRepository {
     tx?: DrizzleTx
   ): Promise<RoleRow | undefined>
 
-  findRoleById(roleId: string, tenantId: string, tx?: DrizzleTx): Promise<RoleRow | undefined>
+  findRoleById(roleId: string, tx?: DrizzleTx): Promise<RoleRow | undefined>
 
   updateRole(
     roleId: string,
-    tenantId: string,
     updates: { name?: string; slug?: string; description?: string | null },
     tx?: DrizzleTx
   ): Promise<void>
 
   deleteRolePermissions(roleId: string, tx?: DrizzleTx): Promise<void>
 
-  deleteRole(roleId: string, tenantId: string, tx?: DrizzleTx): Promise<void>
+  deleteRole(roleId: string, tx?: DrizzleTx): Promise<void>
 
   findViewerRole(tenantId: string, tx?: DrizzleTx): Promise<{ id: string } | undefined>
 
-  reassignMembersToRole(
-    fromRoleId: string,
-    toRoleId: string,
-    tenantId: string,
-    tx?: DrizzleTx
-  ): Promise<void>
+  reassignMembersToRole(fromRoleId: string, toRoleId: string, tx?: DrizzleTx): Promise<void>
 
   getAllPermissions(tx?: DrizzleTx): Promise<{ id: string; resource: string; action: string }[]>
 
@@ -61,12 +55,9 @@ export interface RbacRepository {
     tx?: DrizzleTx
   ): Promise<void>
 
-  getRolePermissions(roleId: string, tenantId: string, tx?: DrizzleTx): Promise<PermissionRow[]>
+  getRolePermissions(roleId: string, tx?: DrizzleTx): Promise<PermissionRow[]>
 
-  listRolesWithPermissions(
-    tenantId: string,
-    tx?: DrizzleTx
-  ): Promise<(RoleRow & { permissions: PermissionRow[] })[]>
+  listRolesWithPermissions(tx?: DrizzleTx): Promise<(RoleRow & { permissions: PermissionRow[] })[]>
 
   seedDefaultRoles(
     organizationId: string,

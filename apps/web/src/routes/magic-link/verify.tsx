@@ -76,6 +76,7 @@ function getErrorMessage(errorCode: string): string {
 
 function WarningState({ email }: { email: string }) {
   const [signingOut, setSigningOut] = useState(false)
+  const navigate = useNavigate()
 
   async function handleSignOut() {
     setSigningOut(true)
@@ -157,10 +158,7 @@ function GuestVerifyFlow({
       token,
       errorCallbackURL: `${clientEnv.VITE_APP_URL}/magic-link/verify`,
     })
-    navigate({
-      to: `/api/auth/magic-link/verify?${params.toString()}` as '/api/auth/magic-link/verify',
-      reloadDocument: true,
-    })
+    window.location.assign(`/api/auth/magic-link/verify?${params.toString()}`)
   }, [token, error])
 
   // Error code from API redirect (e.g., ?error=EXPIRED_TOKEN)
