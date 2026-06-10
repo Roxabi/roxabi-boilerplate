@@ -12,6 +12,7 @@ function createMockRepo() {
     findAll: vi.fn(),
     findByCategory: vi.fn(),
     updateByKey: vi.fn(),
+    transaction: vi.fn().mockImplementation((fn) => fn(undefined)),
   } satisfies Record<keyof SystemSettingsRepository, Mock>
 }
 

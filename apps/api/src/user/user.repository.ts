@@ -56,39 +56,12 @@ export interface UserRepository {
     tx?: DrizzleTx
   ): Promise<UserProfile | undefined>
 
+  getBanStatus(
+    userId: string,
+    tx?: DrizzleTx
+  ): Promise<{ banned: boolean | null; banExpires: Date | null } | null>
+
   reactivateUser(userId: string, tx?: DrizzleTx): Promise<UserProfile | undefined>
-
-  getOwnedOrganizations(
-    userId: string,
-    tx?: DrizzleTx
-  ): Promise<{ orgId: string; orgName: string; orgSlug: string | null }[]>
-
-  deleteUserSessions(userId: string, tx?: DrizzleTx): Promise<void>
-
-  verifyOrgOwnership(
-    orgId: string,
-    userId: string,
-    tx?: DrizzleTx
-  ): Promise<{ role: string } | undefined>
-
-  verifyTargetMember(
-    orgId: string,
-    userId: string,
-    tx?: DrizzleTx
-  ): Promise<{ id: string } | undefined>
-
-  transferOrgOwnership(
-    orgId: string,
-    targetUserId: string,
-    now: Date,
-    tx?: DrizzleTx
-  ): Promise<void>
-
-  softDeleteOrg(orgId: string, now: Date, deleteScheduledFor: Date, tx?: DrizzleTx): Promise<void>
-
-  clearOrgSessions(orgId: string, tx?: DrizzleTx): Promise<void>
-
-  expireOrgInvitations(orgId: string, tx?: DrizzleTx): Promise<void>
 
   transaction<T>(fn: (tx: DrizzleTx) => Promise<T>): Promise<T>
 }

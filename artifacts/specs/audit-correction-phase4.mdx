@@ -1,0 +1,106 @@
+---
+title: "Audit Correction Phase 4 — Async & Transactions"
+description: "Fix floating promises, wrap read-check-write sequences in transactions, replace N+1 queries with CTEs, and add batch-level error handling."
+---
+
+# Phase 4 Spec: Async & Transactions
+
+## Problem Statement
+
+`onOrganizationCreated` is called without `await` inside a Better Auth `afterCreateOrganization` hook — a floating promise that causes race conditions and unhandled rejections. Cache invalidation is placed inside a Drizzle transaction callback; if the transaction rolls back, the cache becomes stale. Multiple read-check-write sequences (`removeMember`, `createOrganization`, `reactivate`, `batchUpdate`) operate outside transactions, creating TOCTOU races. `queryClient.invalidateQueries` calls are fire-and-forget in callbacks. The email queue handler throws mid-batch, risking duplicate sends on retry.
+
+**Critical findings:**
+- `apps/api/src/auth/auth.instance.ts:241-246` — `afterCreateOrganization` hook calls `onOrganizationCreated` without `await` — floating promise + race condition (P0).
+- `apps/api/src/user/user.service.ts:173` — Cache invalidation called inside transaction callback; stale cache if rollback (P1).
+- `apps/api/src/queue/handlers/email.handler.ts:18-31` — Throw inside batch loop; if `batchSize > 1`, pg-boss retries entire batch causing duplicate sends (P1).
+- `apps/api/src/admin/adminMembers.service.ts:228-247` — `removeMember` reads owner count then deletes outside transaction (P2).
+- `apps/api/src/admin/adminOrganizations.service.ts:148-179` — `createOrganization` checks depth then inserts outside transaction (P2).
+- `apps/api/src/consent/consent.controller.ts:64` — `reply.setCookie()` before `await saveConsent()`; DB/cookie mismatch on failure (P2).
+- `apps/api/src/admin/adminOrganizations.hierarchy.ts:93-110` — `getSubtreeDepth` recursively queries children in a loop (N+1) (P2).
+- `apps/api/src/admin/adminOrganizations.hierarchy.ts:115-129` — `getDescendantOrgIds` recursively queries grandchildren in a loop (N+1) (P2).
+- `apps/api/src/system-settings/systemSettings.service.ts:36-58` — `batchUpdate` performs sequential reads then writes without transaction (P2).
+- `apps/api/src/admin/adminOrganizations.hierarchy.ts:44-51` — `validateHierarchy` uses outer `db` instead of `tx` for `getSubtreeDepth` (P2).
+- `apps/web/src/routes/dashboard.tsx` — `useAutoSelectOrg` floating promise (no cleanup ref).
+- `apps/web/src/routes/register.tsx` — consent sync POST not awaited.
+- `apps/api/src/feature-flags/featureFlags.service.ts` — no stampede protection for `isEnabled`.
+- `apps/api/src/rbac/repositories/drizzleRbac.repository.ts` — `allPerms` query inside loop in `seedDefaultRoles` (quick win #6).
+
+## Solution Design
+
+1. **Await Organization Hook** — Add `await` before `onOrganizationCreated(...)` in `auth.instance.ts` `afterCreateOrganization` hook.
+2. **Cache Invalidation Outside Transaction** — Move `invalidateSoftDeleteCache` outside the `db.transaction` callback in `user.service.ts`.
+3. **Transaction Wrapping** —
+   - `adminMembers.service.ts`: wrap `ensureNotLastOwner` + `delete` in `db.transaction`.
+   - `adminOrganizations.service.ts`: wrap `getDepth` + `insert` in `db.transaction`.
+   - `systemSettings.service.ts`: wrap `batchUpdate` in `db.transaction`.
+   - `organization.service.ts`: wrap `reactivate` read-check-write in transaction.
+   - `rbac.listener.ts`: merge `seedDefaultRoles` + owner assignment into single transaction.
+4. **CTE Replacement** — Replace recursive N+1 loops in `adminOrganizations.hierarchy.ts` (`getSubtreeDepth`, `getDescendantOrgIds`) with single recursive PostgreSQL CTE.
+5. **Pass `tx` to `validateHierarchy`** — `validateHierarchy` receives `tx` and passes it to `getSubtreeDepth`.
+6. **Email Batch Guard** — In `email.handler.ts`, collect per-job outcomes; do not throw mid-batch. Return a summary object with `succeeded` and `failed` arrays.
+7. **Frontend Await** — `await queryClient.invalidateQueries(...)` in all admin route callbacks. Add cleanup ref to `useAutoSelectOrg` floating promise. `await` consent sync POST in `register.tsx`.
+8. **Feature Flag Cache** — Add a pending-promise cache in `FeatureFlagService.isEnabled` to prevent stampede under load.
+9. **Hoist `allPerms`** — In `drizzleRbac.repository.ts`, move the `allPerms` query outside the `seedDefaultRoles` loop.
+
+## Acceptance Criteria
+
+1. `afterCreateOrganization` hook `await`s `onOrganizationCreated` (verified by `bun run typecheck` + integration test).
+2. `invalidateSoftDeleteCache` runs after `repo.transaction` completes.
+3. `removeMember` last-owner check and delete are in the same transaction.
+4. `createOrganization` depth check and insert are in the same transaction.
+5. `batchUpdate` is atomic.
+6. `validateHierarchy` uses `tx` for `getSubtreeDepth`.
+7. `getSubtreeDepth` and `getDescendantOrgIds` use recursive CTE (1 query, not N+1).
+8. `email.handler.ts` does not throw mid-batch; returns per-job outcomes.
+9. `queryClient.invalidateQueries` calls in callbacks are awaited.
+10. `register.tsx` awaits consent sync POST.
+11. `featureFlags` cache has stampede protection.
+12. `bun run test` passes, `bun run test:e2e` passes, `bun run lint` passes.
+
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `apps/api/src/auth/auth.instance.ts` | `await onOrganizationCreated(...)` in `afterCreateOrganization` hook |
+| `apps/api/src/user/user.service.ts` | Move `invalidateSoftDeleteCache` outside transaction callback |
+| `apps/api/src/admin/adminMembers.service.ts` | Wrap `ensureNotLastOwner` + `delete` in `db.transaction` |
+| `apps/api/src/admin/adminOrganizations.service.ts` | Wrap `getDepth` + `insert` in `db.transaction` |
+| `apps/api/src/admin/adminOrganizations.hierarchy.ts` | Pass `tx` to `getSubtreeDepth` in `validateHierarchy`; replace recursive loops with CTE |
+| `apps/api/src/system-settings/systemSettings.service.ts` | Wrap `batchUpdate` in `db.transaction` |
+| `apps/api/src/organization/organization.service.ts` | Wrap `reactivate` read-check-write in transaction |
+| `apps/api/src/rbac/rbac.listener.ts` | Merge `seedDefaultRoles` + owner assignment into single transaction |
+| `apps/api/src/rbac/repositories/drizzleRbac.repository.ts` | Hoist `allPerms` query outside loop |
+| `apps/api/src/queue/handlers/email.handler.ts` | Collect per-job outcomes; do not throw mid-batch |
+| `apps/web/src/routes/admin/*.tsx` | `await queryClient.invalidateQueries(...)` in callbacks |
+| `apps/web/src/routes/dashboard.tsx` | Add cleanup ref to `useAutoSelectOrg` floating promise |
+| `apps/web/src/routes/register.tsx` | `await` consent sync POST |
+| `apps/api/src/feature-flags/featureFlags.service.ts` | Add pending-promise cache for `isEnabled` |
+| `apps/api/src/consent/consent.controller.ts` | Move `reply.setCookie()` after `await saveConsent()` succeeds |
+
+## Tests to Add/Update
+
+| Test File | What to Add |
+|-----------|-------------|
+| `apps/api/src/auth/auth.instance.test.ts` | Assert `onOrganizationCreated` is awaited; assert no floating promise |
+| `apps/api/src/admin/adminMembers.service.test.ts` | Assert `removeMember` owner check + delete are atomic (mock transaction) |
+| `apps/api/src/admin/adminOrganizations.service.test.ts` | Assert `createOrganization` depth check + insert are atomic |
+| `apps/api/src/admin/adminOrganizations.hierarchy.test.ts` | Assert `getSubtreeDepth` and `getDescendantOrgIds` use CTE (spy on `db.execute` count = 1) |
+| `apps/api/src/system-settings/systemSettings.service.test.ts` | Assert `batchUpdate` is wrapped in transaction |
+| `apps/api/src/queue/handlers/email.handler.test.ts` | Assert mid-batch failure does not throw; assert per-job outcomes returned |
+| `apps/api/src/feature-flags/featureFlags.service.test.ts` | Assert concurrent `isEnabled` calls share the same promise (stampede protection) |
+| `apps/api/src/consent/consent.controller.test.ts` | Assert cookie is set only after DB write succeeds |
+
+## Migration Steps
+
+1. No DB schema changes.
+2. Deploy transaction wrapping first. Monitor DB lock wait times after deploy.
+3. Deploy CTE replacement next. Verify CTE returns the same shape as the recursive loop.
+4. Deploy email handler batch guard. Verify pg-boss batch behavior with `batchSize > 1`.
+5. Add timeout to `onOrganizationCreated` to prevent indefinite blocking of the auth hook.
+
+## Rollback Plan
+
+1. **Transaction wrapping** — Transaction wrapping is revertible per-method. If dead-lock behavior changes negatively, remove `db.transaction` from individual methods.
+2. **CTE replacement** — If CTE performance is worse or null/empty-set semantics differ, revert to the recursive loop. Monitor query plans.
+3. **Email handler** — If per-job outcomes break the queue consumer contract, revert to throwing mid-batch while fixing the consumer.
+4. **Feature flag cache** — If promise cache causes memory leaks, revert to uncached `isEnabled`.

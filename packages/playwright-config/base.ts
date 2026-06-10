@@ -111,14 +111,10 @@ export const basePlaywrightConfig: PlaywrightTestConfig = {
         ]
       : []),
   ],
+  // Order matters: entries start SEQUENTIALLY — each must pass its readiness
+  // check before the next launches. The web SSR fetches the API while
+  // rendering '/', so the API must be ready first or web readiness deadlocks.
   webServer: [
-    {
-      // Web server (frontend) — always started
-      command: process.env.CI ? 'node apps/web/.output/server/index.mjs' : 'bun run dev',
-      url: `http://localhost:${process.env.APP_PORT || 3000}`,
-      reuseExistingServer: !process.env.CI,
-      timeout: 120000,
-    },
     // API server — requires DATABASE_URL (local dev always has it via .env)
     ...(hasDatabase || !process.env.CI
       ? [
@@ -130,5 +126,12 @@ export const basePlaywrightConfig: PlaywrightTestConfig = {
           },
         ]
       : []),
+    {
+      // Web server (frontend) — always started
+      command: process.env.CI ? 'node apps/web/.output/server/index.mjs' : 'bun run dev',
+      url: `http://localhost:${process.env.APP_PORT || 3000}`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120000,
+    },
   ],
 }

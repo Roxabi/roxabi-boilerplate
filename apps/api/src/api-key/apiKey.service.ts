@@ -147,7 +147,7 @@ export class ApiKeyService {
 
     const now = new Date()
 
-    await this.repo.markRevoked(id, now)
+    await this.repo.markRevoked(id, orgId, now)
 
     this.logAudit(userId, orgId, 'api_key.revoked', id)
 
@@ -170,7 +170,8 @@ export class ApiKeyService {
 
     // TODO: lastFour should have a database index for performance:
     // CREATE INDEX idx_api_keys_last_four ON api_keys(last_four)
-    const candidates = await this.repo.findCandidatesByLastFour(lastFour)
+    const tenantId = (this.cls.get('tenantId') as string | undefined) ?? null
+    const candidates = await this.repo.findCandidatesByLastFour(lastFour, tenantId)
 
     if (candidates.length === 10) {
       this.logger.warn(
@@ -205,8 +206,8 @@ export class ApiKeyService {
     }
   }
 
-  touchLastUsedAt(id: string): void {
-    this.repo.touchLastUsedAt(id, new Date()).catch((err) => {
+  touchLastUsedAt(id: string, tenantId: string): void {
+    this.repo.touchLastUsedAt(id, tenantId, new Date()).catch((err) => {
       this.logger.error(`[touchLastUsedAt] Failed to update lastUsedAt for key ${id}`, err)
     })
   }

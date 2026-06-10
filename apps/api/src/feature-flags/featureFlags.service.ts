@@ -13,6 +13,12 @@ export class FeatureFlagService {
    */
   private cache = new Map<string, { value: boolean; expiresAt: number }>()
 
+  /**
+   * Pending-promise cache to prevent stampede under concurrent load.
+   * Multiple concurrent calls for the same key share the same DB promise.
+   */
+  private pending = new Map<string, Promise<boolean>>()
+
   constructor(@Inject(FEATURE_FLAG_REPO) private readonly repo: FeatureFlagRepository) {}
 
   async isEnabled(key: string): Promise<boolean> {
@@ -21,6 +27,22 @@ export class FeatureFlagService {
       return cached.value
     }
 
+    const pending = this.pending.get(key)
+    if (pending) {
+      return pending
+    }
+
+    const promise = this.loadAndCache(key)
+    this.pending.set(key, promise)
+
+    try {
+      return await promise
+    } finally {
+      this.pending.delete(key)
+    }
+  }
+
+  private async loadAndCache(key: string): Promise<boolean> {
     const row = await this.repo.findByKey(key)
     if (!row) return false
 

@@ -5,8 +5,9 @@ import { V1ExceptionFilter } from './v1Exception.filter.js'
 function makeHost(sendMock: ReturnType<typeof vi.fn>) {
   const statusMock = vi.fn().mockReturnValue({ send: sendMock })
   const response = { status: statusMock }
+  const request = { method: 'GET', url: '/test' }
   return {
-    switchToHttp: () => ({ getResponse: () => response }),
+    switchToHttp: () => ({ getResponse: () => response, getRequest: () => request }),
     _status: statusMock,
     _send: sendMock,
   }
@@ -370,6 +371,49 @@ describe('V1ExceptionFilter', () => {
       expect(sendMock).toHaveBeenCalledWith({
         error: { code: 'INTERNAL_ERROR', message: 'Internal server error', statusCode: 500 },
       })
+    })
+  })
+
+  describe('logger.error includes stack on 5xx (Fix #7)', () => {
+    it('passes exception stack as second arg to logger.error for plain Error', () => {
+      // Arrange
+      const loggerSpy = vi.spyOn(filter['logger'], 'error')
+      const exception = new Error('boom')
+      exception.stack = 'Error: boom\n  at test:1:1'
+
+      // Act
+      filter.catch(exception, host as never)
+
+      // Assert
+      expect(loggerSpy).toHaveBeenCalledOnce()
+      const [, secondArg] = loggerSpy.mock.calls[0]!
+      expect(secondArg).toBe(exception.stack)
+    })
+
+    it('passes String(exception) as second arg to logger.error for non-Error 5xx', () => {
+      // Arrange
+      const loggerSpy = vi.spyOn(filter['logger'], 'error')
+      const exception = 'raw string thrown'
+
+      // Act
+      filter.catch(exception, host as never)
+
+      // Assert
+      expect(loggerSpy).toHaveBeenCalledOnce()
+      const [, secondArg] = loggerSpy.mock.calls[0]!
+      expect(secondArg).toBe('raw string thrown')
+    })
+
+    it('does not call logger.error for 4xx exceptions', () => {
+      // Arrange
+      const loggerSpy = vi.spyOn(filter['logger'], 'error')
+      const exception = new HttpException('Not found', HttpStatus.NOT_FOUND)
+
+      // Act
+      filter.catch(exception, host as never)
+
+      // Assert
+      expect(loggerSpy).not.toHaveBeenCalled()
     })
   })
 

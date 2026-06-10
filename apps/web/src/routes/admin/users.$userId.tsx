@@ -39,11 +39,14 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { AdminErrorBoundary } from '@/components/admin/AdminErrorBoundary'
 import { BackLink, DetailSkeleton } from '@/components/admin/DetailShared'
 import { UserActions } from '@/components/admin/UserActions'
 import { adminUserKeys } from '@/lib/admin/queryKeys'
+import { ApiError } from '@/lib/apiClient'
 import { appName } from '@/lib/appName'
 import { useSession } from '@/lib/authClient'
+import { parseErrorMessage } from '@/lib/errorUtils'
 import { formatDate, formatTimestamp } from '@/lib/formatDate'
 import { enforceRoutePermission } from '@/lib/routePermissions'
 import { statusLabel, statusVariant } from '@/lib/userStatus'
@@ -52,6 +55,7 @@ export const Route = createFileRoute('/admin/users/$userId')({
   staticData: { permission: 'role:superadmin' },
   beforeLoad: enforceRoutePermission,
   component: AdminUserDetailPage,
+  errorComponent: ({ error }) => <AdminErrorBoundary error={error as Error} />,
   head: () => ({ meta: [{ title: `User Detail | Admin | ${appName}` }] }),
 })
 
@@ -255,11 +259,17 @@ function useEditUserMutation({
         body: JSON.stringify(payload),
       })
       if (!res.ok) {
-        const body = await res.json().catch(() => null)
+        const body: unknown = await res.json().catch(() => {
+          throw new ApiError(res.status, 'Malformed JSON response')
+        })
         if (res.status === 409) {
-          throw new Error(body?.message ?? 'A user with this email already exists')
+          throw new ApiError(
+            res.status,
+            parseErrorMessage(body, 'A user with this email already exists'),
+            body
+          )
         }
-        throw new Error(body?.message ?? 'Failed to update user')
+        throw new ApiError(res.status, parseErrorMessage(body, 'Failed to update user'), body)
       }
       return res.json()
     },
@@ -267,10 +277,10 @@ function useEditUserMutation({
       toast.success('User updated successfully')
       onSave()
     },
-    onError: (err) => {
+    onError: async (err) => {
       setError(err instanceof Error ? err.message : 'Failed to update user')
       // Refetch user detail to update isLastActiveSuperadmin flag
-      queryClient.invalidateQueries({ queryKey: adminUserKeys.detail(user.id) })
+      await queryClient.invalidateQueries({ queryKey: adminUserKeys.detail(user.id) })
     },
   })
 
@@ -523,14 +533,14 @@ function AdminUserDetailPage() {
     queryKey: adminUserKeys.detail(userId),
     queryFn: async () => {
       const res = await fetch(`/api/admin/users/${userId}`)
-      if (!res.ok) throw new Error('User not found')
+      if (!res.ok) throw new ApiError(res.status, 'User not found')
       return res.json()
     },
   })
 
-  function handleActionComplete() {
-    queryClient.invalidateQueries({ queryKey: adminUserKeys.detail(userId) })
-    queryClient.invalidateQueries({ queryKey: adminUserKeys.all })
+  async function handleActionComplete() {
+    await queryClient.invalidateQueries({ queryKey: adminUserKeys.detail(userId) })
+    await queryClient.invalidateQueries({ queryKey: adminUserKeys.all })
   }
 
   function handleEditSave() {

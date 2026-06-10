@@ -31,7 +31,7 @@ export const envSchema = z.object({
   SMTP_HOST: z.string().optional(), // Set to use Nodemailer (e.g. localhost for Mailpit dev relay)
   SMTP_PORT: z.coerce.number().optional().default(1025), // SMTP port — Mailpit default is 1025
   SMTP_SECURE: booleanFromEnv.optional().default(false), // true for TLS (remote relay); false for localhost Mailpit
-  APP_URL: z.string().url().optional(),
+  APP_URL: z.string().url(),
   // Rate limiting & Upstash Redis
   KV_REST_API_URL: z.string().optional(),
   KV_REST_API_TOKEN: z.string().optional(),
@@ -40,8 +40,7 @@ export const envSchema = z.object({
   APP_NAME: z
     .string()
     .max(64)
-    .regex(/^[\w\s\-.]+$/)
-    .default('App'),
+    .regex(/^[\w\s\-.]+$/),
   SWAGGER_ENABLED: booleanFromEnv.optional(),
   V1_SWAGGER_ENABLED: booleanFromEnv.optional(),
   RATE_LIMIT_GLOBAL_TTL: z.coerce.number().positive().optional(),
@@ -67,9 +66,8 @@ const INSECURE_SECRETS: readonly string[] = [
 
 function deriveFallbacks(config: z.infer<typeof envSchema>): void {
   // BetterAuth base URL points at the web origin (Nitro proxies /api/** to the API)
-  const fallbackUrl = config.APP_URL ?? 'http://localhost:3000'
-  if (config.CORS_ORIGIN === undefined) config.CORS_ORIGIN = fallbackUrl
-  if (config.BETTER_AUTH_URL === undefined) config.BETTER_AUTH_URL = fallbackUrl
+  if (config.CORS_ORIGIN === undefined) config.CORS_ORIGIN = config.APP_URL
+  if (config.BETTER_AUTH_URL === undefined) config.BETTER_AUTH_URL = config.APP_URL
 }
 
 const RATE_LIMIT_PRESETS = {

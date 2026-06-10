@@ -8,6 +8,8 @@ export interface UserPurgeRepository {
     tx?: DrizzleTx
   ): Promise<{ id: string; email: string; deletedAt: Date | null } | null>
 
+  findExpiredUsers(now: Date, tx?: DrizzleTx): Promise<{ id: string; email: string }[]>
+
   anonymizeUserRecords(
     userId: string,
     originalEmail: string,

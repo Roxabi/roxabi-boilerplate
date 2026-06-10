@@ -313,8 +313,6 @@ function DeleteAccountSection() {
     try {
       const res = await deleteAccount(userEmail, flow.resolutions)
       if (!res.ok) {
-        const data: unknown = await res.json().catch(() => null)
-        console.error('Delete account error:', data)
         toast.error(m.account_delete_error())
         return
       }

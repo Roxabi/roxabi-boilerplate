@@ -4,6 +4,7 @@ import { Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { appName } from '@/lib/appName'
 import { authClient, useSession } from '@/lib/authClient'
+import { clientEnv } from '@/lib/env.shared'
 import { m } from '@/paraglide/messages'
 import { AuthLayout } from '../../components/AuthLayout'
 
@@ -75,12 +76,13 @@ function getErrorMessage(errorCode: string): string {
 
 function WarningState({ email }: { email: string }) {
   const [signingOut, setSigningOut] = useState(false)
+  const navigate = useNavigate()
 
   async function handleSignOut() {
     setSigningOut(true)
     try {
       await authClient.signOut()
-      window.location.reload()
+      navigate({ to: '/magic-link/verify', reloadDocument: true })
     } catch {
       setSigningOut(false)
     }
@@ -154,9 +156,9 @@ function GuestVerifyFlow({
     if (!token || error) return
     const params = new URLSearchParams({
       token,
-      errorCallbackURL: `${window.location.origin}/magic-link/verify`,
+      errorCallbackURL: `${clientEnv.VITE_APP_URL}/magic-link/verify`,
     })
-    window.location.href = `/api/auth/magic-link/verify?${params.toString()}`
+    window.location.assign(`/api/auth/magic-link/verify?${params.toString()}`)
   }, [token, error])
 
   // Error code from API redirect (e.g., ?error=EXPIRED_TOKEN)

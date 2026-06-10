@@ -2,7 +2,7 @@ import { type ArgumentsHost, Catch, type ExceptionFilter, HttpStatus } from '@ne
 import type { FastifyReply, FastifyRequest } from 'fastify'
 import { ClsService } from 'nestjs-cls'
 import { sendErrorResponse } from '../../common/filters/sendErrorResponse.js'
-import { FeatureFlagCreateFailedException } from '../exceptions/featureFlagCreateFailed.exception.js'
+import { FeatureFlagCreateFailedException } from '../../feature-flags/exceptions/featureFlagCreateFailed.exception.js'
 
 @Catch(FeatureFlagCreateFailedException)
 export class AdminInternalErrorFilter implements ExceptionFilter {

@@ -13,20 +13,19 @@ import { OrgSlugConflictException } from './exceptions/orgSlugConflict.exception
 // ---------------------------------------------------------------------------
 
 function createMockDb() {
-  return {
+  // tx is the db itself: transactional code paths reuse the configured mocks
+  const db = {
     select: vi.fn(),
     insert: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
-    transaction: vi.fn(async (fn: (tx: Record<string, unknown>) => unknown) =>
-      fn({
-        select: vi.fn(),
-        insert: vi.fn(),
-        update: vi.fn(),
-        delete: vi.fn(),
-      })
-    ),
+    execute: vi.fn(),
+    transaction: vi.fn(),
   }
+  db.transaction.mockImplementation(async (fn: (tx: Record<string, unknown>) => unknown) =>
+    fn(db as unknown as Record<string, unknown>)
+  )
+  return db
 }
 
 function createMockAuditService(): AuditService {
@@ -85,6 +84,55 @@ describe('AdminOrganizationsService', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
     ;({ service, db, auditService } = createService())
+  })
+
+  // -----------------------------------------------------------------------
+  // listOrgRoles
+  // -----------------------------------------------------------------------
+  describe('listOrgRoles', () => {
+    it('should throw AdminOrgNotFoundException when org not found', async () => {
+      // Arrange -- findOrgOrThrow select returns empty
+      db.select.mockReturnValueOnce(createChainMock([]))
+
+      // Act & Assert
+      await expect(service.listOrgRoles('org-missing')).rejects.toThrow(AdminOrgNotFoundException)
+    })
+
+    it('should return roles data when org exists', async () => {
+      // Arrange
+      db.select
+        .mockReturnValueOnce(createChainMock([baseOrg])) // findOrgOrThrow
+        .mockReturnValueOnce(
+          createChainMock([
+            { id: 'r-1', name: 'Owner', slug: 'owner' },
+            { id: 'r-2', name: 'Member', slug: 'member' },
+          ])
+        ) // roles query
+
+      // Act
+      const result = await service.listOrgRoles('org-1')
+
+      // Assert
+      expect(result).toEqual({
+        data: [
+          { id: 'r-1', name: 'Owner', slug: 'owner' },
+          { id: 'r-2', name: 'Member', slug: 'member' },
+        ],
+      })
+    })
+
+    it('should return empty data array when org has no roles', async () => {
+      // Arrange
+      db.select
+        .mockReturnValueOnce(createChainMock([baseOrg])) // findOrgOrThrow
+        .mockReturnValueOnce(createChainMock([])) // no roles
+
+      // Act
+      const result = await service.listOrgRoles('org-1')
+
+      // Assert
+      expect(result).toEqual({ data: [] })
+    })
   })
 
   // -----------------------------------------------------------------------
@@ -149,6 +197,29 @@ describe('AdminOrganizationsService', () => {
       // Assert
       expect(result.members).toEqual([])
       expect(result.children).toEqual([])
+    })
+
+    it('should include parentOrganization data when parentOrganizationId is non-null', async () => {
+      // Arrange
+      const orgWithParent = { ...baseOrg, parentOrganizationId: 'org-parent' }
+      const parentOrg = { id: 'org-parent', name: 'Parent Corp', slug: 'parent-corp' }
+
+      // Promise.all: [fetchParentOrg, fetchOrgMembers, fetchChildOrgs]
+      // findOrgOrThrow is db.select call 1
+      // fetchParentOrg is db.select call 2
+      // fetchOrgMembers and fetchChildOrgs are calls 3 and 4 (innerJoin/leftJoin, so use select mock)
+      db.select
+        .mockReturnValueOnce(createChainMock([orgWithParent])) // findOrgOrThrow
+        .mockReturnValueOnce(createChainMock([parentOrg])) // fetchParentOrg
+        .mockReturnValueOnce(createChainMock([])) // fetchOrgMembers
+        .mockReturnValueOnce(createChainMock([])) // fetchChildOrgs
+
+      // Act
+      const result = await service.getOrganizationDetail('org-1')
+
+      // Assert
+      expect(result.parentOrganization).toEqual(parentOrg)
+      expect(result.parentOrganizationId).toBe('org-parent')
     })
   })
 
@@ -346,11 +417,15 @@ describe('AdminOrganizationsService', () => {
         )
         .mockReturnValueOnce(createChainMock([{ id: 'org-gp', parentOrganizationId: null }]))
       db.transaction.mockImplementationOnce(async (fn: (tx: Record<string, unknown>) => unknown) =>
-        fn({ select: txSelect, insert: vi.fn(), update: vi.fn(), delete: vi.fn() })
+        fn({
+          select: txSelect,
+          insert: vi.fn(),
+          update: vi.fn(),
+          delete: vi.fn(),
+          // getSubtreeDepth (recursive CTE) -- org-move has no children
+          execute: vi.fn().mockResolvedValue([{ max_depth: null }]),
+        })
       )
-
-      // getSubtreeDepth uses db.select -- org-move has no children
-      db.select.mockReturnValueOnce(createChainMock([]))
 
       // Act & Assert -- depth(2) + 1 + subtreeDepth(0) = 3 >= 3, throws
       await expect(
@@ -371,6 +446,87 @@ describe('AdminOrganizationsService', () => {
 
       // Assert
       expect(auditService.log).not.toHaveBeenCalled()
+    })
+
+    it('should skip validateHierarchy when parentOrganizationId is null', async () => {
+      // Arrange -- update with parentOrganizationId explicitly set to null
+      const beforeOrg = { ...baseOrg, parentOrganizationId: 'org-old-parent' }
+      const updatedOrg = { ...baseOrg, parentOrganizationId: null }
+
+      db.select.mockReturnValueOnce(createChainMock([beforeOrg]))
+      db.update.mockReturnValueOnce(createChainMock([updatedOrg]))
+
+      // Act -- should NOT call transaction (validateHierarchy) because parentOrganizationId is null
+      const result = await service.updateOrganization(
+        'org-1',
+        { parentOrganizationId: null },
+        'actor-super'
+      )
+
+      // Assert -- transaction (validateHierarchy) should not have been called
+      expect(result).toBeDefined()
+      expect(db.transaction).not.toHaveBeenCalled()
+    })
+
+    it('should use org.parent_changed audit action when parentOrganizationId changes', async () => {
+      // Arrange -- org currently has no parent; we set a new one (undefined !== null → different)
+      const beforeOrg = { ...baseOrg, parentOrganizationId: null }
+      const updatedOrg = { ...baseOrg, parentOrganizationId: 'org-new-parent' }
+
+      db.select.mockReturnValueOnce(createChainMock([beforeOrg]))
+
+      // validateHierarchy via transaction; depth check returns no ancestors
+      const txSelect = vi.fn()
+      txSelect.mockReturnValueOnce(
+        createChainMock([{ id: 'org-new-parent', parentOrganizationId: null }])
+      )
+      db.transaction.mockImplementationOnce(async (fn: (tx: Record<string, unknown>) => unknown) =>
+        fn({
+          select: txSelect,
+          insert: vi.fn(),
+          update: vi.fn(),
+          delete: vi.fn(),
+          execute: vi.fn().mockResolvedValue([{ max_depth: null }]),
+        })
+      )
+
+      db.update.mockReturnValueOnce(createChainMock([updatedOrg]))
+
+      // Act
+      await service.updateOrganization(
+        'org-1',
+        { parentOrganizationId: 'org-new-parent' },
+        'actor-super'
+      )
+
+      // Assert -- audit action should be org.parent_changed
+      expect(auditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'org.parent_changed' })
+      )
+    })
+  })
+
+  // -----------------------------------------------------------------------
+  // createOrganization — audit fire-and-forget (does not propagate rejection)
+  // -----------------------------------------------------------------------
+  describe('createOrganization — audit fire-and-forget', () => {
+    it('should NOT propagate audit log rejection to the caller', async () => {
+      // Arrange
+      const createdOrg = { ...baseOrg, id: 'org-new' }
+      db.insert.mockReturnValueOnce(createChainMock([createdOrg]))
+      ;(auditService.log as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+        new Error('audit unavailable')
+      )
+
+      // Act -- must not throw even though audit fails
+      const result = await service.createOrganization(
+        { name: 'New Org', slug: 'new-org' },
+        'actor-super'
+      )
+
+      // Assert
+      expect(result).toBeDefined()
+      expect(result.id).toBe('org-new')
     })
   })
 })

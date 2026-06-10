@@ -130,9 +130,11 @@ export class AuthGuard implements CanActivate {
     // Intersect key scopes with org's current permissions to prevent stale elevated access
     const effectiveScopes = keyData.scopes.filter((s) => orgPermissions.includes(s))
     try {
-      this.apiKeyService.touchLastUsedAt(keyData.id)
-    } catch {
-      // fire-and-forget — never block auth on a last-used update failure
+      this.apiKeyService.touchLastUsedAt(keyData.id, keyData.tenantId)
+    } catch (error) {
+      this.logger.warn(`[touchLastUsedAt] failed for key ${keyData.id}`, {
+        error: error instanceof Error ? error.message : String(error),
+      })
     }
     return {
       user: { id: keyData.userId, role: keyData.role as Role },
@@ -150,10 +152,22 @@ export class AuthGuard implements CanActivate {
   ): Promise<void> {
     if (session.actorType !== 'api_key') {
       await this.checkSoftDeleted(request, session)
+      await this.checkBanned(session)
     }
     this.checkRoles(context, session)
     this.checkOrgRequired(context, session)
     this.checkPermissions(context, session)
+  }
+
+  private async checkBanned(session: AuthenticatedSession) {
+    const user = await this.userService.getBanStatus(session.user.id)
+    if (!user?.banned) return
+    const now = new Date()
+    if (user.banExpires !== null && user.banExpires <= now) return
+    throw new ForbiddenException({
+      message: 'Account is banned',
+      errorCode: ErrorCode.ACCOUNT_BANNED,
+    })
   }
 
   private async checkSoftDeleted(request: AuthenticatedRequest, session: AuthenticatedSession) {

@@ -84,9 +84,15 @@ export class RbacMemberService {
         throw new MemberNotFoundException(memberId)
       }
 
-      // Check if removing last Owner
+      // Guard owner role assignment and removal
       if (member.roleId) {
         const currentRole = await this.repo.findRoleById(member.roleId, tx)
+
+        if (role.slug === 'owner' && currentRole?.slug !== 'owner') {
+          throw new OwnershipConstraintException(
+            'Cannot assign owner role directly — use transferOwnership'
+          )
+        }
 
         if (currentRole?.slug === 'owner' && role.slug !== 'owner') {
           // Count Owners

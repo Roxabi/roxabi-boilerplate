@@ -1,4 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing'
+import { Test, type TestingModule } from '@nestjs/testing'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 /**
@@ -46,12 +46,12 @@ describe('AuthModule Integration', () => {
 
   it('should have all required dependencies injected', () => {
     if (authService && typeof authService === 'object') {
-      // Verify key methods exist
       // biome-ignore lint/suspicious/noExplicitAny: Test introspection requires any
-      const _hasValidateToken = typeof (authService as any).validateToken === 'function'
+      const hasValidateToken = typeof (authService as any).validateToken === 'function'
       // biome-ignore lint/suspicious/noExplicitAny: Test introspection requires any
-      const _hasHashPassword = typeof (authService as any).hashPassword === 'function'
-      expect(true).toBe(true)
+      const hasHashPassword = typeof (authService as any).hashPassword === 'function'
+      expect(hasValidateToken).toBe(true)
+      expect(hasHashPassword).toBe(true)
     } else {
       expect(true).toBe(true)
     }

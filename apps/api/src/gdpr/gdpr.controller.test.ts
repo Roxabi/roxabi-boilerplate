@@ -1,3 +1,4 @@
+import type { ConfigService } from '@nestjs/config'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { GdprController } from './gdpr.controller.js'
 import type { GdprService } from './gdpr.service.js'
@@ -5,6 +6,10 @@ import type { GdprService } from './gdpr.service.js'
 const mockGdprService = {
   exportUserData: vi.fn(),
 } as unknown as GdprService
+
+const mockConfigService = {
+  get: vi.fn().mockImplementation((key: string) => process.env[key]),
+} as unknown as ConfigService
 
 const mockExportData = {
   exportedAt: '2026-02-17T12:00:00.000Z',
@@ -50,7 +55,7 @@ const mockExportData = {
 }
 
 describe('GdprController', () => {
-  const controller = new GdprController(mockGdprService)
+  const controller = new GdprController(mockGdprService, mockConfigService)
 
   beforeEach(() => {
     vi.restoreAllMocks()

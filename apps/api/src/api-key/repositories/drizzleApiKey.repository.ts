@@ -80,13 +80,24 @@ export class DrizzleApiKeyRepository implements ApiKeyRepository {
     return existing
   }
 
-  async markRevoked(id: string, now: Date, tx?: DrizzleTx): Promise<void> {
+  async markRevoked(id: string, tenantId: string, now: Date, tx?: DrizzleTx): Promise<void> {
     const qb = tx ?? this.db
-    await qb.update(apiKeys).set({ revokedAt: now }).where(eq(apiKeys.id, id))
+    await qb
+      .update(apiKeys)
+      .set({ revokedAt: now })
+      .where(and(eq(apiKeys.id, id), eq(apiKeys.tenantId, tenantId)))
   }
 
-  async findCandidatesByLastFour(lastFour: string, tx?: DrizzleTx): Promise<ApiKeyValidationRow[]> {
+  async findCandidatesByLastFour(
+    lastFour: string,
+    tenantId: string | null,
+    tx?: DrizzleTx
+  ): Promise<ApiKeyValidationRow[]> {
     const qb = tx ?? this.db
+    const conditions = [eq(apiKeys.lastFour, lastFour), isNull(users.deletedAt)]
+    if (tenantId) {
+      conditions.push(eq(apiKeys.tenantId, tenantId))
+    }
     return qb
       .select({
         id: apiKeys.id,
@@ -101,13 +112,16 @@ export class DrizzleApiKeyRepository implements ApiKeyRepository {
       })
       .from(apiKeys)
       .innerJoin(users, eq(apiKeys.userId, users.id))
-      .where(and(eq(apiKeys.lastFour, lastFour), isNull(users.deletedAt)))
+      .where(and(...conditions))
       .limit(10)
   }
 
-  async touchLastUsedAt(id: string, now: Date, tx?: DrizzleTx): Promise<void> {
+  async touchLastUsedAt(id: string, tenantId: string, now: Date, tx?: DrizzleTx): Promise<void> {
     const qb = tx ?? this.db
-    await qb.update(apiKeys).set({ lastUsedAt: now }).where(eq(apiKeys.id, id))
+    await qb
+      .update(apiKeys)
+      .set({ lastUsedAt: now })
+      .where(and(eq(apiKeys.id, id), eq(apiKeys.tenantId, tenantId)))
   }
 
   async revokeAllForUser(userId: string, now: Date, tx?: DrizzleTx): Promise<void> {

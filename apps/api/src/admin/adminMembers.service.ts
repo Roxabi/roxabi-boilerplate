@@ -1,8 +1,9 @@
 import { Inject, Injectable, Logger } from '@nestjs/common'
-import { and, count, eq, ilike, or } from 'drizzle-orm'
+import { and, count, eq, ilike, isNull, or } from 'drizzle-orm'
 import { ClsService } from 'nestjs-cls'
 import { AuditService } from '../audit/audit.service.js'
 import { DRIZZLE, type DrizzleDB, type DrizzleTx } from '../database/drizzle.provider.js'
+import { whereActive } from '../database/helpers/whereActive.js'
 import { members, users } from '../database/schema/auth.schema.js'
 import { roles } from '../database/schema/rbac.schema.js'
 import { LastOwnerConstraintException } from './exceptions/lastOwnerConstraint.exception.js'
@@ -63,7 +64,7 @@ export class AdminMembersService {
   }
 
   private buildMemberSearchClause(orgId: string, search?: string) {
-    const conditions = [eq(members.organizationId, orgId)]
+    const conditions = [eq(members.organizationId, orgId), whereActive(members)]
     if (search) {
       const pattern = `%${escapeIlikePattern(search)}%`
       const searchCondition = or(ilike(users.name, pattern), ilike(users.email, pattern))
@@ -168,7 +169,9 @@ export class AdminMembersService {
       await tx
         .update(members)
         .set({ roleId: data.roleId, role: newRole.slug })
-        .where(and(eq(members.id, memberId), eq(members.organizationId, orgId)))
+        .where(
+          and(eq(members.id, memberId), eq(members.organizationId, orgId), whereActive(members))
+        )
     })
 
     this.logMemberAudit('member.role_changed', 'member', orgId, memberId, actorId, {
@@ -212,7 +215,7 @@ export class AdminMembersService {
       })
       .from(members)
       .leftJoin(roles, eq(members.roleId, roles.id))
-      .where(and(eq(members.id, memberId), eq(members.organizationId, orgId)))
+      .where(and(eq(members.id, memberId), eq(members.organizationId, orgId), whereActive(members)))
       .limit(1)
 
     if (!memberWithRole) {
@@ -232,9 +235,13 @@ export class AdminMembersService {
       throw new SelfRemovalException()
     }
 
-    await this.ensureNotLastOwner(member, orgId)
+    await this.db.transaction(async (tx) => {
+      await this.ensureNotLastOwner(tx, member, orgId)
 
-    await this.db.delete(members).where(eq(members.id, memberId))
+      await tx
+        .delete(members)
+        .where(and(eq(members.id, memberId), eq(members.organizationId, orgId)))
+    })
 
     this.logMemberAudit('member.removed', 'member', orgId, memberId, actorId, {
       before: {
@@ -258,7 +265,7 @@ export class AdminMembersService {
       })
       .from(members)
       .leftJoin(roles, eq(members.roleId, roles.id))
-      .where(and(eq(members.id, memberId), eq(members.organizationId, orgId)))
+      .where(and(eq(members.id, memberId), eq(members.organizationId, orgId), whereActive(members)))
       .limit(1)
 
     if (!member) {
@@ -282,11 +289,15 @@ export class AdminMembersService {
   ) {
     if (member.roleSlug !== 'owner' && member.role !== 'owner') return
 
+    const roleCondition =
+      member.roleId != null
+        ? eq(members.roleId, member.roleId)
+        : and(eq(members.role, 'owner'), isNull(members.roleId))
+
     const [ownerCount] = await tx
       .select({ count: count() })
       .from(members)
-      // biome-ignore lint/style/noNonNullAssertion: roleId is guaranteed by the owner role check above
-      .where(and(eq(members.organizationId, orgId), eq(members.roleId, member.roleId!)))
+      .where(and(eq(members.organizationId, orgId), roleCondition, whereActive(members)))
 
     if ((ownerCount?.count ?? 0) <= 1) {
       throw new LastOwnerConstraintException()
@@ -294,16 +305,21 @@ export class AdminMembersService {
   }
 
   private async ensureNotLastOwner(
+    tx: DrizzleTx,
     member: { roleSlug: string | null; role: string; roleId: string | null },
     orgId: string
   ) {
     if (member.roleSlug !== 'owner' && member.role !== 'owner') return
 
-    const [ownerCount] = await this.db
+    const roleCondition =
+      member.roleId != null
+        ? eq(members.roleId, member.roleId)
+        : and(eq(members.role, 'owner'), isNull(members.roleId))
+
+    const [ownerCount] = await tx
       .select({ count: count() })
       .from(members)
-      // biome-ignore lint/style/noNonNullAssertion: roleId is guaranteed by the owner role check above
-      .where(and(eq(members.organizationId, orgId), eq(members.roleId, member.roleId!)))
+      .where(and(eq(members.organizationId, orgId), roleCondition, whereActive(members)))
 
     if ((ownerCount?.count ?? 0) <= 1) {
       throw new LastOwnerConstraintException()

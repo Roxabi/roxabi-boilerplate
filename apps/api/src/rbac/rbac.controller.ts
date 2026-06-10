@@ -8,8 +8,8 @@ import { PermissionService } from './permission.service.js'
 import { RbacService } from './rbac.service.js'
 import { RbacMemberService } from './rbacMember.service.js'
 
-/** Matches "resource:action" where both segments are lowercase letters with optional hyphens (e.g. "audit-log:read"). */
-export const PERMISSION_FORMAT = /^[a-z][a-z-]*:[a-z][a-z-]*$/
+/** Matches "resource:action" where both segments are lowercase letters with optional hyphens and underscores (e.g. "audit-log:read" or "api_keys:read"). */
+export const PERMISSION_FORMAT = /^[a-z][a-z_-]*:[a-z][a-z_-]*$/
 
 const createRoleSchema = z.object({
   name: z.string().min(1).max(100),

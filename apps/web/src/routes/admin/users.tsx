@@ -1,4 +1,4 @@
-import type { AdminUser } from '@repo/types'
+import type { AdminUser, CursorPaginatedResponse } from '@repo/types'
 import {
   Badge,
   Card,
@@ -17,12 +17,14 @@ import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, Link, Outlet, useMatch } from '@tanstack/react-router'
 import { ShieldIcon, UsersIcon } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { AdminErrorBoundary } from '@/components/admin/AdminErrorBoundary'
 import type { FilterConfig } from '@/components/admin/FilterBar'
 import { FilterBar } from '@/components/admin/FilterBar'
 import { LoadMoreButton } from '@/components/admin/LoadMoreButton'
 import { UserContextMenu, UserKebabButton } from '@/components/admin/UserContextMenu'
 import { useCursorPagination } from '@/hooks/useCursorPagination'
 import { adminOrgKeys, adminUserKeys } from '@/lib/admin/queryKeys'
+import { apiGet } from '@/lib/apiClient'
 import { appName } from '@/lib/appName'
 import { formatDate } from '@/lib/formatDate'
 import { formatRelativeTime } from '@/lib/formatRelativeTime'
@@ -33,6 +35,7 @@ export const Route = createFileRoute('/admin/users')({
   staticData: { permission: 'role:superadmin' },
   beforeLoad: enforceRoutePermission,
   component: AdminUsersPage,
+  errorComponent: AdminErrorBoundary,
   head: () => ({ meta: [{ title: `Users | Admin | ${appName}` }] }),
 })
 
@@ -108,9 +111,9 @@ function useOrgFilterConfigs(): FilterConfig[] {
   const { data: orgsData } = useQuery<{ data: { id: string; name: string }[] }>({
     queryKey: adminOrgKeys.filterOptions(),
     queryFn: async () => {
-      const res = await fetch('/api/admin/organizations?limit=100')
-      if (!res.ok) throw new Error('Failed to fetch organizations')
-      return res.json()
+      return apiGet<{ data: { id: string; name: string }[] }>('/api/admin/organizations', {
+        limit: '100',
+      })
     },
   })
 
@@ -149,15 +152,13 @@ function AdminUsersList() {
   } = useCursorPagination<AdminUser>({
     queryKey: adminUserKeys.list(filters),
     fetchFn: async (cursor) => {
-      const params = new URLSearchParams()
-      if (cursor) params.set('cursor', cursor)
-      if (filters.role) params.set('role', filters.role)
-      if (filters.status) params.set('status', filters.status)
-      if (filters.organizationId) params.set('organizationId', filters.organizationId)
-      if (filters.search) params.set('search', filters.search)
-      const res = await fetch(`/api/admin/users?${params}`)
-      if (!res.ok) throw new Error('Failed to fetch users')
-      return res.json()
+      const params: Record<string, string> = {}
+      if (cursor) params.cursor = cursor
+      if (filters.role) params.role = filters.role
+      if (filters.status) params.status = filters.status
+      if (filters.organizationId) params.organizationId = filters.organizationId
+      if (filters.search) params.search = filters.search
+      return apiGet<CursorPaginatedResponse<AdminUser>>('/api/admin/users', params)
     },
   })
 

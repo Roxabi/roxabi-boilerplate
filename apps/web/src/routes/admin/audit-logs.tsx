@@ -1,4 +1,4 @@
-import type { AuditLogEntry } from '@repo/types'
+import type { AuditLogEntry, CursorPaginatedResponse } from '@repo/types'
 import {
   Badge,
   Card,
@@ -23,6 +23,7 @@ import { FilterBar } from '@/components/admin/FilterBar'
 import { LoadMoreButton } from '@/components/admin/LoadMoreButton'
 import { useCursorPagination } from '@/hooks/useCursorPagination'
 import { adminAuditKeys } from '@/lib/admin/queryKeys'
+import { apiGet } from '@/lib/apiClient'
 import { appName } from '@/lib/appName'
 import { formatTimestamp } from '@/lib/formatDate'
 import { enforceRoutePermission } from '@/lib/routePermissions'
@@ -169,9 +170,7 @@ function AdminAuditLogsPage() {
     queryKey: adminAuditKeys.list(filters),
     fetchFn: async (cursor) => {
       const params = buildAuditLogParams(cursor, filters)
-      const res = await fetch(`/api/admin/audit-logs?${params}`)
-      if (!res.ok) throw new Error('Failed to fetch audit logs')
-      return res.json()
+      return apiGet<CursorPaginatedResponse<AuditEntry>>(`/api/admin/audit-logs?${params}`)
     },
   })
 

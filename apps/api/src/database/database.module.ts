@@ -103,8 +103,11 @@ export class DatabaseModule implements OnModuleInit, OnModuleDestroy {
     try {
       const rows = await client`SELECT count(*)::int AS count FROM drizzle.__drizzle_migrations`
       applied = rows[0]?.count ?? 0
-    } catch {
-      // Table doesn't exist — no migrations have been applied
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      if (!message.includes('relation "drizzle.__drizzle_migrations" does not exist')) {
+        this.logger.error(`Migration table check failed: ${message}`)
+      }
       applied = 0
     }
 

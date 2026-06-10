@@ -74,7 +74,8 @@ function MagicLinkSentPage() {
         toast.success(m.auth_toast_magic_link_resent())
         setCooldown(COOLDOWN_SECONDS)
       }
-    } catch {
+    } catch (err) {
+      console.error('Failed to resend magic link:', err)
       toast.error(m.auth_toast_error())
     } finally {
       setLoading(false)

@@ -2,7 +2,7 @@ import type { Job } from 'pg-boss'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   EMAIL_SEND_FAILED,
-  EmailSendFailedEvent,
+  type EmailSendFailedEvent,
 } from '../../common/events/emailSendFailed.event.js'
 import { EmailDlqHandler } from '../handlers/emailDlq.handler.js'
 

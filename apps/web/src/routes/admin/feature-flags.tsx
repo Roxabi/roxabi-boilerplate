@@ -67,9 +67,9 @@ function useToggleFeatureFlag() {
   return useMutation({
     mutationFn: ({ id, enabled }: { id: string; enabled: boolean }) =>
       toggleFeatureFlag(id, enabled),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success('Feature flag updated')
-      queryClient.invalidateQueries({ queryKey: featureFlagKeys.list() })
+      await queryClient.invalidateQueries({ queryKey: featureFlagKeys.list() })
     },
     onError: (err: Error) => toast.error(err.message),
   })
@@ -80,9 +80,9 @@ function useDeleteFeatureFlag() {
 
   return useMutation({
     mutationFn: (id: string) => deleteFeatureFlag(id),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success('Feature flag deleted')
-      queryClient.invalidateQueries({ queryKey: featureFlagKeys.list() })
+      await queryClient.invalidateQueries({ queryKey: featureFlagKeys.list() })
     },
     onError: (err: Error) => toast.error(err.message),
   })
@@ -90,7 +90,7 @@ function useDeleteFeatureFlag() {
 
 function useOnFlagCreated() {
   const queryClient = useQueryClient()
-  return () => queryClient.invalidateQueries({ queryKey: featureFlagKeys.list() })
+  return async () => queryClient.invalidateQueries({ queryKey: featureFlagKeys.list() })
 }
 
 function FeatureFlagsPage() {
@@ -133,13 +133,20 @@ function FeatureFlagsPage() {
             <FlagListItem
               key={flag.id}
               flag={flag}
-              onToggle={(id, enabled) =>
-                toggleMutation
-                  .mutateAsync({ id, enabled })
-                  .then(() => {})
-                  .catch(() => {})
+              onToggle={async (id, enabled) => {
+                try {
+                  await toggleMutation.mutateAsync({ id, enabled })
+                } catch (err: unknown) {
+                  console.error('Failed to toggle feature flag:', err)
+                  toast.error('Failed to toggle feature flag')
+                }
+              }}
+              onDelete={(id) =>
+                deleteMutation.mutateAsync(id).catch((err: unknown) => {
+                  console.error('Failed to delete feature flag:', err)
+                  toast.error('Failed to delete feature flag')
+                })
               }
-              onDelete={(id) => deleteMutation.mutateAsync(id).catch(() => {})}
             />
           ))}
         </div>

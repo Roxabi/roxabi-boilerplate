@@ -40,7 +40,7 @@ describe('RbacListener', () => {
     const event = new OrganizationCreatedEvent('org-1', 'user-1')
     await listener.handleOrganizationCreated(event)
 
-    expect(mockRbacService.seedDefaultRoles).toHaveBeenCalledWith('org-1')
+    expect(mockRbacService.seedDefaultRoles).toHaveBeenCalledWith('org-1', mockTx)
     expect(mockTenantService.queryAs).toHaveBeenCalledWith('org-1', expect.any(Function))
     expect(mockTx.update).toHaveBeenCalled()
   })
@@ -63,7 +63,7 @@ describe('RbacListener', () => {
     const event = new OrganizationCreatedEvent('org-1', 'user-1')
     await listener.handleOrganizationCreated(event)
 
-    expect(mockRbacService.seedDefaultRoles).toHaveBeenCalledWith('org-1')
+    expect(mockRbacService.seedDefaultRoles).toHaveBeenCalledWith('org-1', mockTx)
     expect(mockTenantService.queryAs).toHaveBeenCalledWith('org-1', expect.any(Function))
     expect(mockTx.update).not.toHaveBeenCalled()
   })

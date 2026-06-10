@@ -259,6 +259,9 @@ describe('OrganizationService', () => {
         deleteScheduledFor: null,
       }
       ;(mockRepo.reactivateOrg as ReturnType<typeof vi.fn>).mockResolvedValue(reactivatedOrg)
+      ;(mockRepo.transaction as ReturnType<typeof vi.fn>).mockImplementation(
+        async (fn: (tx: unknown) => Promise<unknown>) => fn(undefined)
+      )
 
       const service = new OrganizationService(mockRepo as never, mockEventEmitter as never)
 

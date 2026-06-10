@@ -345,18 +345,20 @@ async function handleRegister(form: RegisterFormState) {
         form.setError(m.auth_register_unable())
       }
     } else {
-      fetch('/api/consent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          categories: { necessary: true, analytics: false, marketing: false },
-          policyVersion: legalConfig.consentPolicyVersion,
-          action: 'customized',
-        }),
-      }).catch(() => {
+      try {
+        await fetch('/api/consent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            categories: { necessary: true, analytics: false, marketing: false },
+            policyVersion: legalConfig.consentPolicyVersion,
+            action: 'customized',
+          }),
+        })
+      } catch {
         /* Consent sync failure is non-critical */
-      })
+      }
       toast.success(m.auth_toast_account_created())
       form.setMessage(m.auth_check_email_verify())
     }

@@ -73,4 +73,8 @@ export class DrizzleSystemSettingsRepository implements SystemSettingsRepository
       .returning()
     return rows[0] ? toSystemSetting(rows[0]) : null
   }
+
+  transaction<T>(fn: (tx: DrizzleTx) => Promise<T>): Promise<T> {
+    return this.db.transaction(fn)
+  }
 }

@@ -1,0 +1,71 @@
+# .claude/stack.yml — dev-core stack configuration
+# DO NOT commit stack.yml. Commit this file (stack.yml.example) as a reference.
+# Copy to .claude/stack.yml and fill in your values.
+schema_version: "1.0"
+
+runtime: bun                      # bun | node | deno
+package_manager: bun              # bun | npm | pnpm | yarn
+
+backend:
+  framework: nestjs               # nestjs | express | fastify | django | rails | none
+  orm: drizzle                    # drizzle | prisma | typeorm | mongoose | none
+  path: apps/api
+
+frontend:
+  framework: tanstack-start       # nextjs | remix | sveltekit | tanstack-start | nuxt | none
+  path: apps/web
+  ui_package: "@repo/ui"
+  ui_src: packages/ui/src
+
+shared:
+  types: packages/types
+  ui: packages/ui
+  config: packages/config
+
+build:
+  orchestrator: turbo             # turbo | nx | none
+  orchestrator_config: turbo.jsonc
+  formatter: biome                # biome | eslint | rome | none
+  formatter_config: biome.json
+  formatter_fix_cmd: "bunx biome check --write"
+
+testing:
+  unit: vitest                    # vitest | jest | pytest | none
+  e2e: playwright                 # playwright | cypress | none
+
+deploy:
+  platform: vercel                # vercel | railway | fly | aws | none
+  secrets_cmd: "vercel env add"
+
+docs:
+  framework: fumadocs             # fumadocs | docusaurus | nextra | none
+  path: docs
+  format: mdx                    # mdx | md
+
+commands:
+  dev: bun run dev
+  build: bun run build
+  test: bun run test
+  lint: bun run lint
+  typecheck: bun run typecheck
+  format: "bunx biome check --write"
+  install: bun install
+
+artifacts:
+  analyses: artifacts/analyses
+  specs: artifacts/specs
+  frames: artifacts/frames
+  plans: artifacts/plans
+
+standards:
+  backend: docs/standards/backend-patterns.mdx
+  frontend: docs/standards/frontend-patterns.mdx
+  testing: docs/standards/testing.mdx
+  code_review: docs/standards/code-review.mdx
+  architecture: docs/architecture/
+  configuration: docs/configuration.mdx
+  deployment: docs/guides/deployment.mdx
+  troubleshooting: docs/guides/troubleshooting.mdx
+  issue_management: docs/processes/issue-management.mdx
+  dev_process: docs/processes/dev-process.mdx
+  contributing: docs/contributing.mdx

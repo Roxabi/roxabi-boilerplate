@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Logger } from '@nestjs/common'
+import { HttpException, HttpStatus, type Logger } from '@nestjs/common'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { AllExceptionsFilter } from './allExceptions.filter.js'

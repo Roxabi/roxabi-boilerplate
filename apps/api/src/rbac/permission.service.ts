@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common'
 import { and, eq } from 'drizzle-orm'
 import { DRIZZLE, type DrizzleDB } from '../database/drizzle.provider.js'
+import { whereActive } from '../database/helpers/whereActive.js'
 import { members } from '../database/schema/auth.schema.js'
 import { permissions, rolePermissions } from '../database/schema/rbac.schema.js'
 
@@ -24,7 +25,13 @@ export class PermissionService {
     const member = await this.db
       .select({ roleId: members.roleId })
       .from(members)
-      .where(and(eq(members.userId, userId), eq(members.organizationId, organizationId)))
+      .where(
+        and(
+          eq(members.userId, userId),
+          eq(members.organizationId, organizationId),
+          whereActive(members)
+        )
+      )
       .limit(1)
 
     const roleId = member[0]?.roleId

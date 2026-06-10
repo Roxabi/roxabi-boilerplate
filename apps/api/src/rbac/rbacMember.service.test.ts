@@ -189,5 +189,29 @@ describe('RbacMemberService', () => {
         OwnershipConstraintException
       )
     })
+
+    it('should block non-owner from promoting member to owner', async () => {
+      // Arrange
+      const mockRepo = createMockRbacMemberRepo()
+      ;(mockRepo.findRoleInTenant as ReturnType<typeof vi.fn>).mockResolvedValue({
+        id: 'r-owner',
+        slug: 'owner',
+      })
+      ;(mockRepo.findMemberInOrg as ReturnType<typeof vi.fn>).mockResolvedValue({
+        id: 'm-1',
+        roleId: 'r-admin',
+      })
+      ;(mockRepo.findRoleById as ReturnType<typeof vi.fn>).mockResolvedValue({
+        id: 'r-admin',
+        slug: 'admin',
+      })
+
+      const service = new RbacMemberService(mockTenantService, mockCls, mockRepo as never)
+
+      // Act & Assert
+      await expect(service.changeMemberRole('m-1', 'r-owner')).rejects.toThrow(
+        OwnershipConstraintException
+      )
+    })
   })
 })

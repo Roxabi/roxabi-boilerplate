@@ -33,6 +33,9 @@ vi.mock('@tanstack/react-start/server', () => ({
 
 vi.mock('@/lib/env.server', () => ({
   env: {
+    get API_URL() {
+      return process.env.API_URL ?? 'http://localhost:4000'
+    },
     get API_PORT() {
       return process.env.API_PORT ? parseInt(process.env.API_PORT, 10) : 4000
     },
@@ -157,10 +160,9 @@ describe('getServerEnrichedSession', () => {
     })
   })
 
-  it('should use API_PORT when API_URL is not set', async () => {
-    // Arrange
-    vi.stubEnv('API_URL', undefined)
-    vi.stubEnv('API_PORT', '5000')
+  it('should use API_URL from env when set to a custom value', async () => {
+    // Arrange — API_URL is always required; no API_PORT fallback exists
+    vi.stubEnv('API_URL', 'http://internal-api:5000')
     const session = {
       user: { id: '1', email: 'test@example.com', role: 'member' },
       session: {},
@@ -174,15 +176,14 @@ describe('getServerEnrichedSession', () => {
 
     // Assert
     expect(result).toEqual(session)
-    expect(mockFetch).toHaveBeenCalledWith('http://localhost:5000/api/session', {
+    expect(mockFetch).toHaveBeenCalledWith('http://internal-api:5000/api/session', {
       headers: { cookie: 'session=abc' },
     })
   })
 
-  it('should prefer API_URL over API_PORT when both are set', async () => {
-    // Arrange
-    vi.stubEnv('API_URL', 'http://internal-api:8080')
-    vi.stubEnv('API_PORT', '9999')
+  it('should use default API_URL when env var is not set', async () => {
+    // Arrange — mock falls back to http://localhost:4000 when API_URL is unset
+    vi.stubEnv('API_URL', undefined)
     const session = {
       user: { id: '1', email: 'test@example.com', role: 'member' },
       session: {},
@@ -196,7 +197,7 @@ describe('getServerEnrichedSession', () => {
 
     // Assert
     expect(result).toEqual(session)
-    expect(mockFetch).toHaveBeenCalledWith('http://internal-api:8080/api/session', {
+    expect(mockFetch).toHaveBeenCalledWith('http://localhost:4000/api/session', {
       headers: { cookie: 'session=abc' },
     })
   })

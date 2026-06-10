@@ -32,7 +32,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Check changed paths
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@v4
         id: filter
         with:
           filters: |
@@ -70,7 +70,7 @@ jobs:
           fetch-depth: 0
 
       - name: TruffleHog
-        uses: trufflesecurity/trufflehog@v3.93.7
+        uses: trufflesecurity/trufflehog@v3.95.3
         with:
           path: ./
           base: ${{ github.event.pull_request.base.sha || (github.event.before != '0000000000000000000000000000000000000000' && github.event.before) || '' }}
@@ -311,6 +311,9 @@ jobs:
         env:
           TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
           TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+          # Smoke-build values — real deploys get these from Vercel project env
+          APP_URL: http://localhost:3000
+          VITE_APP_URL: http://localhost:3000
           # Raise Node heap to 6 GB on the 7 GB ubuntu-latest runner.
           # Default V8 ceiling (~4 GB) is marginal given Nitro's SSR bundle size.
           # See artifacts/analyses/437-shiki4-oom-build.mdx for root cause.
@@ -337,7 +340,7 @@ jobs:
           [ "$failed" -eq 0 ] || exit 1
 
       - name: Upload web build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: web-build-output
           path: apps/web/.output/
@@ -346,7 +349,7 @@ jobs:
           include-hidden-files: true
 
       - name: Upload API build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: api-build-output
           path: apps/api/dist/
@@ -396,6 +399,11 @@ jobs:
       SMTP_HOST: localhost
       RATE_LIMIT_ENABLED: "false"
       QUEUE_WORKER_ENABLED: "true"
+      # Required since the phase-5 env contract (32c0c06 / cb51e41):
+      # API validates APP_URL+APP_NAME, web SSR validates API_URL+APP_URL
+      APP_URL: http://localhost:3000
+      API_URL: http://localhost:4000
+      APP_NAME: Roxabi
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -446,13 +454,13 @@ jobs:
         run: bunx playwright install-deps chromium
 
       - name: Download web build artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: web-build-output
           path: apps/web/.output
 
       - name: Download API build artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: api-build-output
           path: apps/api/dist
@@ -461,7 +469,7 @@ jobs:
         run: bun test:e2e --project=chromium --reporter=list --reporter=html
 
       - name: Upload Playwright report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-report
@@ -509,6 +517,11 @@ jobs:
       SMTP_HOST: localhost
       RATE_LIMIT_ENABLED: "false"
       QUEUE_WORKER_ENABLED: "true"
+      # Required since the phase-5 env contract (32c0c06 / cb51e41):
+      # API validates APP_URL+APP_NAME, web SSR validates API_URL+APP_URL
+      APP_URL: http://localhost:3000
+      API_URL: http://localhost:4000
+      APP_NAME: Roxabi
     strategy:
       fail-fast: false
       matrix:
@@ -563,13 +576,13 @@ jobs:
         run: bunx playwright install-deps chromium firefox webkit
 
       - name: Download web build artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: web-build-output
           path: apps/web/.output
 
       - name: Download API build artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: api-build-output
           path: apps/api/dist
@@ -578,7 +591,7 @@ jobs:
         run: bun test:e2e --shard=${{ matrix.shard }}
 
       - name: Upload blob report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: blob-report-${{ strategy.job-index }}
@@ -611,7 +624,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Download blob reports
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: blob-report-*
           merge-multiple: true
@@ -621,7 +634,7 @@ jobs:
         run: bunx playwright merge-reports --reporter html all-blob-reports
 
       - name: Upload merged report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report-merged
           path: playwright-report/

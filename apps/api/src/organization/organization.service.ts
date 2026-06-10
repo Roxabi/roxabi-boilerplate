@@ -62,7 +62,9 @@ export class OrganizationService {
       throw new OrgNotOwnerException(orgId)
     }
 
-    return this.repo.reactivateOrg(orgId, new Date())
+    return this.repo.transaction(async (tx) => {
+      return this.repo.reactivateOrg(orgId, new Date(), tx)
+    })
   }
 
   async getDeletionImpact(orgId: string) {

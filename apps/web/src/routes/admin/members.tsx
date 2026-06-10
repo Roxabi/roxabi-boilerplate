@@ -11,15 +11,16 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { SearchIcon, UsersIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { AdminErrorBoundary } from '@/components/admin/AdminErrorBoundary'
 import { ErrorCard } from '@/components/admin/ErrorCard'
 import { InviteDialog } from '@/components/admin/InviteDialog'
 import { MembersTable } from '@/components/admin/MembersTable'
 import { PaginationControls } from '@/components/admin/PaginationControls'
 import { PendingInvitations } from '@/components/admin/PendingInvitations'
 import type { MembersResponse, OrgRole } from '@/components/admin/types'
+import { apiGet } from '@/lib/apiClient'
 import { appName } from '@/lib/appName'
 import { authClient, useSession } from '@/lib/authClient'
-import { parseErrorMessage } from '@/lib/errorUtils'
 import { enforceRoutePermission } from '@/lib/routePermissions'
 import { m } from '@/paraglide/messages'
 
@@ -27,6 +28,7 @@ export const Route = createFileRoute('/admin/members')({
   staticData: { permission: 'members:write' },
   beforeLoad: enforceRoutePermission,
   component: AdminMembersPage,
+  errorComponent: AdminErrorBoundary,
   head: () => ({
     meta: [{ title: `${m.org_members_title()} | ${appName}` }],
   }),
@@ -48,28 +50,18 @@ async function fetchMembers(
   search: string | undefined,
   signal?: AbortSignal
 ): Promise<MembersResponse> {
-  const params = new URLSearchParams({
+  const params: Record<string, string> = {
     page: String(page),
     limit: String(PAGE_LIMIT),
-  })
+  }
   if (search) {
-    params.set('search', search)
+    params.search = search
   }
-  const res = await fetch(`/api/admin/members?${params.toString()}`, {
-    credentials: 'include',
-    signal,
-  })
-  if (!res.ok) {
-    const data: unknown = await res.json().catch(() => null)
-    throw new Error(parseErrorMessage(data, m.auth_toast_error()))
-  }
-  return (await res.json()) as MembersResponse
+  return apiGet<MembersResponse>('/api/admin/members', params, signal)
 }
 
 async function fetchRoles(signal?: AbortSignal): Promise<OrgRole[]> {
-  const res = await fetch('/api/roles', { credentials: 'include', signal })
-  if (!res.ok) return []
-  return (await res.json()) as OrgRole[]
+  return apiGet<OrgRole[]>('/api/roles', undefined, signal)
 }
 
 // ---------------------------------------------------------------------------

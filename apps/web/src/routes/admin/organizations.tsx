@@ -2,6 +2,7 @@ import { Button } from '@repo/ui'
 import { createFileRoute, Outlet, useMatch } from '@tanstack/react-router'
 import { BuildingIcon, ListIcon, NetworkIcon, PlusIcon } from 'lucide-react'
 import { useState } from 'react'
+import { AdminErrorBoundary } from '@/components/admin/AdminErrorBoundary'
 import type { FilterConfig } from '@/components/admin/FilterBar'
 import { FilterBar } from '@/components/admin/FilterBar'
 import { appName } from '@/lib/appName'
@@ -14,6 +15,7 @@ export const Route = createFileRoute('/admin/organizations')({
   staticData: { permission: 'role:superadmin' },
   beforeLoad: enforceRoutePermission,
   component: AdminOrganizationsPage,
+  errorComponent: ({ error }) => <AdminErrorBoundary error={error as Error} />,
   head: () => ({ meta: [{ title: `Organizations | Admin | ${appName}` }] }),
 })
 

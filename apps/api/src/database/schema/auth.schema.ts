@@ -13,6 +13,10 @@ import { timestamps } from './timestamps.js'
 
 const genId = () => crypto.randomUUID()
 
+// NOTE: Auth tables (users, accounts, sessions, verifications) are user-global
+// and do not carry tenantId. RLS is applied at the api_keys / roles / members
+// layer instead. User-level access is enforced by AuthGuard and session checks.
+
 export const users = pgTable(
   'users',
   {
@@ -128,12 +132,14 @@ export const members = pgTable(
       .references(() => organizations.id, { onDelete: 'cascade' }),
     role: text('role').notNull().default('member'),
     roleId: text('role_id'),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
     ...timestamps,
   },
   (table) => [
     index('members_user_id_idx').on(table.userId),
     index('members_organization_id_idx').on(table.organizationId),
     index('members_role_id_idx').on(table.roleId),
+    index('members_deleted_at_idx').on(table.deletedAt).where(isNotNull(table.deletedAt)),
   ]
 )
 

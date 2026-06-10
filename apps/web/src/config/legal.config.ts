@@ -23,3 +23,13 @@ export const legalConfig = {
   },
   consentPolicyVersion: '2026-02-v1',
 } as const
+
+if (import.meta.env.PROD && legalConfig.companyName === 'ACME Corp SAS') {
+  // Warn, don't throw: the boilerplate itself ships (CI e2e, preview, demo)
+  // with placeholder values — a module-load throw would take the whole SSR
+  // down. Products built from this template replace these before launch.
+  console.warn(
+    'legal.config.ts contains placeholder values. ' +
+      "Replace with your company's actual legal information before going to production."
+  )
+}

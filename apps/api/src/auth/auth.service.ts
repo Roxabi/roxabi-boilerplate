@@ -37,8 +37,9 @@ export class AuthService {
       this.queueService,
       {
         secret: config.getOrThrow<string>('BETTER_AUTH_SECRET'),
-        baseURL: config.get<string>('BETTER_AUTH_URL', 'http://localhost:4000'),
-        appURL: config.get<string>('APP_URL', 'http://localhost:3000'),
+        baseURL: config.getOrThrow<string>('BETTER_AUTH_URL'),
+        appURL: config.getOrThrow<string>('APP_URL'),
+        appName: config.getOrThrow<string>('APP_NAME'),
         googleClientId,
         googleClientSecret,
         githubClientId,

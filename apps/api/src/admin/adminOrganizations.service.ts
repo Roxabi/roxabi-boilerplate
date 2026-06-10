@@ -1,8 +1,9 @@
 import { Inject, Injectable, Logger } from '@nestjs/common'
-import { count, eq } from 'drizzle-orm'
+import { and, count, eq } from 'drizzle-orm'
 import { ClsService } from 'nestjs-cls'
 import { AuditService } from '../audit/audit.service.js'
 import { DRIZZLE, type DrizzleDB } from '../database/drizzle.provider.js'
+import { whereActive } from '../database/helpers/whereActive.js'
 import { PG_UNIQUE_VIOLATION } from '../database/pgErrorCodes.js'
 import { members, organizations, users } from '../database/schema/auth.schema.js'
 import { roles } from '../database/schema/rbac.schema.js'
@@ -124,7 +125,7 @@ export class AdminOrganizationsService {
       })
       .from(members)
       .innerJoin(users, eq(members.userId, users.id))
-      .where(eq(members.organizationId, orgId))
+      .where(and(eq(members.organizationId, orgId), whereActive(members)))
   }
 
   private fetchChildOrgs(orgId: string) {
@@ -137,7 +138,7 @@ export class AdminOrganizationsService {
         memberCount: count(members.id),
       })
       .from(organizations)
-      .leftJoin(members, eq(organizations.id, members.organizationId))
+      .leftJoin(members, and(eq(organizations.id, members.organizationId), whereActive(members)))
       .where(eq(organizations.parentOrganizationId, orgId))
       .groupBy(organizations.id)
   }
@@ -149,34 +150,35 @@ export class AdminOrganizationsService {
     data: { name: string; slug: string; parentOrganizationId?: string | null },
     actorId: string
   ) {
-    // Validate parent depth if parentOrganizationId is provided
-    if (data.parentOrganizationId) {
-      const depth = await getDepth(this.db, data.parentOrganizationId)
-      if (depth + 1 >= 3) {
-        throw new OrgDepthExceededException()
+    const createdOrg = await this.db.transaction(async (tx) => {
+      // Validate parent depth if parentOrganizationId is provided
+      if (data.parentOrganizationId) {
+        const depth = await getDepth(tx, data.parentOrganizationId)
+        if (depth + 1 >= 3) {
+          throw new OrgDepthExceededException()
+        }
       }
-    }
 
-    // Insert the organization
-    let createdOrg: typeof organizations.$inferSelect
-    try {
-      const [result] = await this.db
-        .insert(organizations)
-        .values({
-          name: data.name,
-          slug: data.slug,
-          parentOrganizationId: data.parentOrganizationId ?? null,
-        })
-        .returning()
-      if (!result) throw new AdminOrgNotFoundException('insert returned no rows')
-      createdOrg = result
-    } catch (err) {
-      const pgErr = err as { code?: string }
-      if (pgErr.code === PG_UNIQUE_VIOLATION) {
-        throw new OrgSlugConflictException()
+      // Insert the organization
+      try {
+        const [result] = await tx
+          .insert(organizations)
+          .values({
+            name: data.name,
+            slug: data.slug,
+            parentOrganizationId: data.parentOrganizationId ?? null,
+          })
+          .returning()
+        if (!result) throw new AdminOrgNotFoundException('insert returned no rows')
+        return result
+      } catch (err) {
+        const pgErr = err as { code?: string }
+        if (pgErr.code === PG_UNIQUE_VIOLATION) {
+          throw new OrgSlugConflictException()
+        }
+        throw err
       }
-      throw err
-    }
+    })
 
     // Fire-and-forget audit log
     this.auditService

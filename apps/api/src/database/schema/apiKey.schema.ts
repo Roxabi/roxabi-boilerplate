@@ -27,6 +27,7 @@ export const apiKeys = pgTable(
   },
   (table) => [
     index('idx_api_keys_key_hash').on(table.keyHash),
+    index('idx_api_keys_last_four').on(table.lastFour),
     index('idx_api_keys_tenant').on(table.tenantId),
     index('idx_api_keys_user').on(table.userId),
   ]

@@ -1,11 +1,12 @@
 import {
-  type ArgumentsHost,
+  ArgumentsHost,
   Catch,
-  type ExceptionFilter,
+  ExceptionFilter,
   HttpException,
   HttpStatus,
+  Logger,
 } from '@nestjs/common'
-import type { FastifyReply } from 'fastify'
+import type { FastifyReply, FastifyRequest } from 'fastify'
 
 interface ErrorWithCode {
   errorCode: string
@@ -25,9 +26,12 @@ function extractMessage(res: string | object): string | undefined {
 
 @Catch()
 export class V1ExceptionFilter implements ExceptionFilter {
+  private readonly logger = new Logger(V1ExceptionFilter.name)
+
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp()
     const response = ctx.getResponse<FastifyReply>()
+    const request = ctx.getRequest<FastifyRequest>()
 
     let statusCode = HttpStatus.INTERNAL_SERVER_ERROR
     let code = 'INTERNAL_ERROR'
@@ -48,6 +52,10 @@ export class V1ExceptionFilter implements ExceptionFilter {
     }
 
     if (statusCode >= 500) {
+      this.logger.error(
+        `[${request.method}] ${request.url} → ${statusCode} | ${code} | ${exception instanceof Error ? exception.message : String(exception)}`,
+        exception instanceof Error ? exception.stack : String(exception)
+      )
       message = 'Internal server error'
       code = 'INTERNAL_ERROR'
     }

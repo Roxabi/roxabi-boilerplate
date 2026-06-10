@@ -40,7 +40,9 @@ import { QueueService } from './queue.service.js'
         // Register handlers
         queueService.registerHandler(
           QUEUE_NAMES.EMAIL_SEND,
-          emailHandler.handle.bind(emailHandler),
+          async (jobs) => {
+            await emailHandler.handle.bind(emailHandler)(jobs)
+          },
           {
             batchSize: QUEUE_DEFAULTS.batchSize,
             pollingIntervalSeconds: QUEUE_DEFAULTS.pollingIntervalSeconds,

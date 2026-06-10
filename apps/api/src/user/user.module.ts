@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common'
 import { APP_FILTER } from '@nestjs/core'
+import { MembershipModule } from '../membership/membership.module.js'
 import { AccountAlreadyDeletedFilter } from './filters/accountAlreadyDeleted.filter.js'
 import { AccountNotDeletedFilter } from './filters/accountNotDeleted.filter.js'
 import { EmailConfirmationMismatchFilter } from './filters/emailConfirmationMismatch.filter.js'
@@ -14,8 +15,7 @@ import { USER_PURGE_REPO } from './userPurge.repository.js'
 import { UserPurgeService } from './userPurge.service.js'
 
 @Module({
-  // No AuthModule import needed: the Session decorator is standalone (createParamDecorator),
-  // and the APP_GUARD (AuthGuard) is globally provided by AuthModule — no circular dependency.
+  imports: [MembershipModule],
   controllers: [UserController],
   providers: [
     UserService,
@@ -28,6 +28,6 @@ import { UserPurgeService } from './userPurge.service.js'
     { provide: APP_FILTER, useClass: AccountAlreadyDeletedFilter },
     { provide: APP_FILTER, useClass: AccountNotDeletedFilter },
   ],
-  exports: [UserService, UserPurgeService],
+  exports: [UserService, UserPurgeService, USER_PURGE_REPO],
 })
 export class UserModule {}

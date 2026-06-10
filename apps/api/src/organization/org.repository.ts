@@ -24,7 +24,7 @@ export type OrgFindRow = {
 }
 
 export type OrgOwnershipRow = {
-  role: string | null
+  role: string
 }
 
 export type OrgDeletionImpact = {

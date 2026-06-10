@@ -63,7 +63,6 @@ reports/
 .claude/security_warnings/
 
 # dev-core stack config (project-local, not committed — commit .claude/stack.yml.example)
-.claude/stack.yml
 
 # Retro session intelligence database
 .claude/skills/retro/data/
@@ -74,3 +73,6 @@ reports/
 .vercel
 .dashboard.pid
 .playwright-mcp/
+# CocoIndex Code (ccc)
+/.cocoindex_code/
+blob-report/
