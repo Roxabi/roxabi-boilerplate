@@ -8,15 +8,15 @@ import {
   Logger,
   UnauthorizedException,
 } from '@nestjs/common'
-import type { Reflector } from '@nestjs/core'
+import { Reflector } from '@nestjs/core'
 import type { Role } from '@repo/types'
 import type { FastifyRequest } from 'fastify'
-import type { ApiKeyService } from '../api-key/apiKey.service.js'
+import { ApiKeyService } from '../api-key/apiKey.service.js'
 import { ApiKeyInvalidException } from '../api-key/exceptions/apiKeyInvalid.exception.js'
 import { ErrorCode } from '../common/errorCodes.js'
-import type { PermissionService } from '../rbac/permission.service.js'
+import { PermissionService } from '../rbac/permission.service.js'
 import { UserService } from '../user/user.service.js'
-import type { SessionEnrichmentService } from './sessionEnrichment.service.js'
+import { SessionEnrichmentService } from './sessionEnrichment.service.js'
 import type { AuthenticatedSession } from './types.js'
 
 function isAuthenticatedSession(value: unknown): value is AuthenticatedSession {
@@ -130,10 +130,11 @@ export class AuthGuard implements CanActivate {
     // Intersect key scopes with org's current permissions to prevent stale elevated access
     const effectiveScopes = keyData.scopes.filter((s) => orgPermissions.includes(s))
     try {
-      this.apiKeyService.touchLastUsedAt(keyData.id, keyData.tenantId)
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err)
-      this.logger.warn(`[buildApiKeySession] touchLastUsedAt failed: ${message}`)
+      this.apiKeyService.touchLastUsedAt(keyData.id)
+    } catch (error) {
+      this.logger.warn(`[touchLastUsedAt] failed for key ${keyData.id}`, {
+        error: error instanceof Error ? error.message : String(error),
+      })
     }
     return {
       user: { id: keyData.userId, role: keyData.role as Role },
@@ -151,7 +152,6 @@ export class AuthGuard implements CanActivate {
   ): Promise<void> {
     if (session.actorType !== 'api_key') {
       await this.checkSoftDeleted(request, session)
-      await this.checkBanned(session)
     }
     this.checkRoles(context, session)
     this.checkOrgRequired(context, session)
@@ -177,23 +177,6 @@ export class AuthGuard implements CanActivate {
         deleteScheduledFor: user.deleteScheduledFor?.toISOString(),
       })
     }
-  }
-
-  private async checkBanned(session: AuthenticatedSession) {
-    const user = await this.userService.getBanStatus(session.user.id)
-
-    if (!user?.banned) return
-
-    const now = new Date()
-    if (user.banExpires && user.banExpires < now) {
-      // Ban has expired
-      return
-    }
-
-    throw new ForbiddenException({
-      message: 'Account is banned',
-      errorCode: ErrorCode.ACCOUNT_BANNED,
-    })
   }
 
   private checkRoles(context: ExecutionContext, session: AuthenticatedSession) {

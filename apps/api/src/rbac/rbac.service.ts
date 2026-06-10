@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common'
-import type { ClsService } from 'nestjs-cls'
-import type { DrizzleTx } from '../database/drizzle.provider.js'
-import type { TenantService } from '../tenant/tenant.service.js'
+import { ClsService } from 'nestjs-cls'
+import { type DrizzleTx } from '../database/drizzle.provider.js'
+import { TenantService } from '../tenant/tenant.service.js'
 import { DefaultRoleException } from './exceptions/defaultRole.exception.js'
 import { RoleInsertFailedException } from './exceptions/roleInsertFailed.exception.js'
 import { RoleNotFoundException } from './exceptions/roleNotFound.exception.js'
@@ -83,8 +83,7 @@ export class RbacService {
   ) {
     // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: inherent to multi-step role update with slug collision check and permission sync
     return this.tenantService.query(async (tx) => {
-      const tenantId = this.cls.get('tenantId') as string
-      const existing = await this.repo.findRoleById(roleId, tenantId, tx)
+      const existing = await this.repo.findRoleById(roleId, tx)
 
       if (!existing) {
         throw new RoleNotFoundException(roleId)
@@ -94,6 +93,7 @@ export class RbacService {
       const updates: { name?: string; slug?: string; description?: string | null } = {}
       if (data.name !== undefined) {
         const newSlug = slugify(data.name)
+        const tenantId = this.cls.get('tenantId') as string
         // Ensure the new slug doesn't collide with an existing role in the tenant
         if (newSlug !== existing.slug) {
           const collision = await this.repo.findRoleBySlug(tenantId, newSlug, tx)
@@ -109,7 +109,7 @@ export class RbacService {
       }
 
       if (Object.keys(updates).length > 0) {
-        await this.repo.updateRole(roleId, tenantId, updates, tx)
+        await this.repo.updateRole(roleId, updates, tx)
       }
 
       // Re-sync permissions if provided
@@ -126,7 +126,7 @@ export class RbacService {
       }
 
       // Return updated role
-      return this.repo.findRoleById(roleId, tenantId, tx)
+      return this.repo.findRoleById(roleId, tx)
     })
   }
 
@@ -135,8 +135,7 @@ export class RbacService {
    */
   async deleteRole(roleId: string) {
     return this.tenantService.query(async (tx) => {
-      const tenantId = this.cls.get('tenantId') as string
-      const role = await this.repo.findRoleById(roleId, tenantId, tx)
+      const role = await this.repo.findRoleById(roleId, tx)
 
       if (!role) {
         throw new RoleNotFoundException(roleId)
@@ -151,10 +150,10 @@ export class RbacService {
 
       // Reassign members to Viewer + delete role (atomic via tenant tx)
       if (viewerRole) {
-        await this.repo.reassignMembersToRole(roleId, viewerRole.id, tenantId, tx)
+        await this.repo.reassignMembersToRole(roleId, viewerRole.id, tx)
       }
 
-      await this.repo.deleteRole(roleId, tenantId, tx)
+      await this.repo.deleteRole(roleId, tx)
 
       return { deleted: true }
     })
@@ -165,14 +164,13 @@ export class RbacService {
    */
   async getRolePermissions(roleId: string) {
     return this.tenantService.query(async (tx) => {
-      const tenantId = this.cls.get('tenantId') as string
-      const existing = await this.repo.findRoleById(roleId, tenantId, tx)
+      const existing = await this.repo.findRoleById(roleId, tx)
 
       if (!existing) {
         throw new RoleNotFoundException(roleId)
       }
 
-      return this.repo.getRolePermissions(roleId, tenantId, tx)
+      return this.repo.getRolePermissions(roleId, tx)
     })
   }
 
@@ -180,29 +178,26 @@ export class RbacService {
    * List all roles for the current tenant, each with their permissions — single batched query.
    */
   async listRolesWithPermissions() {
-    const tenantId = this.cls.get('tenantId') as string
-    return this.tenantService.query((tx) => this.repo.listRolesWithPermissions(tenantId, tx))
+    return this.tenantService.query((tx) => this.repo.listRolesWithPermissions(tx))
   }
 
   /**
    * Seed default roles for a newly created organization.
    * Called on org creation event.
-   * When called with an explicit tx (e.g., from RbacListener), seeds inside the caller's transaction.
-   * Otherwise, creates a new tenant-scoped transaction.
+   * When tx is provided, runs inside the existing transaction; otherwise opens a new one.
    */
   async seedDefaultRoles(organizationId: string, tx?: DrizzleTx) {
-    const mappedRoles = DEFAULT_ROLES.map((def) => ({
+    const defs = DEFAULT_ROLES.map((def) => ({
       name: def.name,
       slug: def.slug,
       description: def.description,
       permissions: def.permissions,
     }))
-
     if (tx) {
-      await this.repo.seedDefaultRoles(organizationId, mappedRoles, tx)
+      await this.repo.seedDefaultRoles(organizationId, defs, tx)
     } else {
       await this.tenantService.queryAs(organizationId, async (innerTx) => {
-        await this.repo.seedDefaultRoles(organizationId, mappedRoles, innerTx)
+        await this.repo.seedDefaultRoles(organizationId, defs, innerTx)
       })
     }
   }

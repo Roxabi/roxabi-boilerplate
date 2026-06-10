@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common'
 import { and, eq } from 'drizzle-orm'
 import { DRIZZLE, type DrizzleDB, type DrizzleTx } from '../../database/drizzle.provider.js'
 import { whereActive } from '../../database/helpers/whereActive.js'
-import { sessions, users } from '../../database/schema/auth.schema.js'
+import { users } from '../../database/schema/auth.schema.js'
 import type { UserProfile, UserRepository } from '../user.repository.js'
 
 const profileColumns = {
@@ -35,19 +35,6 @@ export class DrizzleUserRepository implements UserRepository {
     const qb = tx ?? this.db
     const [user] = await qb
       .select({ deletedAt: users.deletedAt, deleteScheduledFor: users.deleteScheduledFor })
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1)
-    return user ?? null
-  }
-
-  async getBanStatus(
-    userId: string,
-    tx?: DrizzleTx
-  ): Promise<{ banned: boolean | null; banExpires: Date | null } | null> {
-    const qb = tx ?? this.db
-    const [user] = await qb
-      .select({ banned: users.banned, banExpires: users.banExpires })
       .from(users)
       .where(eq(users.id, userId))
       .limit(1)
@@ -131,11 +118,6 @@ export class DrizzleUserRepository implements UserRepository {
       .where(eq(users.id, userId))
       .returning(profileColumns)
     return updated
-  }
-
-  async deleteUserSessions(userId: string, tx?: DrizzleTx): Promise<void> {
-    const qb = tx ?? this.db
-    await qb.delete(sessions).where(eq(sessions.userId, userId))
   }
 
   transaction<T>(fn: (tx: DrizzleTx) => Promise<T>): Promise<T> {

@@ -1,14 +1,16 @@
 import { type ArgumentsHost, Catch, type ExceptionFilter, HttpStatus } from '@nestjs/common'
 import type { FastifyReply, FastifyRequest } from 'fastify'
-import type { ClsService } from 'nestjs-cls'
+import { ClsService } from 'nestjs-cls'
 import { sendErrorResponse } from '../../common/filters/sendErrorResponse.js'
 import { SuperadminProtectionException } from '../exceptions/superadminProtection.exception.js'
+
+type AdminForbiddenException = SuperadminProtectionException
 
 @Catch(SuperadminProtectionException)
 export class AdminForbiddenFilter implements ExceptionFilter {
   constructor(private readonly cls: ClsService) {}
 
-  catch(exception: SuperadminProtectionException, host: ArgumentsHost) {
+  catch(exception: AdminForbiddenException, host: ArgumentsHost) {
     const ctx = host.switchToHttp()
     const response = ctx.getResponse<FastifyReply>()
     const request = ctx.getRequest<FastifyRequest>()

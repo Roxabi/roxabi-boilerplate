@@ -3,12 +3,12 @@ import { OnEvent } from '@nestjs/event-emitter'
 import { and, eq } from 'drizzle-orm'
 import {
   ORGANIZATION_CREATED,
-  type OrganizationCreatedEvent,
+  OrganizationCreatedEvent,
 } from '../common/events/organizationCreated.event.js'
 import { members } from '../database/schema/auth.schema.js'
 import { roles } from '../database/schema/rbac.schema.js'
-import type { TenantService } from '../tenant/tenant.service.js'
-import type { RbacService } from './rbac.service.js'
+import { TenantService } from '../tenant/tenant.service.js'
+import { RbacService } from './rbac.service.js'
 
 @Injectable()
 export class RbacListener {
@@ -23,10 +23,10 @@ export class RbacListener {
   async handleOrganizationCreated(event: OrganizationCreatedEvent) {
     this.logger.log(`Seeding default roles for organization ${event.organizationId}`)
 
+    // Merge role seeding + owner assignment into a single transaction
     await this.tenantService.queryAs(event.organizationId, async (tx) => {
       await this.rbacService.seedDefaultRoles(event.organizationId, tx)
 
-      // Assign Owner role to the creator
       const [ownerRole] = await tx
         .select({ id: roles.id })
         .from(roles)

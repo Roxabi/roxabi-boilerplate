@@ -3,64 +3,53 @@ import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagg
 import { Throttle } from '@nestjs/throttler'
 import type { SettingsUpdatePayload } from '@repo/types'
 import { z } from 'zod'
-import type { AuditService } from '../audit/audit.service.js'
+import { AuditService } from '../audit/audit.service.js'
 import { Roles } from '../auth/decorators/roles.decorator.js'
 import { Session } from '../auth/decorators/session.decorator.js'
 import type { AuthenticatedSession } from '../auth/types.js'
 import { SkipOrg } from '../common/decorators/skipOrg.decorator.js'
 import { ZodValidationPipe } from '../common/pipes/zodValidation.pipe.js'
-import type { SystemSettingsService } from '../system-settings/systemSettings.service.js'
+import { SystemSettingsService } from '../system-settings/systemSettings.service.js'
 import { AdminBadRequestFilter } from './filters/adminBadRequest.filter.js'
 import { AdminConflictFilter } from './filters/adminConflict.filter.js'
+import { AdminForbiddenFilter } from './filters/adminForbidden.filter.js'
 import { AdminInternalErrorFilter } from './filters/adminInternalError.filter.js'
 import { AdminNotFoundFilter } from './filters/adminNotFound.filter.js'
 
-const settingValueSchema = z.union([z.string(), z.number(), z.boolean(), z.null()])
-
-const SETTING_VALUE_SCHEMAS: Record<string, z.ZodType> = {
-  'app.name': z.string().min(1).max(64),
-  'app.supportEmail': z.string().email(),
-  'app.maintenanceMode': z.boolean(),
-  'auth.signupEnabled': z.boolean(),
-  'auth.sessionTtlHours': z.number().int().min(1),
-  'auth.maxLoginAttempts': z.number().int().min(1),
-  'org.maxMembers': z.number().int().min(1),
-  'org.allowSelfRegistration': z.boolean(),
-  'email.fromName': z.string().min(1).max(128),
-  'email.fromAddress': z.string().email(),
-  'email.footerText': z.string(),
-  'security.passwordMinLength': z.number().int().min(1),
+/** Per-key value schemas for known system settings.
+ *  Unknown keys pass through to the service layer which validates by stored type.
+ */
+const knownSettingValueSchemas: Record<string, z.ZodTypeAny> = {
+  support_email: z.string().email(),
+  max_orgs: z.number().int().min(1),
+  maintenance_mode: z.boolean(),
 }
 
-export const settingsUpdateSchema = z.object({
+const settingsUpdateSchema = z.object({
   updates: z
     .array(
       z
         .object({
           key: z.string().min(1),
-          value: settingValueSchema,
+          value: z.unknown(),
         })
         .refine((obj) => 'value' in obj, {
           message: 'Value is required',
           path: ['value'],
         })
-    )
-    .min(1)
-    .refine(
-      (items) => {
-        for (const item of items) {
-          const schema = SETTING_VALUE_SCHEMAS[item.key]
-          if (schema) {
-            const result = schema.safeParse(item.value)
-            if (!result.success) return false
+        .refine(
+          (obj) => {
+            const schema = knownSettingValueSchemas[obj.key]
+            if (!schema) return true
+            return schema.safeParse(obj.value).success
+          },
+          {
+            message: 'Invalid value for this setting key',
+            path: ['value'],
           }
-        }
-        return true
-      },
-      {
-        message: 'One or more setting values are invalid for their key',
-      }
-    ),
+        )
+    )
+    .min(1),
 })
 
 @ApiTags('Admin Settings')
@@ -69,6 +58,7 @@ export const settingsUpdateSchema = z.object({
   AdminNotFoundFilter,
   AdminConflictFilter,
   AdminBadRequestFilter,
+  AdminForbiddenFilter,
   AdminInternalErrorFilter
 )
 @Throttle({ global: { ttl: 60_000, limit: 30 } })

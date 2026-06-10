@@ -27,11 +27,6 @@ export interface UserRepository {
     tx?: DrizzleTx
   ): Promise<{ deletedAt: Date | null; deleteScheduledFor: Date | null } | null>
 
-  getBanStatus(
-    userId: string,
-    tx?: DrizzleTx
-  ): Promise<{ banned: boolean | null; banExpires: Date | null } | null>
-
   getProfile(userId: string, tx?: DrizzleTx): Promise<UserProfile | null>
 
   getNameFields(
@@ -62,8 +57,6 @@ export interface UserRepository {
   ): Promise<UserProfile | undefined>
 
   reactivateUser(userId: string, tx?: DrizzleTx): Promise<UserProfile | undefined>
-
-  deleteUserSessions(userId: string, tx?: DrizzleTx): Promise<void>
 
   transaction<T>(fn: (tx: DrizzleTx) => Promise<T>): Promise<T>
 }

@@ -8,17 +8,14 @@ import {
   type NestInterceptor,
   Optional,
 } from '@nestjs/common'
-import type { Reflector } from '@nestjs/core'
+import { Reflector } from '@nestjs/core'
 import type { FastifyRequest } from 'fastify'
-import type { ClsService } from 'nestjs-cls'
+import { ClsService } from 'nestjs-cls'
 import { from, type Observable, switchMap } from 'rxjs'
 import { SKIP_ORG_KEY } from '../common/decorators/skipOrg.decorator.js'
-import { ErrorCode } from '../common/errorCodes.js'
-import { TenantResolutionException } from './exceptions/tenantResolution.exception.js'
-import {
-  ORGANIZATION_LOOKUP_REPO,
-  type OrganizationLookupRepository,
-} from './organizationLookup.repository.js'
+import { DRIZZLE, type DrizzleDB } from '../database/drizzle.provider.js'
+import { DeletedOrgRestrictionService } from './services/deletedOrgRestriction.service.js'
+import { TENANT_REPO, type TenantRepository } from './tenant.repository.js'
 
 type AuthenticatedRequest = FastifyRequest & {
   session?: {
@@ -33,12 +30,6 @@ type AuthenticatedRequest = FastifyRequest & {
  */
 const CLS_RESOLVED_TENANT_KEY = 'resolvedTenantMap'
 
-// Org-scoped routes that are allowed when org is soft-deleted
-const ORG_DELETED_ALLOWED_PATTERNS = [
-  { method: 'POST', pattern: /^\/api\/organizations\/[^/]+\/reactivate$/ },
-  { method: 'GET', pattern: /^\/api\/organizations\/[^/]+$/ },
-]
-
 @Injectable()
 export class TenantInterceptor implements NestInterceptor {
   private readonly logger = new Logger(TenantInterceptor.name)
@@ -46,9 +37,9 @@ export class TenantInterceptor implements NestInterceptor {
   constructor(
     private readonly cls: ClsService,
     private readonly reflector: Reflector,
-    @Optional()
-    @Inject(ORGANIZATION_LOOKUP_REPO)
-    private readonly orgLookup: OrganizationLookupRepository | null
+    @Inject(TENANT_REPO) private readonly tenantRepo: TenantRepository,
+    private readonly deletedOrgRestrictionService: DeletedOrgRestrictionService,
+    @Optional() @Inject(DRIZZLE) private readonly db: DrizzleDB | null // RLS-BYPASS: tenant resolution — fallback when repository is unavailable
   ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
@@ -75,8 +66,8 @@ export class TenantInterceptor implements NestInterceptor {
       return next.handle()
     }
 
-    // If no repository is available, fall back to using activeOrganizationId directly
-    if (!this.orgLookup) {
+    // If no DB is available, fall back to using activeOrganizationId directly
+    if (!this.db) {
       this.cls.set('tenantId', activeOrganizationId)
       return next.handle()
     }
@@ -98,20 +89,20 @@ export class TenantInterceptor implements NestInterceptor {
    * non-allowed operations if so.
    */
   private async resolveParentOrg(orgId: string, request: AuthenticatedRequest): Promise<string> {
-    if (!this.orgLookup) {
+    if (!this.db) {
       return orgId
     }
 
     try {
-      const org = await this.orgLookup.findById(orgId)
+      const org = await this.tenantRepo.lookupOrganization(orgId)
 
       if (!org) {
         this.logger.warn(`Organization ${orgId} not found during tenant resolution`)
-        throw new TenantResolutionException(`Organization ${orgId} not found`)
+        return orgId
       }
 
       if (org.deletedAt) {
-        this.enforceDeletedOrgRestriction(org, request)
+        this.deletedOrgRestrictionService.enforce(org, request)
       }
 
       // TODO(Phase 3, #389): Parent tenant resolution is formally deferred.
@@ -124,27 +115,7 @@ export class TenantInterceptor implements NestInterceptor {
         throw error
       }
       this.logger.error(`Failed to resolve parent org for ${orgId}`, error)
-      throw new TenantResolutionException()
-    }
-  }
-
-  private enforceDeletedOrgRestriction(
-    org: { deleteScheduledFor: Date | null },
-    request: AuthenticatedRequest
-  ) {
-    const method = request.method.toUpperCase()
-    const path = request.url?.split('?')[0]
-
-    const isAllowed = ORG_DELETED_ALLOWED_PATTERNS.some(
-      (route) => route.method === method && path && route.pattern.test(path)
-    )
-
-    if (!isAllowed) {
-      throw new ForbiddenException({
-        message: 'Organization is scheduled for deletion',
-        errorCode: ErrorCode.ORG_SCHEDULED_FOR_DELETION,
-        deleteScheduledFor: org.deleteScheduledFor?.toISOString(),
-      })
+      return orgId
     }
   }
 

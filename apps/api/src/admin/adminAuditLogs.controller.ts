@@ -4,9 +4,10 @@ import { Throttle } from '@nestjs/throttler'
 import { z } from 'zod'
 import { Roles } from '../auth/decorators/roles.decorator.js'
 import { SkipOrg } from '../common/decorators/skipOrg.decorator.js'
-import type { AdminAuditLogsService } from './adminAuditLogs.service.js'
+import { AdminAuditLogsService } from './adminAuditLogs.service.js'
 import { AdminBadRequestFilter } from './filters/adminBadRequest.filter.js'
 import { AdminConflictFilter } from './filters/adminConflict.filter.js'
+import { AdminForbiddenFilter } from './filters/adminForbidden.filter.js'
 import { AdminInternalErrorFilter } from './filters/adminInternalError.filter.js'
 import { AdminNotFoundFilter } from './filters/adminNotFound.filter.js'
 
@@ -28,6 +29,7 @@ const listAuditLogsQuerySchema = z.object({
   AdminNotFoundFilter,
   AdminConflictFilter,
   AdminBadRequestFilter,
+  AdminForbiddenFilter,
   AdminInternalErrorFilter
 )
 @Throttle({ global: { ttl: 60_000, limit: 30 } })

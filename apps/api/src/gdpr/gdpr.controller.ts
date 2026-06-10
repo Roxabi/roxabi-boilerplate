@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config'
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger'
 import type { FastifyReply } from 'fastify'
 import { Session } from '../auth/decorators/session.decorator.js'
-import type { GdprService } from './gdpr.service.js'
+import { GdprService } from './gdpr.service.js'
 
 @ApiTags('GDPR')
 @ApiBearerAuth()

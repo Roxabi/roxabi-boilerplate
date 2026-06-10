@@ -21,11 +21,12 @@ import { Session } from '../auth/decorators/session.decorator.js'
 import type { AuthenticatedSession } from '../auth/types.js'
 import { SkipOrg } from '../common/decorators/skipOrg.decorator.js'
 import { ZodValidationPipe } from '../common/pipes/zodValidation.pipe.js'
-import type { AdminUsersLifecycleService } from './adminUsers.lifecycle.js'
-import type { AdminUsersQueryService } from './adminUsers.query.js'
-import type { AdminUsersService } from './adminUsers.service.js'
+import { AdminUsersLifecycleService } from './adminUsers.lifecycle.js'
+import { AdminUsersQueryService } from './adminUsers.query.js'
+import { AdminUsersService } from './adminUsers.service.js'
 import { AdminBadRequestFilter } from './filters/adminBadRequest.filter.js'
 import { AdminConflictFilter } from './filters/adminConflict.filter.js'
+import { AdminForbiddenFilter } from './filters/adminForbidden.filter.js'
 import { AdminInternalErrorFilter } from './filters/adminInternalError.filter.js'
 import { AdminNotFoundFilter } from './filters/adminNotFound.filter.js'
 
@@ -58,6 +59,7 @@ type BanUserDto = z.infer<typeof banUserSchema>
   AdminNotFoundFilter,
   AdminConflictFilter,
   AdminBadRequestFilter,
+  AdminForbiddenFilter,
   AdminInternalErrorFilter
 )
 @Throttle({ global: { ttl: 60_000, limit: 30 } })

@@ -1,7 +1,7 @@
 import {
-  type ArgumentsHost,
+  ArgumentsHost,
   Catch,
-  type ExceptionFilter,
+  ExceptionFilter,
   HttpException,
   HttpStatus,
   Logger,
@@ -52,11 +52,11 @@ export class V1ExceptionFilter implements ExceptionFilter {
     }
 
     if (statusCode >= 500) {
+      this.logger.error(
+        `[${request.method}] ${request.url} → ${statusCode} | ${code} | ${exception instanceof Error ? exception.message : String(exception)}`
+      )
       message = 'Internal server error'
       code = 'INTERNAL_ERROR'
-      this.logger.error(
-        `[${request.method}] ${request.url} → ${statusCode} — ${exception instanceof Error ? exception.message : 'Unknown error'}`
-      )
     }
 
     response.status(statusCode).send({

@@ -21,12 +21,13 @@ import { Session } from '../auth/decorators/session.decorator.js'
 import type { AuthenticatedSession } from '../auth/types.js'
 import { SkipOrg } from '../common/decorators/skipOrg.decorator.js'
 import { ZodValidationPipe } from '../common/pipes/zodValidation.pipe.js'
-import type { AdminMembersService } from './adminMembers.service.js'
-import type { AdminOrganizationsDeletionService } from './adminOrganizations.deletion.js'
-import type { AdminOrganizationsQueryService } from './adminOrganizations.query.js'
-import type { AdminOrganizationsService } from './adminOrganizations.service.js'
+import { AdminMembersService } from './adminMembers.service.js'
+import { AdminOrganizationsDeletionService } from './adminOrganizations.deletion.js'
+import { AdminOrganizationsQueryService } from './adminOrganizations.query.js'
+import { AdminOrganizationsService } from './adminOrganizations.service.js'
 import { AdminBadRequestFilter } from './filters/adminBadRequest.filter.js'
 import { AdminConflictFilter } from './filters/adminConflict.filter.js'
+import { AdminForbiddenFilter } from './filters/adminForbidden.filter.js'
 import { AdminInternalErrorFilter } from './filters/adminInternalError.filter.js'
 import { AdminNotFoundFilter } from './filters/adminNotFound.filter.js'
 
@@ -74,6 +75,7 @@ const listOrgsQuerySchema = z.object({
   AdminNotFoundFilter,
   AdminConflictFilter,
   AdminBadRequestFilter,
+  AdminForbiddenFilter,
   AdminInternalErrorFilter
 )
 @Throttle({ global: { ttl: 60_000, limit: 30 } })

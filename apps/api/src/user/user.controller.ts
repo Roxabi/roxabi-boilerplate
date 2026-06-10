@@ -4,7 +4,7 @@ import type { FastifyReply } from 'fastify'
 import { z } from 'zod'
 import { Session } from '../auth/decorators/session.decorator.js'
 import { ZodValidationPipe } from '../common/pipes/zodValidation.pipe.js'
-import type { UserService } from './user.service.js'
+import { UserService } from './user.service.js'
 
 const avatarOptionValue = z.union([z.string(), z.number(), z.boolean(), z.array(z.string())])
 

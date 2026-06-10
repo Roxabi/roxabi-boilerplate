@@ -24,7 +24,7 @@ export type OrgFindRow = {
 }
 
 export type OrgOwnershipRow = {
-  role: string | null
+  role: string
 }
 
 export type OrgDeletionImpact = {
@@ -35,6 +35,11 @@ export type OrgDeletionImpact = {
 
 export interface OrgRepository {
   listForUser(userId: string, tx?: DrizzleTx): Promise<OrgListRow[]>
+
+  getOwnedOrganizations(
+    userId: string,
+    tx?: DrizzleTx
+  ): Promise<{ orgId: string; orgName: string; orgSlug: string | null }[]>
 
   findActiveOrg(orgId: string, tx?: DrizzleTx): Promise<OrgFindRow | undefined>
 
@@ -48,6 +53,19 @@ export interface OrgRepository {
     userId: string,
     tx?: DrizzleTx
   ): Promise<OrgOwnershipRow | undefined>
+
+  verifyTargetMember(
+    orgId: string,
+    userId: string,
+    tx?: DrizzleTx
+  ): Promise<{ id: string } | undefined>
+
+  transferOrgOwnership(
+    orgId: string,
+    targetUserId: string,
+    now: Date,
+    tx?: DrizzleTx
+  ): Promise<void>
 
   softDeleteOrg(
     orgId: string,
@@ -63,6 +81,8 @@ export interface OrgRepository {
   reactivateOrg(orgId: string, now: Date, tx?: DrizzleTx): Promise<OrgSoftDeleteRow | undefined>
 
   getDeletionImpact(orgId: string, tx?: DrizzleTx): Promise<OrgDeletionImpact>
+
+  deleteUserSessions(userId: string, tx?: DrizzleTx): Promise<void>
 
   transaction<T>(fn: (tx: DrizzleTx) => Promise<T>): Promise<T>
 }

@@ -14,19 +14,20 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger'
 import { Throttle } from '@nestjs/throttler'
 import { z } from 'zod'
-import type { AuditService } from '../audit/audit.service.js'
+import { AuditService } from '../audit/audit.service.js'
 import { Roles } from '../auth/decorators/roles.decorator.js'
 import { Session } from '../auth/decorators/session.decorator.js'
 import type { AuthenticatedSession } from '../auth/types.js'
 import { SkipOrg } from '../common/decorators/skipOrg.decorator.js'
 import { ZodValidationPipe } from '../common/pipes/zodValidation.pipe.js'
 import { PG_UNIQUE_VIOLATION } from '../database/pgErrorCodes.js'
-import type { FeatureFlagService } from '../feature-flags/featureFlags.service.js'
+import { FeatureFlagService } from '../feature-flags/featureFlags.service.js'
 import { FeatureFlagCreateFailedException } from './exceptions/featureFlagCreateFailed.exception.js'
 import { FlagKeyConflictException } from './exceptions/flagKeyConflict.exception.js'
 import { FlagNotFoundException } from './exceptions/flagNotFound.exception.js'
 import { AdminBadRequestFilter } from './filters/adminBadRequest.filter.js'
 import { AdminConflictFilter } from './filters/adminConflict.filter.js'
+import { AdminForbiddenFilter } from './filters/adminForbidden.filter.js'
 import { AdminInternalErrorFilter } from './filters/adminInternalError.filter.js'
 import { AdminNotFoundFilter } from './filters/adminNotFound.filter.js'
 
@@ -54,6 +55,7 @@ const updateFlagSchema = z
   AdminNotFoundFilter,
   AdminConflictFilter,
   AdminBadRequestFilter,
+  AdminForbiddenFilter,
   AdminInternalErrorFilter
 )
 @Throttle({ global: { ttl: 60_000, limit: 30 } })

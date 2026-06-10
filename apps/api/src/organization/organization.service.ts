@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common'
-import type { EventEmitter2 } from '@nestjs/event-emitter'
+import { EventEmitter2 } from '@nestjs/event-emitter'
 import { DELETION_GRACE_PERIOD_MS } from '../common/constants.js'
 import {
   ORGANIZATION_SOFT_DELETED,
@@ -53,16 +53,16 @@ export class OrganizationService {
   }
 
   async reactivate(orgId: string, userId: string) {
+    const org = await this.repo.findOrgForReactivate(orgId)
+    if (!org) throw new OrgNotFoundException(orgId)
+    if (!org.deletedAt) throw new OrgNotDeletedException(orgId)
+
+    const membership = await this.repo.checkOwnership(orgId, userId)
+    if (!membership || membership.role !== 'owner') {
+      throw new OrgNotOwnerException(orgId)
+    }
+
     return this.repo.transaction(async (tx) => {
-      const org = await this.repo.findOrgForReactivate(orgId, tx)
-      if (!org) throw new OrgNotFoundException(orgId)
-      if (!org.deletedAt) throw new OrgNotDeletedException(orgId)
-
-      const membership = await this.repo.checkOwnership(orgId, userId, tx)
-      if (!membership || membership.role !== 'owner') {
-        throw new OrgNotOwnerException(orgId)
-      }
-
       return this.repo.reactivateOrg(orgId, new Date(), tx)
     })
   }

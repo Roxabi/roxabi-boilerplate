@@ -105,8 +105,8 @@ export class DatabaseModule implements OnModuleInit, OnModuleDestroy {
       applied = rows[0]?.count ?? 0
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
-      if (!message.includes('does not exist')) {
-        this.logger.error(`Failed to check pending migrations: ${message}`)
+      if (!message.includes('relation "drizzle.__drizzle_migrations" does not exist')) {
+        this.logger.error(`Migration table check failed: ${message}`)
       }
       applied = 0
     }

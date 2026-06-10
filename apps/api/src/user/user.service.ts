@@ -1,16 +1,16 @@
 import { Inject, Injectable, Logger } from '@nestjs/common'
-import type { EventEmitter2 } from '@nestjs/event-emitter'
+import { EventEmitter2 } from '@nestjs/event-emitter'
 import type { OrgOwnershipResolution } from '@repo/types'
 import { DELETION_GRACE_PERIOD_MS } from '../common/constants.js'
 import { USER_SOFT_DELETED, UserSoftDeletedEvent } from '../common/events/userSoftDeleted.event.js'
-import { MEMBERSHIP_REPO, type MembershipRepository } from '../membership/membership.repository.js'
 import { OrgNotOwnerException } from '../organization/exceptions/orgNotOwner.exception.js'
+import { ORG_REPO, type OrgRepository } from '../organization/org.repository.js'
 import { AccountAlreadyDeletedException } from './exceptions/accountAlreadyDeleted.exception.js'
 import { EmailConfirmationMismatchException } from './exceptions/emailConfirmationMismatch.exception.js'
 import { TransferTargetNotMemberException } from './exceptions/transferTargetNotMember.exception.js'
 import { UserNotFoundException } from './exceptions/userNotFound.exception.js'
 import { USER_REPO, type UserRepository } from './user.repository.js'
-import type { UserPurgeService } from './userPurge.service.js'
+import { UserPurgeService } from './userPurge.service.js'
 
 /** Simple in-memory TTL cache for soft-delete status lookups */
 const SOFT_DELETE_CACHE_TTL_MS = 60_000
@@ -25,7 +25,7 @@ export class UserService {
 
   constructor(
     @Inject(USER_REPO) private readonly repo: UserRepository,
-    @Inject(MEMBERSHIP_REPO) private readonly membershipRepo: MembershipRepository,
+    @Inject(ORG_REPO) private readonly orgRepo: OrgRepository,
     private readonly eventEmitter: EventEmitter2,
     private readonly userPurgeService: UserPurgeService
   ) {}
@@ -42,10 +42,6 @@ export class UserService {
       expiresAt: Date.now() + SOFT_DELETE_CACHE_TTL_MS,
     })
     return result
-  }
-
-  async getBanStatus(userId: string) {
-    return this.repo.getBanStatus(userId)
   }
 
   /** Invalidate the soft-delete status cache for a user */
@@ -135,21 +131,17 @@ export class UserService {
     const deleteScheduledFor = new Date(now.getTime() + DELETION_GRACE_PERIOD_MS)
 
     // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: inherent to multi-table org resolution within softDelete transaction
-    const updated = await this.repo.transaction(async (tx) => {
+    const updated = await this.orgRepo.transaction(async (tx) => {
       for (const resolution of orgResolutions) {
         // Verify the deleting user is an owner of this organization
-        const membership = await this.membershipRepo.verifyOrgOwnership(
-          resolution.organizationId,
-          userId,
-          tx
-        )
+        const membership = await this.orgRepo.checkOwnership(resolution.organizationId, userId, tx)
         if (!membership || membership.role !== 'owner') {
           throw new OrgNotOwnerException(resolution.organizationId)
         }
 
         if (resolution.action === 'transfer') {
           // Verify transferToUserId is an existing member of the org
-          const targetMember = await this.membershipRepo.verifyTargetMember(
+          const targetMember = await this.orgRepo.verifyTargetMember(
             resolution.organizationId,
             resolution.transferToUserId,
             tx
@@ -160,21 +152,16 @@ export class UserService {
               resolution.organizationId
             )
           }
-          await this.membershipRepo.transferOrgOwnership(
+          await this.orgRepo.transferOrgOwnership(
             resolution.organizationId,
             resolution.transferToUserId,
             now,
             tx
           )
         } else if (resolution.action === 'delete') {
-          await this.membershipRepo.softDeleteOrg(
-            resolution.organizationId,
-            now,
-            deleteScheduledFor,
-            tx
-          )
-          await this.membershipRepo.clearOrgSessions(resolution.organizationId, tx)
-          await this.membershipRepo.expireOrgInvitations(resolution.organizationId, tx)
+          await this.orgRepo.softDeleteOrg(resolution.organizationId, now, deleteScheduledFor, tx)
+          await this.orgRepo.clearOrgSessions(resolution.organizationId, tx)
+          await this.orgRepo.expireOrgInvitations(resolution.organizationId, tx)
         }
       }
 
@@ -182,12 +169,12 @@ export class UserService {
       const result = await this.repo.softDeleteUser(userId, now, deleteScheduledFor, tx)
 
       // Delete all sessions for this user (force logout)
-      await this.repo.deleteUserSessions(userId, tx)
+      await this.orgRepo.deleteUserSessions(userId, tx)
 
       return result
     })
 
-    // Invalidate cached soft-delete status after transaction commits
+    // Invalidate cached soft-delete status after successful transaction commit
     this.invalidateSoftDeleteCache(userId)
 
     // Emit after transaction commits to prevent listeners from running on partial state
@@ -207,7 +194,7 @@ export class UserService {
   }
 
   async getOwnedOrganizations(userId: string) {
-    return this.membershipRepo.getOwnedOrganizations(userId)
+    return this.orgRepo.getOwnedOrganizations(userId)
   }
 
   async purge(userId: string, confirmEmail: string) {
