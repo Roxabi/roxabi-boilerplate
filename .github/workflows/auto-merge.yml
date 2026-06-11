@@ -53,7 +53,11 @@ jobs:
       - name: Enable auto-merge (merge commit)
         run: gh pr merge "$PR_NUMBER" --auto --merge
         env:
-          GH_TOKEN: ${{ github.token }}
+          # PAT, not github.token: the eventual merge push is attributed to the enabling
+          # token, and GITHUB_TOKEN-attributed pushes never trigger push workflows
+          # (anti-recursion) — staging CI (e2e-matrix, boot-smoke) silently skipped
+          # on every auto-merged PR (#587/#588). All other Roxabi repos use PAT here.
+          GH_TOKEN: ${{ secrets.PAT }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
 
   update-behind-prs:

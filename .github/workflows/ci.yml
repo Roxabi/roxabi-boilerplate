@@ -5,6 +5,8 @@ on:
     branches: [main, staging]
   push:
     branches: [main, staging]
+  # Manual backfill (e.g. validate a merged state whose push didn't trigger CI)
+  workflow_dispatch:
   workflow_call:
 
 permissions:
