@@ -582,7 +582,7 @@ jobs:
             fi
             if body=$(curl -fsS http://localhost:4000/health 2>/dev/null); then
               echo "API healthy after ~$((i * 2))s: $body"
-              kill "$API_PID"
+              kill "$API_PID" 2>/dev/null || true
               exit 0
             fi
             sleep 2
