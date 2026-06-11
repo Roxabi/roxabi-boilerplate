@@ -49,6 +49,9 @@ jobs:
             e2e:
               - 'apps/web/src/**'
               - 'apps/web/e2e/**'
+              # API changes break e2e too (web SSR fetches the API) — #579 merged a broken
+              # API DI change while the path filter skipped e2e entirely.
+              - 'apps/api/src/**'
               - 'packages/ui/src/**'
               - 'packages/playwright-config/**'
               - 'playwright.config.ts'
@@ -476,6 +479,118 @@ jobs:
           path: playwright-report/
           retention-days: 7
 
+  # Boots the BUILT API artifact (same dist the e2e jobs and deploys consume) against a real
+  # Postgres and asserts GET /health answers. Catches "compiles green but doesn't start"
+  # regressions — broken DI wiring, bad env contract, dead bundle — that unit tests and
+  # typecheck structurally cannot see (#579: 4 such regressions shipped behind a green CI).
+  boot-smoke:
+    name: API Boot Smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [detect-changes, build]
+    if: |
+      !cancelled() &&
+      needs.build.result == 'success' &&
+      (github.event_name != 'pull_request' || needs.detect-changes.outputs.code == 'true')
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U ci"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=5
+      mailpit:
+        image: axllent/mailpit:v1.29.2
+        ports:
+          - 1025:1025
+          - 8025:8025
+        options: >-
+          --health-cmd="wget -qO- http://localhost:8025/api/v1/messages?limit=1"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=5
+    env:
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      BETTER_AUTH_SECRET: test-secret-minimum-32-characters-long
+      SMTP_HOST: localhost
+      RATE_LIMIT_ENABLED: "false"
+      QUEUE_WORKER_ENABLED: "true"
+      # Required since the phase-5 env contract (32c0c06 / cb51e41):
+      # API validates APP_URL+APP_NAME, web SSR validates API_URL+APP_URL
+      APP_URL: http://localhost:3000
+      API_URL: http://localhost:4000
+      APP_NAME: Roxabi
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Cache Bun dependencies
+        uses: actions/cache@v5
+        with:
+          path: node_modules
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            bun-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build shared packages
+        # Restores packages/*/dist/ from turbo remote cache (written by the Build job).
+        # Required because apps/api/node_modules/@repo/* are workspace symlinks pointing
+        # to packages/*/dist/ which don't exist in the checked-out repo.
+        run: bun run build --filter=@repo/types --filter=@repo/config --filter=@repo/email --filter=@repo/ui
+        env:
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+
+      - name: Download API build artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: api-build-output
+          path: apps/api/dist
+
+      - name: Run database migrations
+        run: bun run db:migrate
+
+      - name: Boot API and probe /health
+        run: |
+          node apps/api/dist/index.js > api-boot.log 2>&1 &
+          API_PID=$!
+          for i in $(seq 1 30); do
+            if ! kill -0 "$API_PID" 2>/dev/null; then
+              echo "::error::API process exited before becoming healthy."
+              cat api-boot.log
+              exit 1
+            fi
+            if body=$(curl -fsS http://localhost:4000/health 2>/dev/null); then
+              echo "API healthy after ~$((i * 2))s: $body"
+              kill "$API_PID"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::API did not become healthy within 60s."
+          cat api-boot.log
+          exit 1
+
   # Intentionally runs on every push to main/staging regardless of changed paths.
   # Full browser coverage is required on protected branches before release.
   e2e-matrix:
@@ -670,7 +785,7 @@ jobs:
     name: CI Success
     runs-on: ubuntu-latest
     if: always()
-    needs: [secrets, lint, typecheck, test, build, e2e, e2e-matrix, merge-reports]
+    needs: [secrets, lint, typecheck, test, build, e2e, boot-smoke, e2e-matrix, merge-reports]
     steps:
       - name: Check job outcomes
         env:
@@ -680,6 +795,7 @@ jobs:
           TEST_RESULT: ${{ needs.test.result }}
           BUILD_RESULT: ${{ needs.build.result }}
           E2E_RESULT: ${{ needs.e2e.result }}
+          BOOT_SMOKE_RESULT: ${{ needs.boot-smoke.result }}
           E2E_MATRIX_RESULT: ${{ needs.e2e-matrix.result }}
           MERGE_REPORTS_RESULT: ${{ needs.merge-reports.result }}
         run: |
@@ -690,6 +806,7 @@ jobs:
             "$TEST_RESULT" \
             "$BUILD_RESULT" \
             "$E2E_RESULT" \
+            "$BOOT_SMOKE_RESULT" \
             "$E2E_MATRIX_RESULT" \
             "$MERGE_REPORTS_RESULT" \
           )
